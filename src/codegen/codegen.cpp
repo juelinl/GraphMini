@@ -245,11 +245,11 @@ namespace minigraph {
             }
         }
         for (auto &mg_op: out.mg_ops) {
-            for (auto itr = mg_op.begin(); itr != mg_op.end(); itr++) {
-                if (!IndeedUsed.at(itr->id)) {
-                    mg_op.erase(itr);
-                }
-            }
+            mg_op.erase(std::remove_if(mg_op.begin(), mg_op.end(),
+                                       [&IndeedUsed](const MiniGraphIR &mg) {
+                                           return mg.id >= IndeedUsed.size() || !IndeedUsed.at(mg.id);
+                                       }),
+                        mg_op.end());
         }
         return out;
     };
