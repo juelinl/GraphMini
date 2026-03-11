@@ -1,8 +1,13 @@
 #include "graphmini_scheduler.hpp"
+#include "logging.h"
 
 #include <algorithm>
 #include <cassert>
 #include <numeric>
+#include <oneapi/tbb/blocked_range.h>
+#include <oneapi/tbb/parallel_for.h>
+#include <oneapi/tbb/parallel_reduce.h>
+#include <oneapi/tbb/parallel_sort.h>
 #include <string>
 #include <utility>
 #include <vector>
@@ -118,6 +123,33 @@ void get_full_permutation_for_size(int size,
     }
 }
 
+std::vector<std::vector<int>> get_all_permutations_for_size(int size) {
+    std::vector<std::vector<std::vector<int>>> buckets(static_cast<size_t>(size));
+    tbb::parallel_for(tbb::blocked_range<int>(0, size), [&](const tbb::blocked_range<int> &range) {
+        for (int first = range.begin(); first != range.end(); ++first) {
+            auto &bucket = buckets[static_cast<size_t>(first)];
+            std::vector<bool> used(static_cast<size_t>(size), false);
+            std::vector<int> tmp;
+            tmp.reserve(static_cast<size_t>(size));
+            used[static_cast<size_t>(first)] = true;
+            tmp.push_back(first);
+            get_full_permutation_for_size(size, bucket, used, tmp, 1);
+        }
+    });
+
+    size_t total = 0;
+    for (const auto &bucket: buckets) {
+        total += bucket.size();
+    }
+
+    std::vector<std::vector<int>> out;
+    out.reserve(total);
+    for (auto &bucket: buckets) {
+        out.insert(out.end(), bucket.begin(), bucket.end());
+    }
+    return out;
+}
+
 std::vector<int> build_rank(const std::vector<int> &order, int size) {
     std::vector<int> rank(static_cast<size_t>(size), 0);
     for (int i = 0; i < size; ++i) {
@@ -210,23 +242,34 @@ std::vector<std::pair<int, int>> normalize_restricts(std::vector<std::pair<int, 
 std::vector<std::vector<int>> remove_automorphisms(const std::vector<int> &adj_mat,
                                                    int size,
                                                    const std::vector<std::vector<int>> &orders) {
-    std::vector<std::string> all_mat;
-    all_mat.reserve(orders.size());
-    for (const auto &order: orders) {
-        const auto reordered = reorder_adj_mat(adj_mat, order, size);
-        all_mat.push_back(adj_mat_to_string(reordered, size));
-    }
+    struct CanonicalOrder {
+        std::string adj_key;
+        size_t index{0};
+    };
 
-    std::vector<std::string> unique = all_mat;
-    std::sort(unique.begin(), unique.end());
-    unique.erase(std::unique(unique.begin(), unique.end()), unique.end());
+    std::vector<CanonicalOrder> all_mat(orders.size());
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, orders.size()), [&](const tbb::blocked_range<size_t> &range) {
+        for (size_t i = range.begin(); i != range.end(); ++i) {
+            const auto reordered = reorder_adj_mat(adj_mat, orders[i], size);
+            all_mat[i].adj_key = adj_mat_to_string(reordered, size);
+            all_mat[i].index = i;
+        }
+    });
+
+    tbb::parallel_sort(all_mat.begin(), all_mat.end(), [](const CanonicalOrder &lhs, const CanonicalOrder &rhs) {
+        if (lhs.adj_key != rhs.adj_key) {
+            return lhs.adj_key < rhs.adj_key;
+        }
+        return lhs.index < rhs.index;
+    });
 
     std::vector<std::vector<int>> out;
-    out.reserve(unique.size());
-    for (const auto &mat: unique) {
-        const auto it = std::find(all_mat.begin(), all_mat.end(), mat);
-        assert(it != all_mat.end());
-        out.push_back(orders[static_cast<size_t>(std::distance(all_mat.begin(), it))]);
+    out.reserve(all_mat.size());
+    for (size_t i = 0; i < all_mat.size(); ++i) {
+        if (i > 0 && all_mat[i].adj_key == all_mat[i - 1].adj_key) {
+            continue;
+        }
+        out.push_back(orders[all_mat[i].index]);
     }
     return out;
 }
@@ -238,6 +281,220 @@ bool satisfies_restricts(const std::vector<int> &perm, const std::vector<std::pa
         }
     }
     return true;
+}
+
+bool is_valid_permutation(const std::vector<int> &vec, const std::vector<int> &adj_mat, int size) {
+    for (int x = 1; x < size; ++x) {
+        bool have_edge = false;
+        for (int y = 0; y < x; ++y) {
+            if (adj_mat[static_cast<size_t>(index_of(vec[static_cast<size_t>(x)],
+                                                     vec[static_cast<size_t>(y)],
+                                                     size))] != 0) {
+                have_edge = true;
+                break;
+            }
+        }
+        if (!have_edge) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::vector<int> find_isolated_vertices(const std::vector<int> &adj_mat, int size) {
+    std::vector<int> isolated;
+    for (int vertex = 0; vertex < size; ++vertex) {
+        bool connected = false;
+        for (int other = 0; other < size; ++other) {
+            if (vertex == other) {
+                continue;
+            }
+            if (adj_mat[static_cast<size_t>(index_of(vertex, other, size))] != 0 ||
+                adj_mat[static_cast<size_t>(index_of(other, vertex, size))] != 0) {
+                connected = true;
+                break;
+            }
+        }
+        if (!connected) {
+            isolated.push_back(vertex);
+        }
+    }
+    return isolated;
+}
+
+std::string format_vertex_ids(const std::vector<int> &vertices) {
+    std::string out;
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        if (i != 0) {
+            out += ", ";
+        }
+        out += "n" + std::to_string(vertices[i]);
+    }
+    return out;
+}
+
+struct RankedOrderCandidate {
+    bool valid{false};
+    std::vector<int> order;
+    std::vector<int> reordered_adj_mat;
+    std::vector<uint64_t> scores;
+    std::string adj_key;
+};
+
+bool better_ranked_order(const RankedOrderCandidate &lhs, const RankedOrderCandidate &rhs) {
+    if (!lhs.valid) {
+        return false;
+    }
+    if (!rhs.valid) {
+        return true;
+    }
+    if (score_vector_better(lhs.scores, rhs.scores)) {
+        return true;
+    }
+    if (score_vector_better(rhs.scores, lhs.scores)) {
+        return false;
+    }
+    if (lhs.adj_key != rhs.adj_key) {
+        return lhs.adj_key > rhs.adj_key;
+    }
+    return lhs.order < rhs.order;
+}
+
+struct RankedRestrictCandidate {
+    bool valid{false};
+    std::vector<std::pair<int, int>> pairs;
+    std::vector<uint64_t> scores;
+};
+
+bool better_ranked_restricts(const RankedRestrictCandidate &lhs, const RankedRestrictCandidate &rhs) {
+    if (!lhs.valid) {
+        return false;
+    }
+    if (!rhs.valid) {
+        return true;
+    }
+    if (score_vector_better(lhs.scores, rhs.scores)) {
+        return true;
+    }
+    if (score_vector_better(rhs.scores, lhs.scores)) {
+        return false;
+    }
+    return lhs.pairs < rhs.pairs;
+}
+
+bool is_valid_prefix(const std::vector<int> &order, int depth, const std::vector<int> &adj_mat, int size) {
+    if (depth == 0) {
+        return true;
+    }
+    for (int pos = 1; pos <= depth; ++pos) {
+        bool have_edge = false;
+        for (int prev = 0; prev < pos; ++prev) {
+            if (adj_mat[static_cast<size_t>(index_of(order[static_cast<size_t>(pos)],
+                                                     order[static_cast<size_t>(prev)],
+                                                     size))] != 0) {
+                have_edge = true;
+                break;
+            }
+        }
+        if (!have_edge) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void enumerate_best_order_dfs(const std::vector<int> &adj_mat,
+                              int size,
+                              std::vector<int> &order,
+                              std::vector<bool> &used,
+                              int depth,
+                              RankedOrderCandidate &best) {
+    if (depth == size) {
+        RankedOrderCandidate candidate;
+        candidate.valid = true;
+        candidate.order = order;
+        candidate.reordered_adj_mat = reorder_adj_mat(adj_mat, order, size);
+        candidate.scores = build_score_vector(candidate.reordered_adj_mat, size);
+        candidate.adj_key = adj_mat_to_string(candidate.reordered_adj_mat, size);
+        if (better_ranked_order(candidate, best)) {
+            best = std::move(candidate);
+        }
+        return;
+    }
+
+    for (int vertex = 0; vertex < size; ++vertex) {
+        if (used[static_cast<size_t>(vertex)]) {
+            continue;
+        }
+        order[static_cast<size_t>(depth)] = vertex;
+        used[static_cast<size_t>(vertex)] = true;
+        if (is_valid_prefix(order, depth, adj_mat, size)) {
+            enumerate_best_order_dfs(adj_mat, size, order, used, depth + 1, best);
+        }
+        used[static_cast<size_t>(vertex)] = false;
+    }
+}
+
+RankedOrderCandidate find_best_order_parallel(const std::vector<int> &adj_mat, int size) {
+    return tbb::parallel_reduce(
+            tbb::blocked_range<int>(0, size),
+            RankedOrderCandidate{},
+            [&](const tbb::blocked_range<int> &range, RankedOrderCandidate local_best) {
+                std::vector<int> order(static_cast<size_t>(size), -1);
+                std::vector<bool> used(static_cast<size_t>(size), false);
+                for (int first = range.begin(); first != range.end(); ++first) {
+                    std::fill(order.begin(), order.end(), -1);
+                    std::fill(used.begin(), used.end(), false);
+                    order[0] = first;
+                    used[static_cast<size_t>(first)] = true;
+                    enumerate_best_order_dfs(adj_mat, size, order, used, 1, local_best);
+                }
+                return local_best;
+            },
+            [](RankedOrderCandidate lhs, const RankedOrderCandidate &rhs) {
+                if (better_ranked_order(rhs, lhs)) {
+                    return rhs;
+                }
+                return lhs;
+            });
+}
+
+bool is_automorphism(const std::vector<int> &adj_mat, const std::vector<int> &perm, int size) {
+    for (int i = 0; i < size; ++i) {
+        for (int j = i + 1; j < size; ++j) {
+            if (adj_mat[static_cast<size_t>(index_of(i, j, size))] !=
+                adj_mat[static_cast<size_t>(index_of(perm[static_cast<size_t>(i)],
+                                                     perm[static_cast<size_t>(j)],
+                                                     size))]) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+void enumerate_automorphisms_dfs(const std::vector<int> &adj_mat,
+                                 int size,
+                                 std::vector<int> &perm,
+                                 std::vector<bool> &used,
+                                 int depth,
+                                 std::vector<std::vector<int>> &out) {
+    if (depth == size) {
+        if (is_automorphism(adj_mat, perm, size)) {
+            out.push_back(perm);
+        }
+        return;
+    }
+
+    for (int vertex = 0; vertex < size; ++vertex) {
+        if (used[static_cast<size_t>(vertex)]) {
+            continue;
+        }
+        perm[static_cast<size_t>(depth)] = vertex;
+        used[static_cast<size_t>(vertex)] = true;
+        enumerate_automorphisms_dfs(adj_mat, size, perm, used, depth + 1, out);
+        used[static_cast<size_t>(vertex)] = false;
+    }
 }
 
 } // namespace
@@ -319,28 +576,23 @@ void GraphMiniScheduler::add_restrict(const std::vector<std::pair<int, int>> &re
 }
 
 std::vector<std::vector<int>> GraphMiniScheduler::get_isomorphism_vec() const {
-    std::vector<std::vector<int>> perms;
-    std::vector<bool> used(static_cast<size_t>(size_), false);
-    std::vector<int> tmp;
-    get_full_permutation_for_size(size_, perms, used, tmp, 0);
+    const int size = size_;
+    const std::vector<int> adj_mat = adj_mat_;
+    std::vector<std::vector<std::vector<int>>> buckets(static_cast<size_t>(size));
+    tbb::parallel_for(tbb::blocked_range<int>(0, size), [&](const tbb::blocked_range<int> &range) {
+        for (int first = range.begin(); first != range.end(); ++first) {
+            auto &bucket = buckets[static_cast<size_t>(first)];
+            std::vector<int> perm(static_cast<size_t>(size), -1);
+            std::vector<bool> used(static_cast<size_t>(size), false);
+            perm[0] = first;
+            used[static_cast<size_t>(first)] = true;
+            enumerate_automorphisms_dfs(adj_mat, size, perm, used, 1, bucket);
+        }
+    });
 
     std::vector<std::vector<int>> out;
-    for (const auto &perm: perms) {
-        bool is_iso = true;
-        for (int i = 0; i < size_ && is_iso; ++i) {
-            for (int j = i + 1; j < size_; ++j) {
-                if (adj_mat_[static_cast<size_t>(index_of(i, j, size_))] != 0 &&
-                    adj_mat_[static_cast<size_t>(index_of(perm[static_cast<size_t>(i)],
-                                                          perm[static_cast<size_t>(j)],
-                                                          size_))] == 0) {
-                    is_iso = false;
-                    break;
-                }
-            }
-        }
-        if (is_iso) {
-            out.push_back(perm);
-        }
+    for (const auto &bucket: buckets) {
+        out.insert(out.end(), bucket.begin(), bucket.end());
     }
     return out;
 }
@@ -510,30 +762,22 @@ int GraphMiniScheduler::get_vec_optimize_num(const std::vector<int> &vec) const 
 }
 
 void GraphMiniScheduler::remove_invalid_permutation(std::vector<std::vector<int>> &candidate_permutations) const {
-    for (size_t i = 0; i < candidate_permutations.size();) {
-        const auto &vec = candidate_permutations[i];
-        bool valid = true;
-        for (int x = 1; x < size_; ++x) {
-            bool have_edge = false;
-            for (int y = 0; y < x; ++y) {
-                if (adj_mat_[static_cast<size_t>(index_of(vec[static_cast<size_t>(x)],
-                                                          vec[static_cast<size_t>(y)],
-                                                          size_))] != 0) {
-                    have_edge = true;
-                    break;
-                }
-            }
-            if (!have_edge) {
-                valid = false;
-                break;
-            }
-        }
-        if (!valid) {
-            candidate_permutations.erase(candidate_permutations.begin() + static_cast<long>(i));
-        } else {
-            ++i;
+    std::vector<char> keep(candidate_permutations.size(), 0);
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, candidate_permutations.size()),
+                      [&](const tbb::blocked_range<size_t> &range) {
+                          for (size_t i = range.begin(); i != range.end(); ++i) {
+                              keep[i] = is_valid_permutation(candidate_permutations[i], adj_mat_, size_) ? 1 : 0;
+                          }
+                      });
+
+    std::vector<std::vector<int>> valid_permutations;
+    valid_permutations.reserve(candidate_permutations.size());
+    for (size_t i = 0; i < candidate_permutations.size(); ++i) {
+        if (keep[i] != 0) {
+            valid_permutations.push_back(candidate_permutations[i]);
         }
     }
+    candidate_permutations = std::move(valid_permutations);
 }
 
 void GraphMiniScheduler::init_in_exclusion_optimize() {
@@ -652,38 +896,16 @@ void GraphMiniScheduler::get_schedule(const char *input_adj_mat,
         original_adj_mat[static_cast<size_t>(index_of(i, i, size_))] = 0;
     }
 
-    std::vector<std::vector<int>> candidate_permutations;
-    std::vector<bool> used(static_cast<size_t>(size_), false);
-    std::vector<int> tmp;
-    get_full_permutation_for_size(size_, candidate_permutations, used, tmp, 0);
-    candidate_permutations = remove_automorphisms(original_adj_mat, size_, candidate_permutations);
-    remove_invalid_permutation(candidate_permutations);
-    assert(!candidate_permutations.empty() && "invalid schedule");
+    const std::vector<int> isolated_vertices = find_isolated_vertices(original_adj_mat, size_);
+    CHECK(isolated_vertices.empty())
+            << "Invalid query pattern: isolated vertices remain after removing diagonal self-loops: "
+            << format_vertex_ids(isolated_vertices);
 
-    std::vector<int> best_order(static_cast<size_t>(size_), 0);
-    std::vector<int> best_adj_mat;
-    std::vector<uint64_t> best_order_scores;
-    std::string best_adj_key;
-    bool have_best_order = false;
+    const RankedOrderCandidate best_order = find_best_order_parallel(original_adj_mat, size_);
+    CHECK(best_order.valid) << "Invalid schedule: no valid matching order exists for the input query pattern.";
 
-    for (const auto &order: candidate_permutations) {
-        const auto reordered_adj_mat = reorder_adj_mat(original_adj_mat, order, size_);
-        const auto order_scores = build_score_vector(reordered_adj_mat, size_);
-        const auto adj_key = adj_mat_to_string(reordered_adj_mat, size_);
-
-        if (!have_best_order ||
-            score_vector_better(order_scores, best_order_scores) ||
-            (order_scores == best_order_scores && adj_key > best_adj_key)) {
-            have_best_order = true;
-            best_order = order;
-            best_adj_mat = reordered_adj_mat;
-            best_order_scores = order_scores;
-            best_adj_key = adj_key;
-        }
-    }
-
-    matching_order_ = best_order;
-    adj_mat_ = best_adj_mat;
+    matching_order_ = best_order.order;
+    adj_mat_ = best_order.reordered_adj_mat;
 
     std::vector<std::vector<std::pair<int, int>>> restricts_vector;
     restricts_generate(adj_mat_, restricts_vector);
@@ -691,22 +913,29 @@ void GraphMiniScheduler::get_schedule(const char *input_adj_mat,
         restricts_vector.emplace_back();
     }
 
-    std::vector<std::pair<int, int>> best_pairs;
-    std::vector<uint64_t> best_restrict_scores;
-    bool have_best_restrict = false;
-    for (const auto &pairs: restricts_vector) {
-        const auto normalized = normalize_restricts(pairs);
-        const auto restrict_adj_mat = build_restrict_adj_mat(normalized, size_);
-        const auto restrict_scores = build_score_vector(restrict_adj_mat, size_);
-        if (!have_best_restrict ||
-            score_vector_better(restrict_scores, best_restrict_scores) ||
-            (restrict_scores == best_restrict_scores && normalized < best_pairs)) {
-            have_best_restrict = true;
-            best_pairs = normalized;
-            best_restrict_scores = restrict_scores;
-        }
-    }
-    restrict_pair = best_pairs;
+    const RankedRestrictCandidate best_restricts = tbb::parallel_reduce(
+            tbb::blocked_range<size_t>(0, restricts_vector.size()),
+            RankedRestrictCandidate{},
+            [&](const tbb::blocked_range<size_t> &range, RankedRestrictCandidate local_best) {
+                for (size_t i = range.begin(); i != range.end(); ++i) {
+                    RankedRestrictCandidate candidate;
+                    candidate.valid = true;
+                    candidate.pairs = normalize_restricts(restricts_vector[i]);
+                    const auto restrict_adj_mat = build_restrict_adj_mat(candidate.pairs, size_);
+                    candidate.scores = build_score_vector(restrict_adj_mat, size_);
+                    if (better_ranked_restricts(candidate, local_best)) {
+                        local_best = std::move(candidate);
+                    }
+                }
+                return local_best;
+            },
+            [](RankedRestrictCandidate lhs, const RankedRestrictCandidate &rhs) {
+                if (better_ranked_restricts(rhs, lhs)) {
+                    return rhs;
+                }
+                return lhs;
+            });
+    restrict_pair = best_restricts.pairs;
 
     std::vector<int> identity(static_cast<size_t>(size_), 0);
     std::iota(identity.begin(), identity.end(), 0);
@@ -743,7 +972,7 @@ void GraphMiniScheduler::get_schedule(const char *input_adj_mat,
     }
 
     build_loop_invariant();
-    add_restrict(best_pairs);
+    add_restrict(restrict_pair);
     set_in_exclusion_optimize_redundancy();
 }
 
