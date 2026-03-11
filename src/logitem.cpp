@@ -10,6 +10,20 @@
 namespace minigraph
 {
 #define spliter ","
+    namespace {
+        const char *scheduler_type_name(SchedulerType scheduler_type) {
+            switch (scheduler_type) {
+                case SchedulerType::GraphPi:
+                    return "GraphPi";
+                case SchedulerType::GraphMini:
+                    return "GraphMini";
+                case SchedulerType::GraphZero:
+                    return "GraphZero";
+            }
+            return "Unknown";
+        }
+    } // namespace
+
     void CompilerLog::save(std::string in_dir) {
         std::filesystem::path path = in_dir;
         path /= Constant::kExpCompileFile;
@@ -20,7 +34,8 @@ namespace minigraph
                                    Constant::kExpDataName,
                                    Constant::kExpPatternName,
                                    Constant::kExpPatternAdj, Constant::kExpPatternSize,
-                                   Constant::kExpAdjMatType, Constant::kExpPruningType, Constant::kExpParallelType,
+                                   Constant::kExpAdjMatType, Constant::kExpSchedulerType,
+                                   Constant::kExpPruningType, Constant::kExpParallelType,
                                    Constant::kExpCodeGenTime, Constant::kExpCompilationTime,
                                    };
             // write header
@@ -47,6 +62,7 @@ namespace minigraph
                 log << "Edge-Induced-IEP" << spliter;
                 break;
         }
+        log << scheduler_type_name(schedulerType) << spliter;
         switch (pruningType) {
             case PruningType::None:
                 log << "None" << spliter;

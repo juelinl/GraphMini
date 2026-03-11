@@ -10,14 +10,182 @@
 
 #include <cmath>
 #include <fmt/format.h>
+#include <numeric>
 #include <sstream>
 #include <algorithm>
 #include <set>
 #include <utility>
+#include "graphmini_scheduler.hpp"
 #include "graphpi_scheduler.hpp"
 #include "typedef.h"
 
 namespace minigraph {
+    namespace {
+        struct ScheduleResult {
+            std::string adj_mat;
+            std::vector<int> matching_order;
+            std::vector<std::pair<int, int>> restrict_pair;
+            int iep_num{0};
+            std::vector<std::vector<std::vector<int>>> iep_groups;
+            std::vector<int> iep_vals;
+            long long iep_redundancy{1};
+        };
+
+        template<typename Scheduler>
+        ScheduleResult capture_schedule_result(Scheduler &scheduler) {
+            ScheduleResult result;
+            result.adj_mat = scheduler.get_adj_mat_str();
+            result.matching_order = scheduler.get_matching_order();
+            result.restrict_pair = scheduler.restrict_pair;
+            result.iep_num = scheduler.get_in_exclusion_optimize_num();
+            result.iep_groups = scheduler.in_exclusion_optimize_group;
+            result.iep_vals = scheduler.in_exclusion_optimize_val;
+            result.iep_redundancy = scheduler.get_in_exclusion_optimize_redundancy();
+            return result;
+        }
+
+        std::string format_query_vertex(int vertex) {
+            return fmt::format("n{}", vertex);
+        }
+
+        std::string format_matching_order(const std::vector<int> &matching_order) {
+            if (matching_order.empty()) {
+                return "Matching Order: unavailable";
+            }
+
+            std::ostringstream out;
+            out << "Matching Order: ";
+            for (size_t i = 0; i < matching_order.size(); ++i) {
+                if (i != 0) {
+                    out << " -> ";
+                }
+                out << format_query_vertex(matching_order[i]);
+            }
+            return out.str();
+        }
+
+        std::string format_canonicality_constraints(const std::vector<std::pair<int, int>> &restrict_pair,
+                                                    int pattern_size) {
+            std::vector<std::vector<int>> grouped_constraints(static_cast<size_t>(pattern_size));
+            for (const auto &[lhs, rhs]: restrict_pair) {
+                grouped_constraints[static_cast<size_t>(rhs)].push_back(lhs);
+            }
+
+            std::ostringstream out;
+            out << "Canonicality Constraints:";
+            bool has_constraints = false;
+            for (int vertex = 0; vertex < pattern_size; ++vertex) {
+                auto &checks = grouped_constraints[static_cast<size_t>(vertex)];
+                if (checks.empty()) {
+                    continue;
+                }
+
+                has_constraints = true;
+                std::sort(checks.begin(), checks.end());
+                out << "\n  " << format_query_vertex(vertex) << ": ";
+                for (size_t i = 0; i < checks.size(); ++i) {
+                    if (i != 0) {
+                        out << ", ";
+                    }
+                    out << format_query_vertex(checks[i]) << " > " << format_query_vertex(vertex);
+                }
+            }
+
+            if (!has_constraints) {
+                out << "\n  none";
+            }
+            return out.str();
+        }
+
+        std::string format_scheduled_adjacency_lists(const std::string &adj_mat,
+                                                     const std::vector<int> &matching_order,
+                                                     int pattern_size) {
+            std::ostringstream out;
+            out << "Scheduled Adjacency Lists:";
+            std::vector<int> schedule_position(static_cast<size_t>(pattern_size), 0);
+            if (matching_order.empty()) {
+                std::iota(schedule_position.begin(), schedule_position.end(), 0);
+            } else {
+                for (int row = 0; row < pattern_size; ++row) {
+                    schedule_position[static_cast<size_t>(matching_order[static_cast<size_t>(row)])] = row;
+                }
+            }
+
+            for (int vertex = 0; vertex < pattern_size; ++vertex) {
+                const int row = schedule_position[static_cast<size_t>(vertex)];
+                out << "\n  " << format_query_vertex(vertex) << ": ";
+
+                std::vector<int> unmatched_neighbors;
+                for (int col = row + 1; col < pattern_size; ++col) {
+                    if (adj_mat[static_cast<size_t>(row * pattern_size + col)] != '1') {
+                        continue;
+                    }
+                    const int neighbor = matching_order.empty() ? col : matching_order[static_cast<size_t>(col)];
+                    unmatched_neighbors.push_back(neighbor);
+                }
+
+                std::sort(unmatched_neighbors.begin(), unmatched_neighbors.end());
+                if (unmatched_neighbors.empty()) {
+                    out << "none";
+                    continue;
+                }
+
+                for (size_t i = 0; i < unmatched_neighbors.size(); ++i) {
+                    if (i != 0) {
+                        out << ", ";
+                    }
+                    out << format_query_vertex(unmatched_neighbors[i]);
+                }
+            }
+            return out.str();
+        }
+
+        ScheduleResult schedule_pattern(const std::string &adj_mat,
+                                        int p_size,
+                                        const CodeGenConfig &config,
+                                        const MetaData &meta) {
+            switch (config.schedulerType) {
+                case SchedulerType::GraphPi: {
+                    GraphPiScheduler scheduler{};
+                    scheduler.get_schedule(adj_mat.c_str(),
+                                           p_size,
+                                           meta.num_vertex,
+                                           meta.num_edge,
+                                           meta.num_triangle,
+                                           PerfModelType::graphpi);
+                    return capture_schedule_result(scheduler);
+                }
+                case SchedulerType::GraphZero: {
+                    GraphPiScheduler scheduler{};
+                    scheduler.get_schedule(adj_mat.c_str(),
+                                           p_size,
+                                           meta.num_vertex,
+                                           meta.num_edge,
+                                           meta.num_triangle,
+                                           PerfModelType::graphzero);
+                    return capture_schedule_result(scheduler);
+                }
+                case SchedulerType::GraphMini: {
+                    GraphMiniScheduler scheduler{};
+                    scheduler.get_schedule(adj_mat.c_str(),
+                                           p_size,
+                                           meta.num_vertex,
+                                           meta.num_edge,
+                                           meta.num_triangle);
+                    return capture_schedule_result(scheduler);
+                }
+            }
+
+            GraphMiniScheduler scheduler{};
+            scheduler.get_schedule(adj_mat.c_str(),
+                                   p_size,
+                                   meta.num_vertex,
+                                   meta.num_edge,
+                                   meta.num_triangle);
+            return capture_schedule_result(scheduler);
+        }
+    } // namespace
+
     bool EnableProfling = false;
     CodeGenConfig CurConfig;
 
@@ -82,12 +250,14 @@ namespace minigraph {
 
     PlanIR create_plan(const std::string &_adj_mat, CodeGenConfig config, MetaData meta) {
         Timer t;
-        GraphPiScheduler sc{};
         int p_size = get_pattern_size(_adj_mat);
-        sc.get_schedule(_adj_mat.c_str(), p_size, meta.num_vertex, meta.num_edge, meta.num_triangle);
-        std::string adj_mat = sc.get_adj_mat_str();
-        std::string res_mat = restricts_to_str(sc.restrict_pair, p_size);
-        LOG(MSG) << "SCHEDULING_TIME(s)=" << t.Passed();
+        ScheduleResult schedule = schedule_pattern(_adj_mat, p_size, config, meta);
+        std::string adj_mat = schedule.adj_mat;
+        std::string res_mat = restricts_to_str(schedule.restrict_pair, p_size);
+        LOG(MSG) << format_matching_order(schedule.matching_order);
+        LOG(MSG) << format_scheduled_adjacency_lists(adj_mat, schedule.matching_order, p_size);
+        LOG(MSG) << format_canonicality_constraints(schedule.restrict_pair, p_size);
+        LOG(MSG) << "Scheduling Time: " << ToReadableDuration(t.Passed());
         t.Reset();
         PlanIR out;
         VertexSetIR::adjMatType = config.adjMatType;
@@ -143,11 +313,11 @@ namespace minigraph {
         // iep optimization
 
         if (config.adjMatType == AdjMatType::EdgeInducedIEP) {
-            out.iep_num = sc.get_in_exclusion_optimize_num();
+            out.iep_num = schedule.iep_num;
             out.iep_depth = p_size - out.iep_num - 1;
-            out.iep_groups = sc.in_exclusion_optimize_group;
-            out.iep_vals = sc.in_exclusion_optimize_val;
-            out.iep_redundancy = sc.get_in_exclusion_optimize_redundancy();
+            out.iep_groups = schedule.iep_groups;
+            out.iep_vals = schedule.iep_vals;
+            out.iep_redundancy = schedule.iep_redundancy;
 
             if (out.iep_num > 1) {
                 for (int vset_id = 0; vset_id < out.iep_num; ++vset_id) {
@@ -937,7 +1107,7 @@ namespace minigraph {
         out << "} // namespace minigraph \n";
 
         out << "extern \"C\" void plan(const minigraph::GraphType* graph, minigraph::Context& ctx){return minigraph::plan(graph, ctx);};";
-        LOG(INFO) << "Code Generation Time: " << t.Passed() << "s";
+        LOG(INFO) << "Code Generation Time: " << ToReadableDuration(t.Passed());
         return out.str();
     };
 
@@ -1407,18 +1577,18 @@ namespace minigraph {
             EnableProfling = false;
         }
         if (config.parType == ParallelType::OpenMP) {
-            LOG(MSG) << "ParallelType=OpenMP";
+            LOG(MSG) << "Parallel Type: OpenMP";
             return gen_code_omp(plan, config);
         } else if (config.parType == ParallelType::TbbTop
                    || config.parType == ParallelType::Nested
                    || config.parType == ParallelType::NestedRt) {
             
             if (config.parType == ParallelType::TbbTop) {
-                LOG(MSG) << "ParallelType=TbbTop";
+                LOG(MSG) << "Parallel Type: TbbTop";
             } else if (config.parType == ParallelType::Nested) {
-                LOG(MSG) << "ParallelType=Nested";
+                LOG(MSG) << "Parallel Type: Nested";
             } else {
-                LOG(MSG) << "ParallelType=NestedRT";
+                LOG(MSG) << "Parallel Type: NestedRt";
             }
 
             return gen_code_nested(plan, config);

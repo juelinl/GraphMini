@@ -13,6 +13,7 @@ namespace minigraph {
         int patternSize{0};
         double compileTime{0.0};
         double codegenTime{0.0};
+        SchedulerType schedulerType;
         PruningType pruningType;
         ParallelType parallelType;
         AdjMatType adjMatType;

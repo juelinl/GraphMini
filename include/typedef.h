@@ -10,6 +10,12 @@ namespace minigraph {
        VertexInduced = 0, EdgeInduced = 1, EdgeInducedIEP = 2,
     };
 
+    enum class SchedulerType {
+        GraphPi = 0,
+        GraphMini = 1,
+        GraphZero = 2,
+    };
+
     enum class PruningType {
         None = 0, // not using minigraph
         Static = 1, // use iff not introducing any redundant set operation
@@ -33,8 +39,9 @@ namespace minigraph {
 
     struct CodeGenConfig {
         AdjMatType adjMatType = AdjMatType::VertexInduced;
-        PruningType pruningType = PruningType::None;
-        ParallelType parType = ParallelType::OpenMP;
+        SchedulerType schedulerType = SchedulerType::GraphMini;
+        PruningType pruningType = PruningType::Eager;
+        ParallelType parType = ParallelType::NestedRt;
         RunnerType runnerType = RunnerType::Benchmark;
     };
 

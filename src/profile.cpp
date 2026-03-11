@@ -41,6 +41,20 @@ std::string exec(const char *cmd) {
 
 using namespace minigraph;
 
+namespace {
+const char *scheduler_type_name(SchedulerType scheduler_type) {
+    switch (scheduler_type) {
+        case SchedulerType::GraphPi:
+            return "graphpi";
+        case SchedulerType::GraphMini:
+            return "graphmini";
+        case SchedulerType::GraphZero:
+            return "graphzero";
+    }
+    return "graphmini";
+}
+} // namespace
+
 struct AppConfig {
     int exp_id;
     CodeGenConfig codegen;
@@ -100,10 +114,11 @@ std::filesystem::path get_data_dir(AppConfig config) {
 
 void compile(AppConfig config) {
     CompilerLog log;
-    LOG(INFO) << "START EXPERIMENT";
-    LOG(INFO) << "Pattern Name\t" << config.pattern_name;
-    LOG(INFO) << "AdjMat\t" << config.pat;
-    LOG(INFO) << "Graph\t" << config.data_name;
+    LOG(INFO) << "Start Experiment";
+    LOG(INFO) << "Pattern Name: " << config.pattern_name;
+    LOG(INFO) << "Pattern Adjacency Matrix: " << config.pat;
+    LOG(INFO) << "Graph: " << config.data_name;
+    LOG(INFO) << "Scheduler: " << scheduler_type_name(config.codegen.schedulerType);
     MetaData meta;
     meta.read(get_data_dir(config));
     Timer t;
@@ -115,12 +130,12 @@ void compile(AppConfig config) {
     out_file.flush();
     out_file.close();
     auto codewrite_t = t.Passed();
-    LOG(INFO) << "Codegen Time: " << codewrite_t + codegen_t << "s";
+    LOG(INFO) << "Code Generation Time: " << ToReadableDuration(codewrite_t + codegen_t);
 
     // compile and run
     auto compile_cmd = fmt::format("cmake --build {compile_path} --target prof_runner",
                                    fmt::arg("compile_path", PROJECT_BINARY_DIR));
-    LOG(INFO) << "CMD: " << compile_cmd;
+    LOG(INFO) << "Command: " << compile_cmd;
     t.Reset();
     int flag = system(compile_cmd.c_str());
     int num_try = 3;
@@ -131,10 +146,10 @@ void compile(AppConfig config) {
     }
     if (flag != 0) exit(-1 && "compilation error");
     auto compile_t = t.Passed();
-    LOG(INFO) << "Compilation Time: " << compile_t << "s";
+    LOG(INFO) << "Compilation Time: " << ToReadableDuration(compile_t);
     auto mkdir_cmd = fmt::format("mkdir -p {bin_dir}",
                                  fmt::arg("bin_dir", PROJECT_PLAN_DIR));
-    LOG(INFO) << "CMD: " << mkdir_cmd;
+    LOG(INFO) << "Command: " << mkdir_cmd;
     flag = system(mkdir_cmd.c_str());
     if (flag != 0) exit(-1 && "mkdir error");
 
@@ -151,6 +166,7 @@ void compile(AppConfig config) {
     log.patternSize = sqrt(config.pat.size());
     log.compileTime = compile_t;
     log.codegenTime = codegen_t;
+    log.schedulerType = config.codegen.schedulerType;
     log.pruningType = config.codegen.pruningType;
     log.parallelType = config.codegen.parType;
     log.adjMatType = config.codegen.adjMatType;
@@ -202,6 +218,7 @@ std::string get_prefix(AppConfig config) {
                                        fmt::arg("graph", config.data_name),
                                        fmt::arg("adjtype", adjtype),
                                        fmt::arg("prunetype", prunetype));
+    prefix += fmt::format("_{}", scheduler_type_name(config.codegen.schedulerType));
     return prefix;
 }
 
@@ -227,7 +244,7 @@ void run(AppConfig config) {
                                fmt::arg("exp_id", config.exp_id),
                                fmt::arg("aggr_path", get_aggr_path(config)),
                                fmt::arg("loop_path", get_loop_path(config)));
-    LOG(INFO) << "CMD: " << run_cmd;
+    LOG(INFO) << "Command: " << run_cmd;
     std::string run_results = exec(run_cmd.c_str());
     LOG(MSG) << run_results;
 }
