@@ -58,6 +58,7 @@ namespace minigraph
         inline static const std::string kExpPatternAdj = "PATTERN_ADJ";
         inline static const std::string kExpPatternSize = "PATTERN_SIZE";
         inline static const std::string kExpAdjMatType = "ADJMAT_TYPE";
+        inline static const std::string kExpSchedulerType = "SCHEDULER_TYPE";
         inline static const std::string kExpPruningType = "PRUNING_TYPE";
         // Experiment Items -- Compiler
         inline static const std::string kExpParallelType = "PARALLEL_TYPE";

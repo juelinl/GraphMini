@@ -9,6 +9,7 @@
 namespace minigraph {
     void init_logging(char * argv0);
     std::string ToReadableSize(size_t nbytes);
+    std::string ToReadableDuration(double seconds);
 }
 
 namespace minigraph

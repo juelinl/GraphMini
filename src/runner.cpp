@@ -11,6 +11,7 @@
 #include <mutex>
 #include <math.h>
 #include <condition_variable>
+#include <oneapi/tbb/global_control.h>
 using namespace std::chrono_literals;
 namespace minigraph {
     template<typename T>
@@ -89,6 +90,21 @@ namespace minigraph {
     }
 }
 
+namespace {
+int default_thread_count() {
+    const unsigned int detected = std::thread::hardware_concurrency();
+    return std::max(1u, detected);
+}
+
+int parse_num_threads_or_default(int argc, char *argv[], int index) {
+    if (argc <= index) {
+        return default_thread_count();
+    }
+    const int parsed = std::stoi(argv[index]);
+    return std::max(1, parsed);
+}
+} // namespace
+
 void plan_2hrs(minigraph::GraphType* graph, minigraph::Context& ctx) {
     std::mutex m;
     std::condition_variable cv;
@@ -126,12 +142,12 @@ int main(int argc, char *argv[]){
     int expId = std::stoi(argv[1]);
     std::string in_dir{argv[2]};
     Timer t;
-    const int processor_count = std::thread::hardware_concurrency();
-    LOG(MSG) << "Threads=" << processor_count;
+    const int processor_count = parse_num_threads_or_default(argc, argv, 3);
     GraphType *graph = load_bin(in_dir, false);
-    LOG(MSG) << "LoadTime(s)=" << t.Passed();
+    LOG(MSG) << "Load Time: " << ToReadableDuration(t.Passed());
     bool time_out = false;
     double seconds = 24 * 3600;
+    tbb::global_control tbb_thread_limit(tbb::global_control::max_allowed_parallelism, processor_count);
     Context ctx(processor_count);
 
     RunnerLog log;
@@ -176,11 +192,12 @@ int main(int argc, char *argv[]){
         log.threadMaxTime = seconds;
         log.threadTimeSTD = 0.0;
 
-        LOG(MSG) << "CODE_EXECUTION_TIME(s)=" << "Timeout";
-        LOG(MSG) << "RESULT=" << ctx.get_result();
-        LOG(MSG) << "Throughput=" << result / seconds;
-        LOG(MSG) << "VertexSetAllocated=" << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
-        LOG(MSG) << "MiniGraphAllocated=" << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
+        LOG(MSG) << "Execution Time: Timeout";
+        LOG(MSG) << "Result: " << ctx.get_result();
+        LOG(MSG) << "Throughput: " << result / seconds;
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
+        LOG(MSG) << "Thread Count: " << processor_count;
     } else {
         result = ctx.get_result();
         seconds = t.Passed();
@@ -197,15 +214,16 @@ int main(int argc, char *argv[]){
         log.threadMaxTime = ctx.get_max_time();
         log.threadTimeSTD = sqrt(ctx.get_var_time());
 
-        LOG(MSG) << "CODE_EXECUTION_TIME(s)=" << seconds;
-        LOG(MSG) << "RESULT=" << ctx.get_result();
-        LOG(MSG) << "Throughput=" << ctx.get_result() / seconds;
+        LOG(MSG) << "Execution Time: " << ToReadableDuration(seconds);
+        LOG(MSG) << "Result: " << ctx.get_result();
+        LOG(MSG) << "Throughput: " << ctx.get_result() / seconds;
         // LOG(MSG) << "ThreadMeanTime=" << ctx.get_mean_time() << "s";
         // LOG(MSG) << "ThreadMinTime=" << ctx.get_min_time() << "s";
         // LOG(MSG) << "ThreadMaxTime=" << ctx.get_max_time() << "s";
         // LOG(MSG) << "TimeSTD=" << sqrt(ctx.get_var_time());
-        LOG(MSG) << "VertexSetAllocated=" << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
-        LOG(MSG) << "MiniGraphAllocated=" << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
+        LOG(MSG) << "Thread Count: " << processor_count;
     }
     log.save(PROJECT_LOG_DIR);
 }

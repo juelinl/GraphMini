@@ -7,25 +7,19 @@
 
 namespace minigraph {
 
-enum class PerfModelType {
-    graphzero,
-    graphpi
-};
-
-class GraphPiScheduler {
+class GraphMiniScheduler {
 public:
-    GraphPiScheduler() = default;
-    ~GraphPiScheduler() = default;
+    GraphMiniScheduler() = default;
+    ~GraphMiniScheduler() = default;
 
-    GraphPiScheduler(const GraphPiScheduler &) = delete;
-    GraphPiScheduler &operator=(const GraphPiScheduler &) = delete;
+    GraphMiniScheduler(const GraphMiniScheduler &) = delete;
+    GraphMiniScheduler &operator=(const GraphMiniScheduler &) = delete;
 
     void get_schedule(const char *adj_mat,
                       int size,
-                      uint64_t v_cnt,
-                      uint64_t e_cnt,
-                      uint64_t tri_cnt,
-                      PerfModelType model_type = PerfModelType::graphpi);
+                      uint64_t v_cnt = 0,
+                      uint64_t e_cnt = 0,
+                      uint64_t tri_cnt = 0);
 
     int get_size() const { return size_; }
     int get_in_exclusion_optimize_num() const { return in_exclusion_optimize_num_; }
@@ -45,7 +39,6 @@ private:
     };
 
     void reset();
-    int get_max_degree() const;
     void build_loop_invariant();
     int find_father_prefix(const std::vector<int> &data);
     void add_restrict(const std::vector<std::pair<int, int>> &restricts);
@@ -62,15 +55,6 @@ private:
                             std::vector<std::vector<std::pair<int, int>>> &restricts) const;
     int get_vec_optimize_num(const std::vector<int> &vec) const;
     void remove_invalid_permutation(std::vector<std::vector<int>> &candidate_permutations) const;
-    double our_estimate_schedule_restrict(const std::vector<int> &order,
-                                          const std::vector<std::pair<int, int>> &pairs,
-                                          uint64_t v_cnt,
-                                          uint64_t e_cnt,
-                                          uint64_t tri_cnt) const;
-    double graphzero_estimate_schedule_restrict(const std::vector<int> &order,
-                                                const std::vector<std::pair<int, int>> &pairs,
-                                                uint64_t v_cnt,
-                                                uint64_t e_cnt) const;
     void init_in_exclusion_optimize();
     void get_in_exclusion_optimize_group(int depth,
                                          std::vector<int> &id,

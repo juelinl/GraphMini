@@ -65,7 +65,7 @@ void run_mg(std::string adj_mat,
     int flag = system(fmt::format("cmake --build {compile_path} --target runner",
                                   fmt::arg("compile_path", compile_dir.string())).c_str());
     if (flag != 0) exit(-1 && "compilation error");
-    LOG(INFO) << "Binary Compilation Time: " << t.Passed() << "s";
+    LOG(INFO) << "Binary Compilation Time: " << ToReadableDuration(t.Passed());
 
     std::filesystem::path bin_path = std::filesystem::path(CMAKE_RUNTIME_OUTPUT_DIRECTORY) / "runner";
     flag = system(fmt::format("{bin_path} 0 {data_dir}",
