@@ -8,7 +8,8 @@ GraphMini is a high-performance graph pattern-matching system. It supports subgr
 
 # Software Dependencies
 ### Operating System
-1. Ubuntu 22.04 (tested)
+1. Ubuntu 22.04
+2. Ubuntu 24.04
 
 ### Libraries
 1. CMake (Version >= 3.20)
@@ -37,8 +38,6 @@ sudo apt install curl bc cmake clang-format -y
 mkdir -p build && cd build && cmake .. && make -j
 ```
 
-The project fetches `fmt`, `cxxopts`, and `oneTBB` directly from their GitHub repositories at configure time. GraphPi's scheduling logic is compiled from the local standalone files [`include/graphpi_scheduler.hpp`](/home/juelin/GraphMini/include/graphpi_scheduler.hpp) and [`src/graphpi_scheduler.cpp`](/home/juelin/GraphMini/src/graphpi_scheduler.cpp), so MPI is no longer required to build GraphMini.
-
 # How to download and preprocess data graph
 After you successfully compile the code.
 
@@ -46,35 +45,63 @@ After you successfully compile the code.
 bash dataset/download.sh && bash dataset/prep.sh
 ```
 
-# How to run a single query with GraphMini
-The binary takes 7 required and 1 optional input:
+To preprocess a graph manually, use:
 ```bash
-./build/bin/run [graph_name] [path_to_graph] [query_nickname] [query_adjmat] [query_type] [pruning_type] [parallel_type] [exp_id=-1 (optional)]
+./build/bin/prep --path_to_graph=./dataset/wiki
 ```
-- graph_name: nickname for tested graph (ex. wiki)
-- path_to_graph: path to the directory that contains the preprocessed graph. (ex ../Datasets/GraphMini/wiki)
-- query_nickname: nickname for tested query (ex. P1)
-- query_adjmat: adjacency matrix of the tested query (ex. "0111101111011110" 4-clique)
-- query_type: 
-    - 0: vertex-induced, 
-    - 1: edge-induced, 
-    - 2: edge-induced with IEP optimization
-- pruning_type:
-    - 0: None: not pruning
-    - 1: Static: only prune adj that must be used in the future
-    - 2: Eager: prune all adj that might be used in the future
-    - 3: Online: lazily prune adj that is being queried
-    - 4: CostModel: using cost model to decide which adj to prune
-- parallel_type:
-    - 0: OpenMP: parallel first loop only with OpenMP
-    - 1: Tbb: parallel first loop only with Tbb
-    - 2: Nested: nested loop for all computation
-    - 3: NestedRt: nested loop + runtime information
-- exp_id: experiment id (for generating logs)
+
+# How to run a single query with GraphMini
+Run `./build/bin/run --help` for the full help text. The primary options are:
+```bash
+./build/bin/run \
+  --graph_name=wiki \
+  --path_to_graph=./dataset/GraphMini/wiki \
+  --query_name=P1 \
+  --query_adjmat=0111101111011110 \
+  --query_type=vertex \
+  --pruning_type=costmodel \
+  --parallel_type=nested_rt \
+  --scheduler=graphmini \
+  --num_threads=32 \
+  --exp_id=42
+```
+- `--graph_name`: nickname for tested graph (example: `wiki`)
+- `--path_to_graph`: path to the preprocessed graph directory (example: `./dataset/GraphMini/wiki`)
+- `--query_name`: nickname for the tested query (example: `P1`)
+- `--query_adjmat`: adjacency matrix of the tested query (example: `0111101111011110` for 4-clique)
+- `--query_type`:
+    - `vertex`: vertex-induced
+    - `edge`: edge-induced
+    - `edge_iep`: edge-induced with IEP optimization
+- `--pruning_type`:
+    - `none`: not pruning
+    - `static`: only prune adj that must be used in the future
+    - `eager`: prune all adj that might be used in the future
+    - `online`: lazily prune adj that is being queried
+    - `costmodel`: using cost model to decide which adj to prune
+- `--parallel_type`:
+    - `openmp`: parallel first loop only with OpenMP
+    - `tbb_top`: parallel first loop only with Tbb
+    - `nested`: nested loop for all computation
+    - `nested_rt`: nested loop + runtime information
+- `--scheduler`:
+    - `graphpi`: GraphPi cost model scheduler
+    - `graphzero`: GraphPi search with the GraphZero cost model
+    - `graphmini`: deterministic greedy scheduler 
+- `--num_threads`: positive thread count for execution; defaults to all available CPU threads
+- `--exp_id`: experiment id for logging, optional
 
 For example:
 ```bash
-./build/bin/run wiki ./dataset/GraphMini/wiki P1 0111101111011110 0 4 3
+./build/bin/run \
+  --graph_name=wiki \
+  --path_to_graph=./dataset/GraphMini/wiki \
+  --query_name=P1 \
+  --query_adjmat=0111101111011110 \
+  --query_type=vertex \
+  --pruning_type=costmodel \
+  --parallel_type=nested_rt \
+  --scheduler=graphpi
 ```
 
-This query runs P1 (4clique) on graph wiki. The query is vertex-induced. The executable uses CostModel to decide which adjacency lists to prune and uses nested parallelism to speed up query execution. 
+This query runs `P1` on graph `wiki`. The query is vertex-induced, uses cost-model pruning, and uses nested runtime parallelism.

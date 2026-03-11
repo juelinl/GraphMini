@@ -110,7 +110,7 @@ namespace minigraph {
             }
         }
 
-        LOG(INFO) << "Finished Reading in: " << t.Passed() << " seconds";
+        LOG(INFO) << "Finished Reading In: " << ToReadableDuration(t.Passed());
         // make sort edge pair for building indices
         t.Reset();
         tbb::parallel_sort(edge_vec.begin(), edge_vec.end(),
@@ -124,7 +124,7 @@ namespace minigraph {
         edge_vec.erase(std::unique(edge_vec.begin(), edge_vec.end()), edge_vec.end());
         edge_vec.shrink_to_fit();
 
-        LOG(INFO) << "Finished sorting edges: " << t.Passed() << " seconds";
+        LOG(INFO) << "Finished Sorting Edges: " << ToReadableDuration(t.Passed());
         t.Reset();
 
         v_num = nextID;
@@ -145,7 +145,7 @@ namespace minigraph {
         e_num = indices.size();
 
 
-        LOG(INFO) << "Finished building indices in: " << t.Passed() << " seconds";
+        LOG(INFO) << "Finished Building Indices: " << ToReadableDuration(t.Passed());
         tbb::parallel_for(tbb::blocked_range<uint64_t >(0, v_num), [this](tbb::blocked_range<uint64_t> r){
             for (uint64_t i = r.begin(); i != r.end(); i++){
                 Counter counter{};
@@ -167,7 +167,7 @@ namespace minigraph {
         max_deg = parallel_max(degrees);
         max_offset = parallel_max(offsets);
         max_tri = parallel_max(triangles);
-        LOG(INFO) << "Finished counting triangles in: " << t.Passed() << " seconds";
+        LOG(INFO) << "Finished Counting Triangles: " << ToReadableDuration(t.Passed());
     }
 
 
@@ -247,7 +247,7 @@ namespace minigraph {
 //        outfile.close();
 
         save_bin_u32();
-        LOG(INFO) << "Finished writing binary files in: " << t.Passed() << " seconds";
+        LOG(INFO) << "Finished Writing Binary Files: " << ToReadableDuration(t.Passed());
     }
 
     void GraphConverter::convert(std::filesystem::path input_dir) {
