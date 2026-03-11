@@ -2,8 +2,7 @@
 // Created by ubuntu on 1/18/23.
 //
 
-#ifndef MINIGRAPH_TIMER_H
-#define MINIGRAPH_TIMER_H
+#pragma once
 #include <chrono>
 namespace minigraph {
     class Timer {
@@ -39,4 +38,3 @@ namespace minigraph {
     };
 
 }
-#endif //MINIGRAPH_TIMER_H

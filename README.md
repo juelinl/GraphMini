@@ -13,16 +13,15 @@ GraphMini is a high-performance graph pattern-matching system. It supports subgr
 ### Libraries
 1. CMake (Version >= 3.20)
 2. Make
-3. MPI
-4. GCC compiler (>= 7)
-5. Python (>= 3.8)
-6. bc
-7. curl
-8. clang-format (optional)
+3. GCC compiler (>= 7)
+4. Python (>= 3.8)
+5. bc
+6. curl
+7. clang-format (optional)
 
 ### Install libraries
 ```bash
-sudo apt install curl bc cmake mpich clang-format -y
+sudo apt install curl bc cmake clang-format -y
 ```
 
 # Tested Graph Data
@@ -37,6 +36,8 @@ sudo apt install curl bc cmake mpich clang-format -y
 ```bash
 mkdir -p build && cd build && cmake .. && make -j
 ```
+
+The project fetches `fmt`, `cxxopts`, and `oneTBB` directly from their GitHub repositories at configure time. GraphPi's scheduling logic is compiled from the local standalone files [`include/graphpi_scheduler.hpp`](/home/juelin/GraphMini/include/graphpi_scheduler.hpp) and [`src/graphpi_scheduler.cpp`](/home/juelin/GraphMini/src/graphpi_scheduler.cpp), so MPI is no longer required to build GraphMini.
 
 # How to download and preprocess data graph
 After you successfully compile the code.
