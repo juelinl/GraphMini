@@ -2,8 +2,7 @@
 // Created by ubuntu on 1/1/23.
 //
 
-#ifndef MINIGRAPH_CODEGEN_H
-#define MINIGRAPH_CODEGEN_H
+#pragma once
 
 #include "common.h"
 namespace minigraph
@@ -20,5 +19,3 @@ namespace minigraph
      * */
     std::string gen_code(const std::string& adj_mat, CodeGenConfig config, MetaData meta);
 }
-
-#endif //MINIGRAPH_CODEGEN_H

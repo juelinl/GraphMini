@@ -2,8 +2,7 @@
 // Created by ubuntu on 1/18/23.
 //
 
-#ifndef MINIGRAPH_CONSTANT_H
-#define MINIGRAPH_CONSTANT_H
+#pragma once
 #include <string>
 #include <limits>
 namespace minigraph
@@ -87,4 +86,3 @@ namespace minigraph
         inline static const std::string kAdjReadPerLoopPerVertexCsv = "VID_TO_FREQ.csv";
     };
 }
-#endif //MINIGRAPH_CONSTANT_H

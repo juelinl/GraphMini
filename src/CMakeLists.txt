@@ -2,6 +2,9 @@ add_subdirectory(codegen)
 add_subdirectory(preprocess)
 add_subdirectory(codegen_output)
 
+add_library(graphpi_scheduler STATIC
+        graphpi_scheduler.cpp)
+
 add_library(common STATIC
         logging.cpp
         logitem.cpp

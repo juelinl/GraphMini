@@ -2,8 +2,7 @@
 // Created by ubuntu on 2/14/23.
 //
 
-#ifndef MINIGRAPH_LOGITEM_H
-#define MINIGRAPH_LOGITEM_H
+#pragma once
 #include "constant.h"
 #include "typedef.h"
 #include <string>
@@ -40,4 +39,3 @@ namespace minigraph {
 //        void read(std::string in_dir, int exp_id);
     };
 }
-#endif //MINIGRAPH_LOGITEM_H
