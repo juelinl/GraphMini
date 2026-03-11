@@ -7,6 +7,7 @@ add_library(graphpi_scheduler STATIC
 
 add_library(graphmini_scheduler STATIC
         graphmini_scheduler.cpp)
+target_link_libraries(graphmini_scheduler PRIVATE TBB::tbb)
 
 add_library(common STATIC
         logging.cpp
@@ -27,7 +28,7 @@ target_link_libraries(prof_runner PRIVATE common plan_profile)
 
 # benchmark executable frontend
 add_executable(run run.cpp)
-target_link_libraries(run PRIVATE codegen cxxopts::cxxopts fmt::fmt)
+target_link_libraries(run PRIVATE codegen cxxopts::cxxopts fmt::fmt TBB::tbb)
 
 # profile executable frontend
 add_executable(profile profile.cpp)

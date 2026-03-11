@@ -18,6 +18,7 @@
 #include <string>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <sstream>
 #include <chrono>
 #include <thread>
@@ -27,6 +28,95 @@ namespace {
 int default_thread_count() {
     const unsigned int detected = std::thread::hardware_concurrency();
     return std::max(1u, detected);
+}
+
+struct QueryInspection {
+    int pattern_size{0};
+    std::vector<int> self_loop_vertices;
+    std::vector<std::vector<int>> components;
+};
+
+std::string format_node_id(int node) {
+    return fmt::format("n{}", node);
+}
+
+std::string format_node_list(const std::vector<int> &nodes) {
+    std::ostringstream out;
+    for (size_t i = 0; i < nodes.size(); ++i) {
+        if (i != 0) {
+            out << ", ";
+        }
+        out << format_node_id(nodes[i]);
+    }
+    return out.str();
+}
+
+bool inspect_query_connectivity(const std::string &adj_mat, QueryInspection &inspection, std::string &error) {
+    const int pattern_size = static_cast<int>(std::sqrt(static_cast<double>(adj_mat.size())));
+    if (pattern_size < 1 || pattern_size * pattern_size != static_cast<int>(adj_mat.size())) {
+        error = "Invalid query adjacency matrix: length must be a non-zero square number.";
+        return false;
+    }
+
+    inspection = QueryInspection{};
+    inspection.pattern_size = pattern_size;
+    auto at = [&](int row, int col) {
+        return adj_mat[static_cast<size_t>(row * pattern_size + col)];
+    };
+
+    for (int vertex = 0; vertex < pattern_size; ++vertex) {
+        if (at(vertex, vertex) == '1') {
+            inspection.self_loop_vertices.push_back(vertex);
+        }
+    }
+
+    std::vector<char> visited(static_cast<size_t>(pattern_size), 0);
+    for (int start = 0; start < pattern_size; ++start) {
+        if (visited[static_cast<size_t>(start)] != 0) {
+            continue;
+        }
+
+        std::vector<int> component;
+        std::vector<int> queue = {start};
+        visited[static_cast<size_t>(start)] = 1;
+        for (size_t head = 0; head < queue.size(); ++head) {
+            const int node = queue[head];
+            component.push_back(node);
+            for (int other = 0; other < pattern_size; ++other) {
+                if (node == other || visited[static_cast<size_t>(other)] != 0) {
+                    continue;
+                }
+                if (at(node, other) == '1' || at(other, node) == '1') {
+                    visited[static_cast<size_t>(other)] = 1;
+                    queue.push_back(other);
+                }
+            }
+        }
+        std::sort(component.begin(), component.end());
+        inspection.components.push_back(std::move(component));
+    }
+
+    std::sort(inspection.components.begin(), inspection.components.end(),
+              [](const std::vector<int> &lhs, const std::vector<int> &rhs) {
+                  return lhs.front() < rhs.front();
+              });
+
+    if (inspection.components.size() <= 1) {
+        return true;
+    }
+
+    std::ostringstream out;
+    out << "Invalid query pattern: the query graph is disconnected after ignoring diagonal self-loops.\n";
+    out << "Pattern Size: " << inspection.pattern_size << '\n';
+    if (!inspection.self_loop_vertices.empty()) {
+        out << "Diagonal Self-Loops Ignored On: " << format_node_list(inspection.self_loop_vertices) << '\n';
+    }
+    out << "Connected Components:\n";
+    for (size_t i = 0; i < inspection.components.size(); ++i) {
+        out << "  " << (i + 1) << ". " << format_node_list(inspection.components[i]) << '\n';
+    }
+    error = out.str();
+    return false;
 }
 
 std::string to_lower(std::string value) {
@@ -428,5 +518,13 @@ int main(int argc, char *argv[]) {
     config.codegen = conf;
     config.data_name = graph_name;
     config.graph_dir = graph_dir;
+
+    QueryInspection inspection;
+    std::string inspection_error;
+    if (!inspect_query_connectivity(query_str, inspection, inspection_error)) {
+        std::cerr << inspection_error << std::endl;
+        return 1;
+    }
+
     compile_and_run(config);
 }
