@@ -30,6 +30,24 @@ namespace minigraph {
             return std::string(buf);
         }
     };
+
+    std::string ToReadableDuration(double seconds) {
+        char buf[Constant::kBufferSize];
+        double value = seconds;
+        const char *unit = "s";
+        if (seconds >= 3600.0) {
+            value = seconds / 3600.0;
+            unit = "h";
+        } else if (seconds >= 60.0) {
+            value = seconds / 60.0;
+            unit = "min";
+        } else if (seconds < 1.0) {
+            value = seconds * 1000.0;
+            unit = "ms";
+        }
+        snprintf(buf, Constant::kBufferSize, "%.3g%s", value, unit);
+        return std::string(buf);
+    }
 }
 
 namespace minigraph {

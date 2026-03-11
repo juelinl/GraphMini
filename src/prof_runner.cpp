@@ -11,6 +11,7 @@
 #include <mutex>
 #include <math.h>
 #include <condition_variable>
+#include <oneapi/tbb/global_control.h>
 using namespace std::chrono_literals;
 namespace minigraph {
     template<typename T>
@@ -89,6 +90,21 @@ namespace minigraph {
     }
 }
 
+namespace {
+int default_thread_count() {
+    const unsigned int detected = std::thread::hardware_concurrency();
+    return std::max(1u, detected);
+}
+
+int parse_num_threads_or_default(int argc, char *argv[], int index) {
+    if (argc <= index) {
+        return default_thread_count();
+    }
+    const int parsed = std::stoi(argv[index]);
+    return std::max(1, parsed);
+}
+} // namespace
+
 void plan_2hrs(minigraph::GraphType* graph, minigraph::Context& ctx) {
     std::mutex m;
     std::condition_variable cv;
@@ -128,13 +144,14 @@ int main(int argc, char *argv[]){
     std::string prof_aggr_path{argv[3]};
     std::string prof_loop_path{argv[4]};
     Timer t;
-    const int processor_count = std::thread::hardware_concurrency();
-    LOG(MSG) << "Threads\t" << processor_count;
+    const int processor_count = parse_num_threads_or_default(argc, argv, 5);
+    LOG(MSG) << "Thread Count: " << processor_count;
     GraphType *graph = load_bin(in_dir, false);
-    LOG(MSG) << "LoadTime\t" << t.Passed() << "s";
+    LOG(MSG) << "Load Time: " << ToReadableDuration(t.Passed());
     bool time_out = false;
     double seconds = 24 * 3600;
     t.Reset();
+    tbb::global_control tbb_thread_limit(tbb::global_control::max_allowed_parallelism, processor_count);
     Context ctx(processor_count);
     ctx.profiler = std::make_shared<Profiler>(pattern_size(), graph->get_vnum());
     try {
@@ -161,11 +178,11 @@ int main(int argc, char *argv[]){
         log.threadMaxTime = seconds;
         log.threadTimeSTD = 0.0;
 
-        LOG(MSG) << "CountTime\t" << "Timeout";
-        LOG(MSG) << "Results\t" << ctx.get_result();
-        LOG(MSG) << "Throughput\t" << result / seconds;
-        LOG(MSG) << "VertexSetAllocated\t" << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
-        LOG(MSG) << "MiniGraphAllocated\t" << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
+        LOG(MSG) << "Execution Time: Timeout";
+        LOG(MSG) << "Result: " << ctx.get_result();
+        LOG(MSG) << "Throughput: " << result / seconds;
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
     } else {
         result = ctx.get_result();
         seconds = t.Passed();
@@ -182,19 +199,19 @@ int main(int argc, char *argv[]){
         log.threadMaxTime = ctx.get_max_time();
         log.threadTimeSTD = sqrt(ctx.get_var_time());
 
-        LOG(MSG) << "CountTime\t" << seconds << "s";
-        LOG(MSG) << "Result\t" << ctx.get_result();
-        LOG(MSG) << "SetComp\t" << ctx.profiler->total_set_comp();
-        LOG(MSG) << "MGComp\t" << ctx.profiler->total_mg_comp();
-        LOG(MSG) << "NebComp\t" << ctx.profiler->total_neb_comp();
-        LOG(MSG) << "TotalComp\t" << ctx.profiler->total_set_comp() + ctx.profiler->total_mg_comp();
-        LOG(MSG) << "Throughput\t" << ctx.get_result() / seconds;
-        LOG(MSG) << "ThreadMeanTime\t" << ctx.get_mean_time() << "s";
-        LOG(MSG) << "ThreadMinTime\t" << ctx.get_min_time() << "s";
-        LOG(MSG) << "ThreadMaxTime\t" << ctx.get_max_time() << "s";
-        LOG(MSG) << "TimeSTD\t" << sqrt(ctx.get_var_time());
-        LOG(MSG) << "VertexSetAllocated\t" << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
-        LOG(MSG) << "MiniGraphAllocated\t" << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
+        LOG(MSG) << "Execution Time: " << ToReadableDuration(seconds);
+        LOG(MSG) << "Result: " << ctx.get_result();
+        LOG(MSG) << "Set Comp: " << ctx.profiler->total_set_comp();
+        LOG(MSG) << "MiniGraph Comp: " << ctx.profiler->total_mg_comp();
+        LOG(MSG) << "Neighbor Comp: " << ctx.profiler->total_neb_comp();
+        LOG(MSG) << "Total Comp: " << ctx.profiler->total_set_comp() + ctx.profiler->total_mg_comp();
+        LOG(MSG) << "Throughput: " << ctx.get_result() / seconds;
+        LOG(MSG) << "Thread Mean Time: " << ToReadableDuration(ctx.get_mean_time());
+        LOG(MSG) << "Thread Min Time: " << ToReadableDuration(ctx.get_min_time());
+        LOG(MSG) << "Thread Max Time: " << ToReadableDuration(ctx.get_max_time());
+        LOG(MSG) << "Thread Time Std Dev: " << ToReadableDuration(sqrt(ctx.get_var_time()));
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
 
         uint64_t *VID_TO_DEG = new uint64_t [graph->get_vnum()];
         uint64_t *VID_TO_OFFSET = graph->m_offset;

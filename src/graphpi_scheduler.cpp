@@ -338,6 +338,7 @@ void GraphPiScheduler::reset() {
     in_exclusion_optimize_num_ = 0;
     in_exclusion_optimize_redundancy_ = 1;
     adj_mat_.clear();
+    matching_order_.clear();
     father_prefix_id_.clear();
     last_.clear();
     next_.clear();
@@ -997,6 +998,7 @@ void GraphPiScheduler::get_schedule(const char *input_adj_mat,
         }
     }
 
+    matching_order_ = best_order;
     std::vector<int> rank(static_cast<size_t>(size_), 0);
     for (int i = 0; i < size_; ++i) {
         rank[static_cast<size_t>(best_order[static_cast<size_t>(i)])] = i;
