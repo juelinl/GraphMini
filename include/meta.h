@@ -2,8 +2,7 @@
 // Created by ubuntu on 1/18/23.
 //
 
-#ifndef MINIGRAPH_META_H
-#define MINIGRAPH_META_H
+#pragma once
 #include <string>
 #include <stdint.h>
 
@@ -28,4 +27,3 @@ namespace minigraph
         void read(std::string in_dir);;
     };
 }
-#endif //MINIGRAPH_META_H
