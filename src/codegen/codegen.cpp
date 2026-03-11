@@ -12,8 +12,9 @@
 #include <fmt/format.h>
 #include <sstream>
 #include <algorithm>
+#include <set>
 #include <utility>
-#include "../../dependency/GraphPi/include/schedule.h"
+#include "graphpi_scheduler.hpp"
 #include "typedef.h"
 
 namespace minigraph {
@@ -81,7 +82,7 @@ namespace minigraph {
 
     PlanIR create_plan(const std::string &_adj_mat, CodeGenConfig config, MetaData meta) {
         Timer t;
-        Schedule sc{};
+        GraphPiScheduler sc{};
         int p_size = get_pattern_size(_adj_mat);
         sc.get_schedule(_adj_mat.c_str(), p_size, meta.num_vertex, meta.num_edge, meta.num_triangle);
         std::string adj_mat = sc.get_adj_mat_str();
@@ -245,11 +246,13 @@ namespace minigraph {
             }
         }
         for (auto &mg_op: out.mg_ops) {
-            for (auto itr = mg_op.begin(); itr != mg_op.end(); itr++) {
-                if (!IndeedUsed.at(itr->id)) {
-                    mg_op.erase(itr);
-                }
-            }
+            mg_op.erase(std::remove_if(mg_op.begin(), mg_op.end(),
+                                       [&IndeedUsed](const MiniGraphIR &mg) {
+                                           return mg.id < 0 ||
+                                                  static_cast<size_t>(mg.id) >= IndeedUsed.size() ||
+                                                  !IndeedUsed.at(static_cast<size_t>(mg.id));
+                                       }),
+                        mg_op.end());
         }
         return out;
     };

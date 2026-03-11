@@ -2,8 +2,7 @@
 // Created by ubuntu on 1/2/23.
 //
 
-#ifndef MINIGRAPH_TYPEDEF_H
-#define MINIGRAPH_TYPEDEF_H
+#pragma once
 
 namespace minigraph {
 //---------- Basic Types ----------
@@ -50,4 +49,3 @@ namespace minigraph {
         unsigned long count {0};
     };
 }
-#endif //MINIGRAPH_TYPEDEF_H

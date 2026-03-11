@@ -2,8 +2,7 @@
 // Created by ubuntu on 1/1/23.
 //
 
-#ifndef MINIGRAPH_IR_H
-#define MINIGRAPH_IR_H
+#pragma once
 
 #include "common.h"
 #include <bitset>
@@ -125,4 +124,3 @@ namespace minigraph {
         };
     };
 } // NAMESPACE minigraph
-#endif //MINIGRAPH_IR_H
