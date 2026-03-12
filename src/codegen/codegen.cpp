@@ -48,18 +48,20 @@ namespace minigraph {
             return fmt::format("n{}", vertex);
         }
 
-        std::string format_matching_order(const std::vector<int> &matching_order) {
+        std::string format_schedule_vertex(int vertex) {
+            return fmt::format("v{}", vertex);
+        }
+
+        std::string format_generated_schedule(const std::vector<int> &matching_order) {
             if (matching_order.empty()) {
-                return "Matching Order: unavailable";
+                return "Generated Schedule: unavailable";
             }
 
             std::ostringstream out;
-            out << "Matching Order: ";
+            out << "Generated Schedule:";
             for (size_t i = 0; i < matching_order.size(); ++i) {
-                if (i != 0) {
-                    out << " -> ";
-                }
-                out << format_query_vertex(matching_order[i]);
+                out << "\n  " << format_query_vertex(matching_order[i])
+                    << " -> " << format_schedule_vertex(static_cast<int>(i));
             }
             return out.str();
         }
@@ -82,12 +84,12 @@ namespace minigraph {
 
                 has_constraints = true;
                 std::sort(checks.begin(), checks.end());
-                out << "\n  " << format_query_vertex(vertex) << ": ";
+                out << "\n  " << format_schedule_vertex(vertex) << ": ";
                 for (size_t i = 0; i < checks.size(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << format_query_vertex(checks[i]) << " > " << format_query_vertex(vertex);
+                    out << format_schedule_vertex(checks[i]) << " > " << format_schedule_vertex(vertex);
                 }
             }
 
@@ -97,31 +99,18 @@ namespace minigraph {
             return out.str();
         }
 
-        std::string format_scheduled_adjacency_lists(const std::string &adj_mat,
-                                                     const std::vector<int> &matching_order,
-                                                     int pattern_size) {
+        std::string format_scheduled_adjacency_lists(const std::string &adj_mat, int pattern_size) {
             std::ostringstream out;
             out << "Scheduled Adjacency Lists:";
-            std::vector<int> schedule_position(static_cast<size_t>(pattern_size), 0);
-            if (matching_order.empty()) {
-                std::iota(schedule_position.begin(), schedule_position.end(), 0);
-            } else {
-                for (int row = 0; row < pattern_size; ++row) {
-                    schedule_position[static_cast<size_t>(matching_order[static_cast<size_t>(row)])] = row;
-                }
-            }
-
-            for (int vertex = 0; vertex < pattern_size; ++vertex) {
-                const int row = schedule_position[static_cast<size_t>(vertex)];
-                out << "\n  " << format_query_vertex(vertex) << ": ";
+            for (int row = 0; row < pattern_size; ++row) {
+                out << "\n  " << format_schedule_vertex(row) << ": ";
 
                 std::vector<int> unmatched_neighbors;
                 for (int col = row + 1; col < pattern_size; ++col) {
                     if (adj_mat[static_cast<size_t>(row * pattern_size + col)] != '1') {
                         continue;
                     }
-                    const int neighbor = matching_order.empty() ? col : matching_order[static_cast<size_t>(col)];
-                    unmatched_neighbors.push_back(neighbor);
+                    unmatched_neighbors.push_back(col);
                 }
 
                 std::sort(unmatched_neighbors.begin(), unmatched_neighbors.end());
@@ -134,7 +123,7 @@ namespace minigraph {
                     if (i != 0) {
                         out << ", ";
                     }
-                    out << format_query_vertex(unmatched_neighbors[i]);
+                    out << format_schedule_vertex(unmatched_neighbors[i]);
                 }
             }
             return out.str();
@@ -254,8 +243,8 @@ namespace minigraph {
         ScheduleResult schedule = schedule_pattern(_adj_mat, p_size, config, meta);
         std::string adj_mat = schedule.adj_mat;
         std::string res_mat = restricts_to_str(schedule.restrict_pair, p_size);
-        LOG(MSG) << format_matching_order(schedule.matching_order);
-        LOG(MSG) << format_scheduled_adjacency_lists(adj_mat, schedule.matching_order, p_size);
+        LOG(MSG) << format_generated_schedule(schedule.matching_order);
+        LOG(MSG) << format_scheduled_adjacency_lists(adj_mat, p_size);
         LOG(MSG) << format_canonicality_constraints(schedule.restrict_pair, p_size);
         LOG(MSG) << "Scheduling Time: " << ToReadableDuration(t.Passed());
         t.Reset();
@@ -1106,6 +1095,8 @@ namespace minigraph {
         out << "\t} // plan\n";
         out << "} // namespace minigraph \n";
 
+        out << "extern \"C\" uint64_t graphmini_pattern_size(){return minigraph::pattern_size();}\n";
+        out << "extern \"C\" void graphmini_plan(const minigraph::GraphType* graph, minigraph::Context* ctx){minigraph::plan(graph, *ctx);}\n";
         out << "extern \"C\" void plan(const minigraph::GraphType* graph, minigraph::Context& ctx){return minigraph::plan(graph, ctx);};";
         LOG(INFO) << "Code Generation Time: " << ToReadableDuration(t.Passed());
         return out.str();
@@ -1561,6 +1552,8 @@ namespace minigraph {
         out << "\t\ttbb::parallel_for(tbb::blocked_range<size_t>(0, graph->get_vnum()), Loop0(ctx), tbb::simple_partitioner());\n";
         out << "\t} // plan\n";
         out << "} // minigraph\n";
+        out << "extern \"C\" uint64_t graphmini_pattern_size(){return minigraph::pattern_size();}\n";
+        out << "extern \"C\" void graphmini_plan(const minigraph::GraphType* graph, minigraph::Context* ctx){minigraph::plan(graph, *ctx);}\n";
         return out.str();
     }
 

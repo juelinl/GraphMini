@@ -6,12 +6,17 @@
 #include <fstream>
 #include <numeric>
 #include <string>
-#include <sys/mman.h>
 #include <type_traits>
-#include <unistd.h>
 #include <utility>
-#include <fcntl.h>
 #include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 namespace minigraph {
 
@@ -36,11 +41,24 @@ inline void read_graph_file(const std::filesystem::path &path, T *&pointer, uint
 template<typename T>
 inline void mmap_graph_file(const std::filesystem::path &path, T *&pointer, uint64_t num_elements) {
     CHECK(std::filesystem::is_regular_file(path)) << "File does not exists: " << path;
+#ifdef _WIN32
+    const auto path_w = path.wstring();
+    HANDLE file_handle = CreateFileW(path_w.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
+                                     FILE_ATTRIBUTE_NORMAL, nullptr);
+    CHECK(file_handle != INVALID_HANDLE_VALUE) << "Failed to open: " << path;
+    HANDLE mapping_handle = CreateFileMappingW(file_handle, nullptr, PAGE_READONLY, 0, 0, nullptr);
+    CHECK(mapping_handle != nullptr) << "Failed to create file mapping: " << path;
+    pointer = static_cast<T *>(MapViewOfFile(mapping_handle, FILE_MAP_READ, 0, 0, sizeof(T) * num_elements));
+    CHECK(pointer != nullptr) << "Failed to map file: " << path;
+    CHECK(CloseHandle(mapping_handle) != 0) << "Failed to close file mapping handle: " << path;
+    CHECK(CloseHandle(file_handle) != 0) << "Failed to close file handle: " << path;
+#else
     int fd = open(path.c_str(), O_RDONLY, 0);
     CHECK(fd != -1) << "Failed to open: " << path;
     pointer = static_cast<T *>(mmap(nullptr, sizeof(T) * num_elements, PROT_READ, MAP_SHARED, fd, 0));
     CHECK(pointer != MAP_FAILED) << "Failed to map file: " << path;
     CHECK(close(fd) == 0) << "Failed to close file: " << path;
+#endif
 }
 
 template<typename T>
@@ -58,7 +76,11 @@ inline void release_graph_indices(GraphT &graph) {
         return;
     }
     if (graph.m_mmap) {
+#ifdef _WIN32
+        CHECK(UnmapViewOfFile(graph.m_indices) != 0) << "Failed to unmap graph indices";
+#else
         munmap(graph.m_indices, sizeof(VertexId) * graph.num_edge);
+#endif
     } else {
         delete[] graph.m_indices;
     }
