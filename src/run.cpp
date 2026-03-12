@@ -232,7 +232,8 @@ std::string build_run_help(const cxxopts::Options &) {
            "--query_adjmat=<adjmat> --query_type=<vertex|edge|edge_iep> "
            "--pruning_type=<none|static|eager|online|costmodel> "
            "--parallel_type=<openmp|tbb_top|nested|nested_rt> "
-           "[--scheduler=<graphpi|graphmini|graphzero>] [--num_threads=<count>] [--exp_id=<id>]\n\n";
+           "[--scheduler=<graphpi|graphmini|graphzero>] [--num_threads=<count>] "
+           "[--graph_reordering[=<true|false>]] [--exp_id=<id>]\n\n";
     out << "Required Options:\n";
     out << "  --graph_name      Graph nickname.\n";
     out << "  --path_to_graph   Path to the preprocessed graph directory.\n";
@@ -244,6 +245,8 @@ std::string build_run_help(const cxxopts::Options &) {
     out << "Optional Options:\n";
     out << "  --scheduler       One of: graphpi, graphmini, graphzero. Default: graphmini.\n";
     out << "  --num_threads     Positive thread count. Default: all available threads.\n";
+    out << "  --graph_reordering Enable degree-based graph reordering. Higher-degree vertices get\n";
+    out << "                    smaller ids. Default: false. Disable with --graph_reordering=false.\n";
     out << "  --exp_id          Experiment id for logging. Default: -1.\n";
     out << "  --help            Show this help text.\n\n";
     out << "Positional Compatibility:\n";
@@ -252,7 +255,8 @@ std::string build_run_help(const cxxopts::Options &) {
     out << "Examples:\n";
     out << "  ./build/bin/run --graph_name=wiki --path_to_graph=./dataset/GraphMini/wiki "
            "--query_name=P1 --query_adjmat=0111101111011110 --query_type=vertex "
-           "--pruning_type=costmodel --parallel_type=nested_rt --scheduler=graphmini --num_threads=32\n";
+           "--pruning_type=costmodel --parallel_type=nested_rt --scheduler=graphmini "
+           "--num_threads=32 --graph_reordering\n";
     out << "  ./build/bin/run wiki ./dataset/GraphMini/wiki P1 0111101111011110 vertex costmodel nested_rt "
            "--scheduler=graphpi --exp_id=42\n";
     return out.str();
@@ -284,6 +288,7 @@ std::string exec(const char *cmd) {
 struct AppConfig {
     int exp_id;
     int num_threads;
+    bool graph_reordering;
     CodeGenConfig codegen;
     std::string data_name;
     std::string pattern_name;
@@ -407,11 +412,12 @@ void compile(AppConfig config) {
 
 void run(AppConfig config) {
     std::filesystem::path bin_path = std::filesystem::path(PROJECT_PLAN_DIR) / std::to_string(config.exp_id);
-    auto run_cmd = fmt::format("{bin_path} {exp_id} {data_dir} {num_threads}",
+    auto run_cmd = fmt::format("{bin_path} {exp_id} {data_dir} {num_threads} {graph_reordering}",
                                fmt::arg("bin_path", bin_path.string()),
                                fmt::arg("data_dir", config.graph_dir),
                                fmt::arg("exp_id", config.exp_id),
-                               fmt::arg("num_threads", config.num_threads));
+                               fmt::arg("num_threads", config.num_threads),
+                               fmt::arg("graph_reordering", config.graph_reordering ? "true" : "false"));
     std::string run_results = exec(run_cmd.c_str());
     LOG(MSG) << run_results;
 }
@@ -439,6 +445,9 @@ int main(int argc, char *argv[]) {
              cxxopts::value<std::string>()->default_value("graphmini"))
             ("num_threads", "Positive thread count. Default: all available threads",
              cxxopts::value<int>())
+            ("graph_reordering",
+             "Enable degree-based graph reordering. Higher-degree vertices get smaller ids",
+             cxxopts::value<bool>()->default_value("false")->implicit_value("true"))
             ("exp_id", "Experiment id", cxxopts::value<int>()->default_value("-1"))
             ("help", "Show help");
     options.parse_positional({"graph_name", "path_to_graph", "query_name", "query_adjmat",
@@ -513,6 +522,7 @@ int main(int argc, char *argv[]) {
     AppConfig config;
     config.exp_id = exp_id;
     config.num_threads = num_threads;
+    config.graph_reordering = parsed["graph_reordering"].as<bool>();
     config.pattern_name = query_name;
     config.pat = query_str;
     config.codegen = conf;
