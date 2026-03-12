@@ -7,6 +7,18 @@ GraphMini is a high-performance graph pattern-matching system for subgraph enume
 
 The Python API is the easiest entry point for most users, so this README starts there.
 
+## Table of Contents
+
+- [Python Quick Start](#python-quick-start)
+- [Python API Overview](#python-api-overview)
+- [Example: Run on a Preprocessed Graph](#example-run-on-a-preprocessed-graph)
+- [Example: Build a Graph from NumPy CSR Arrays](#example-build-a-graph-from-numpy-csr-arrays)
+- [Example: Reuse a Compiled Plan](#example-reuse-a-compiled-plan)
+- [CLI Workflow](#cli-workflow)
+- [Requirements](#requirements)
+- [Tested Graph Data](#tested-graph-data)
+- [Citation](#citation)
+
 ## Python Quick Start
 
 ### 1. Create a Python environment
@@ -427,3 +439,23 @@ Remaining caveats:
 4. LiveJournal
 5. Orkut
 6. Friendster
+
+## Citation
+
+If GraphMini is helpful in your work, please consider citing the paper:
+
+- [GraphMini: Accelerating Graph Pattern Matching Using Auxiliary Graphs](https://arxiv.org/abs/2403.01050)
+
+```bibtex
+@inproceedings{Liu_2023,
+   title={GraphMini: Accelerating Graph Pattern Matching Using Auxiliary Graphs},
+   url={http://dx.doi.org/10.1109/PACT58117.2023.00026},
+   DOI={10.1109/pact58117.2023.00026},
+   booktitle={2023 32nd International Conference on Parallel Architectures and Compilation Techniques (PACT)},
+   publisher={IEEE},
+   author={Liu, Juelin and Polisetty, Sandeep and Guan, Hui and Serafini, Marco},
+   year={2023},
+   month=oct,
+   pages={211--224}
+}
+```
