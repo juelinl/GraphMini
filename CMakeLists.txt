@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(GraphMini)
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -48,7 +49,27 @@ FetchContent_Declare(
         GIT_TAG 12.1.0
         GIT_SHALLOW TRUE)
 
-FetchContent_MakeAvailable(cxxopts oneTBB fmt)
+set(PYBIND11_TEST OFF CACHE BOOL "" FORCE)
+set(PYBIND11_INSTALL OFF CACHE BOOL "" FORCE)
+set(PYBIND11_FINDPYTHON ON CACHE BOOL "" FORCE)
+set(Python3_FIND_VIRTUALENV FIRST)
+if(DEFINED ENV{VIRTUAL_ENV} AND EXISTS "$ENV{VIRTUAL_ENV}/bin/python")
+    set(Python3_EXECUTABLE "$ENV{VIRTUAL_ENV}/bin/python" CACHE FILEPATH "Python executable" FORCE)
+elseif(NOT EXISTS "/usr/include/python3.12/Python.h")
+    if(EXISTS "$ENV{HOME}/miniconda3/bin/python")
+        set(Python3_EXECUTABLE "$ENV{HOME}/miniconda3/bin/python" CACHE FILEPATH "Python executable" FORCE)
+    elseif(EXISTS "$ENV{HOME}/anaconda3/bin/python")
+        set(Python3_EXECUTABLE "$ENV{HOME}/anaconda3/bin/python" CACHE FILEPATH "Python executable" FORCE)
+    endif()
+endif()
+find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
+FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.13.6
+        GIT_SHALLOW TRUE)
+
+FetchContent_MakeAvailable(cxxopts oneTBB fmt pybind11)
 find_package(OpenMP REQUIRED COMPONENTS CXX)
 
 set(PROJECT_PROFILE_DIR "${PROJECT_SOURCE_DIR}/profile/")
@@ -62,4 +83,5 @@ message("CMAKE_CXX_FLAGS_DEBUG: " ${CMAKE_CXX_FLAGS_DEBUG})
 message("CMAKE_CXX_FLAGS_RELEASE: " ${CMAKE_CXX_FLAGS_RELEASE})
 include_directories(${PROJECT_BINARY_DIR}/configure)
 include_directories(include)
+include_directories(src)
 add_subdirectory(src)

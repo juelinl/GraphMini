@@ -25,6 +25,32 @@
 using namespace minigraph;
 
 namespace {
+#ifdef _WIN32
+FILE *portable_popen(const char *cmd, const char *mode) {
+    return _popen(cmd, mode);
+}
+
+int portable_pclose(FILE *pipe) {
+    return _pclose(pipe);
+}
+
+const char *null_device_path() {
+    return "NUL";
+}
+#else
+FILE *portable_popen(const char *cmd, const char *mode) {
+    return popen(cmd, mode);
+}
+
+int portable_pclose(FILE *pipe) {
+    return pclose(pipe);
+}
+
+const char *null_device_path() {
+    return "/dev/null";
+}
+#endif
+
 int default_thread_count() {
     const unsigned int detected = std::thread::hardware_concurrency();
     return std::max(1u, detected);
@@ -267,14 +293,14 @@ std::string exec(const char *cmd) {
     struct PipeCloser {
         void operator()(FILE *pipe) const {
             if (pipe != nullptr) {
-                pclose(pipe);
+                portable_pclose(pipe);
             }
         }
     };
 
     std::array<char, 128> buffer;
     std::string result;
-    std::unique_ptr<FILE, PipeCloser> pipe(popen(cmd, "r"));
+    std::unique_ptr<FILE, PipeCloser> pipe(portable_popen(cmd, "r"));
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
@@ -367,8 +393,9 @@ void compile(AppConfig config) {
     LOG(MSG) << "Code Generation Time: " << ToReadableDuration(codewrite_t + codegen_t);
 
     // compile and run
-    auto compile_cmd = fmt::format("cmake --build {compile_path} --target runner 1>>/dev/null 2>>/dev/null",
-                                   fmt::arg("compile_path", PROJECT_BINARY_DIR));
+    auto compile_cmd = fmt::format("cmake --build {compile_path} --target runner 1>>{null_device} 2>>{null_device}",
+                                   fmt::arg("compile_path", PROJECT_BINARY_DIR),
+                                   fmt::arg("null_device", null_device_path()));
     // LOG(MSG) << "CMD: " << compile_cmd;
     t.Reset();
     int flag = system(compile_cmd.c_str());
@@ -381,20 +408,27 @@ void compile(AppConfig config) {
     if (flag != 0) exit(-1 && "compilation error");
     auto compile_t = t.Passed();
     LOG(MSG) << "Compilation Time: " << ToReadableDuration(compile_t);
-    auto mkdir_cmd = fmt::format("mkdir -p {bin_dir}",
-                                 fmt::arg("bin_dir", PROJECT_PLAN_DIR));
-    // LOG(MSG) << "CMD: " << mkdir_cmd;
-    flag = system(mkdir_cmd.c_str());
-    if (flag != 0) exit(-1 && "mkdir error");
+    std::error_code mkdir_error;
+    std::filesystem::create_directories(std::filesystem::path(PROJECT_PLAN_DIR), mkdir_error);
+    if (mkdir_error) {
+        std::cerr << "Failed to create plan directory: " << mkdir_error.message() << std::endl;
+        exit(-1);
+    }
 
     std::filesystem::path bin_path = std::filesystem::path(CMAKE_RUNTIME_OUTPUT_DIRECTORY) / "runner";
     std::filesystem::path dst_path = std::filesystem::path(PROJECT_PLAN_DIR) / std::to_string(config.exp_id);
-    auto mv_cmd = fmt::format("mv {bin_path} {dst_path}",
-                              fmt::arg("bin_path", bin_path.string()),
-                              fmt::arg("dst_path", dst_path.string()));
-
-    flag = system(mv_cmd.c_str());
-    if (flag != 0) exit(-1 && "mv error");
+    std::error_code move_error;
+    std::filesystem::rename(bin_path, dst_path, move_error);
+    if (move_error) {
+        std::filesystem::copy_file(bin_path, dst_path,
+                                   std::filesystem::copy_options::overwrite_existing,
+                                   move_error);
+        if (move_error) {
+            std::cerr << "Failed to move runner binary: " << move_error.message() << std::endl;
+            exit(-1);
+        }
+        std::filesystem::remove(bin_path, move_error);
+    }
 
     log.expId = config.exp_id;
     log.patternSize = sqrt(config.pat.size());
