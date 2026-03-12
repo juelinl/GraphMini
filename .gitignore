@@ -4,6 +4,9 @@ build-ninja
 cmake-build-debug
 cmake-build-release
 
+# env
+venv
+
 # idea
 .vscode
 .idea

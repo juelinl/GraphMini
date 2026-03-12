@@ -5,8 +5,12 @@
 #ifndef MINIGRAPH_GRAPH_H
 #define MINIGRAPH_GRAPH_H
 #include "vertex_set.h"
-#include <sys/mman.h>
 #include <math.h>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/mman.h>
+#endif
 namespace minigraph {
     struct Graph {
         IdType *m_indices{nullptr};
@@ -24,7 +28,11 @@ namespace minigraph {
             if (!m_mmap) {
                 if (m_indices != nullptr) delete[] m_indices;
             } else {
+#ifdef _WIN32
+                UnmapViewOfFile(m_indices);
+#else
                 munmap(m_indices, sizeof(IdType) * num_edge);
+#endif
             }
             if (m_indptr != nullptr) delete[] m_indptr;
             if (m_offset != nullptr) delete[] m_offset;

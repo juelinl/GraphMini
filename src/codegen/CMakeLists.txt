@@ -1,5 +1,5 @@
-add_library(codegen STATIC
+add_library(graphmini_codegen STATIC
         codegen.cpp
         ir.cpp)
 
-target_link_libraries(codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
+target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
