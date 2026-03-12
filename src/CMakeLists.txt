@@ -14,6 +14,15 @@ add_library(common STATIC
         logitem.cpp
         meta.cpp)
 
+add_library(graph_runtime STATIC
+        plan_module.cpp
+        graph_builder.cpp)
+target_link_libraries(graph_runtime PUBLIC common OpenMP::OpenMP_CXX TBB::tbb TBB::tbbmalloc ${CMAKE_DL_LIBS})
+
+pybind11_add_module(pygraphmini MODULE
+        python_api.cpp)
+target_link_libraries(pygraphmini PRIVATE graphmini_codegen graph_runtime)
+
 # graph converter
 add_executable(prep prep.cpp)
 target_link_libraries(prep PRIVATE preprocess common cxxopts::cxxopts)
@@ -28,8 +37,8 @@ target_link_libraries(prof_runner PRIVATE common plan_profile)
 
 # benchmark executable frontend
 add_executable(run run.cpp)
-target_link_libraries(run PRIVATE codegen cxxopts::cxxopts fmt::fmt TBB::tbb)
+target_link_libraries(run PRIVATE graphmini_codegen cxxopts::cxxopts fmt::fmt TBB::tbb)
 
 # profile executable frontend
 add_executable(profile profile.cpp)
-target_link_libraries(profile PRIVATE common codegen cxxopts::cxxopts fmt::fmt TBB::tbb TBB::tbbmalloc ${CMAKE_DL_LIBS})
+target_link_libraries(profile PRIVATE common graphmini_codegen cxxopts::cxxopts fmt::fmt TBB::tbb TBB::tbbmalloc ${CMAKE_DL_LIBS})

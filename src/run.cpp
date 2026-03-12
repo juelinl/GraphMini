@@ -25,6 +25,32 @@
 using namespace minigraph;
 
 namespace {
+#ifdef _WIN32
+FILE *portable_popen(const char *cmd, const char *mode) {
+    return _popen(cmd, mode);
+}
+
+int portable_pclose(FILE *pipe) {
+    return _pclose(pipe);
+}
+
+const char *null_device_path() {
+    return "NUL";
+}
+#else
+FILE *portable_popen(const char *cmd, const char *mode) {
+    return popen(cmd, mode);
+}
+
+int portable_pclose(FILE *pipe) {
+    return pclose(pipe);
+}
+
+const char *null_device_path() {
+    return "/dev/null";
+}
+#endif
+
 int default_thread_count() {
     const unsigned int detected = std::thread::hardware_concurrency();
     return std::max(1u, detected);
@@ -232,7 +258,8 @@ std::string build_run_help(const cxxopts::Options &) {
            "--query_adjmat=<adjmat> --query_type=<vertex|edge|edge_iep> "
            "--pruning_type=<none|static|eager|online|costmodel> "
            "--parallel_type=<openmp|tbb_top|nested|nested_rt> "
-           "[--scheduler=<graphpi|graphmini|graphzero>] [--num_threads=<count>] [--exp_id=<id>]\n\n";
+           "[--scheduler=<graphpi|graphmini|graphzero>] [--num_threads=<count>] "
+           "[--graph_reordering[=<true|false>]] [--exp_id=<id>]\n\n";
     out << "Required Options:\n";
     out << "  --graph_name      Graph nickname.\n";
     out << "  --path_to_graph   Path to the preprocessed graph directory.\n";
@@ -244,6 +271,8 @@ std::string build_run_help(const cxxopts::Options &) {
     out << "Optional Options:\n";
     out << "  --scheduler       One of: graphpi, graphmini, graphzero. Default: graphmini.\n";
     out << "  --num_threads     Positive thread count. Default: all available threads.\n";
+    out << "  --graph_reordering Enable degree-based graph reordering. Higher-degree vertices get\n";
+    out << "                    smaller ids. Default: false. Disable with --graph_reordering=false.\n";
     out << "  --exp_id          Experiment id for logging. Default: -1.\n";
     out << "  --help            Show this help text.\n\n";
     out << "Positional Compatibility:\n";
@@ -252,7 +281,8 @@ std::string build_run_help(const cxxopts::Options &) {
     out << "Examples:\n";
     out << "  ./build/bin/run --graph_name=wiki --path_to_graph=./dataset/GraphMini/wiki "
            "--query_name=P1 --query_adjmat=0111101111011110 --query_type=vertex "
-           "--pruning_type=costmodel --parallel_type=nested_rt --scheduler=graphmini --num_threads=32\n";
+           "--pruning_type=costmodel --parallel_type=nested_rt --scheduler=graphmini "
+           "--num_threads=32 --graph_reordering\n";
     out << "  ./build/bin/run wiki ./dataset/GraphMini/wiki P1 0111101111011110 vertex costmodel nested_rt "
            "--scheduler=graphpi --exp_id=42\n";
     return out.str();
@@ -263,14 +293,14 @@ std::string exec(const char *cmd) {
     struct PipeCloser {
         void operator()(FILE *pipe) const {
             if (pipe != nullptr) {
-                pclose(pipe);
+                portable_pclose(pipe);
             }
         }
     };
 
     std::array<char, 128> buffer;
     std::string result;
-    std::unique_ptr<FILE, PipeCloser> pipe(popen(cmd, "r"));
+    std::unique_ptr<FILE, PipeCloser> pipe(portable_popen(cmd, "r"));
     if (!pipe) {
         throw std::runtime_error("popen() failed!");
     }
@@ -284,6 +314,7 @@ std::string exec(const char *cmd) {
 struct AppConfig {
     int exp_id;
     int num_threads;
+    bool graph_reordering;
     CodeGenConfig codegen;
     std::string data_name;
     std::string pattern_name;
@@ -362,8 +393,9 @@ void compile(AppConfig config) {
     LOG(MSG) << "Code Generation Time: " << ToReadableDuration(codewrite_t + codegen_t);
 
     // compile and run
-    auto compile_cmd = fmt::format("cmake --build {compile_path} --target runner 1>>/dev/null 2>>/dev/null",
-                                   fmt::arg("compile_path", PROJECT_BINARY_DIR));
+    auto compile_cmd = fmt::format("cmake --build {compile_path} --target runner 1>>{null_device} 2>>{null_device}",
+                                   fmt::arg("compile_path", PROJECT_BINARY_DIR),
+                                   fmt::arg("null_device", null_device_path()));
     // LOG(MSG) << "CMD: " << compile_cmd;
     t.Reset();
     int flag = system(compile_cmd.c_str());
@@ -376,20 +408,27 @@ void compile(AppConfig config) {
     if (flag != 0) exit(-1 && "compilation error");
     auto compile_t = t.Passed();
     LOG(MSG) << "Compilation Time: " << ToReadableDuration(compile_t);
-    auto mkdir_cmd = fmt::format("mkdir -p {bin_dir}",
-                                 fmt::arg("bin_dir", PROJECT_PLAN_DIR));
-    // LOG(MSG) << "CMD: " << mkdir_cmd;
-    flag = system(mkdir_cmd.c_str());
-    if (flag != 0) exit(-1 && "mkdir error");
+    std::error_code mkdir_error;
+    std::filesystem::create_directories(std::filesystem::path(PROJECT_PLAN_DIR), mkdir_error);
+    if (mkdir_error) {
+        std::cerr << "Failed to create plan directory: " << mkdir_error.message() << std::endl;
+        exit(-1);
+    }
 
     std::filesystem::path bin_path = std::filesystem::path(CMAKE_RUNTIME_OUTPUT_DIRECTORY) / "runner";
     std::filesystem::path dst_path = std::filesystem::path(PROJECT_PLAN_DIR) / std::to_string(config.exp_id);
-    auto mv_cmd = fmt::format("mv {bin_path} {dst_path}",
-                              fmt::arg("bin_path", bin_path.string()),
-                              fmt::arg("dst_path", dst_path.string()));
-
-    flag = system(mv_cmd.c_str());
-    if (flag != 0) exit(-1 && "mv error");
+    std::error_code move_error;
+    std::filesystem::rename(bin_path, dst_path, move_error);
+    if (move_error) {
+        std::filesystem::copy_file(bin_path, dst_path,
+                                   std::filesystem::copy_options::overwrite_existing,
+                                   move_error);
+        if (move_error) {
+            std::cerr << "Failed to move runner binary: " << move_error.message() << std::endl;
+            exit(-1);
+        }
+        std::filesystem::remove(bin_path, move_error);
+    }
 
     log.expId = config.exp_id;
     log.patternSize = sqrt(config.pat.size());
@@ -407,11 +446,12 @@ void compile(AppConfig config) {
 
 void run(AppConfig config) {
     std::filesystem::path bin_path = std::filesystem::path(PROJECT_PLAN_DIR) / std::to_string(config.exp_id);
-    auto run_cmd = fmt::format("{bin_path} {exp_id} {data_dir} {num_threads}",
+    auto run_cmd = fmt::format("{bin_path} {exp_id} {data_dir} {num_threads} {graph_reordering}",
                                fmt::arg("bin_path", bin_path.string()),
                                fmt::arg("data_dir", config.graph_dir),
                                fmt::arg("exp_id", config.exp_id),
-                               fmt::arg("num_threads", config.num_threads));
+                               fmt::arg("num_threads", config.num_threads),
+                               fmt::arg("graph_reordering", config.graph_reordering ? "true" : "false"));
     std::string run_results = exec(run_cmd.c_str());
     LOG(MSG) << run_results;
 }
@@ -439,6 +479,9 @@ int main(int argc, char *argv[]) {
              cxxopts::value<std::string>()->default_value("graphmini"))
             ("num_threads", "Positive thread count. Default: all available threads",
              cxxopts::value<int>())
+            ("graph_reordering",
+             "Enable degree-based graph reordering. Higher-degree vertices get smaller ids",
+             cxxopts::value<bool>()->default_value("false")->implicit_value("true"))
             ("exp_id", "Experiment id", cxxopts::value<int>()->default_value("-1"))
             ("help", "Show help");
     options.parse_positional({"graph_name", "path_to_graph", "query_name", "query_adjmat",
@@ -513,6 +556,7 @@ int main(int argc, char *argv[]) {
     AppConfig config;
     config.exp_id = exp_id;
     config.num_threads = num_threads;
+    config.graph_reordering = parsed["graph_reordering"].as<bool>();
     config.pattern_name = query_name;
     config.pat = query_str;
     config.codegen = conf;

@@ -1,11 +1,13 @@
 #include "codegen_output/plan.h"
 #include "configure.h"
 #include "common.h"
+#include "graph_loader.h"
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
-#include <fstream>
-#include <unistd.h>
-#include <fcntl.h>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 #include <thread>
 #include <chrono>
 #include <mutex>
@@ -14,64 +16,6 @@
 #include <oneapi/tbb/global_control.h>
 using namespace std::chrono_literals;
 namespace minigraph {
-    template<typename T>
-    inline void read_file(std::filesystem::path path, T *&pointer, uint64_t num_elements) {
-        CHECK(std::filesystem::is_regular_file(path)) << "File does not exists: " << path;
-        if (pointer != nullptr) free(pointer);
-        const size_t num_bytes = sizeof(T) * num_elements;
-        pointer = new T[num_elements];
-        std::ifstream file;
-        file.open(path, std::ios::binary | std::ios::in);
-        file.read(reinterpret_cast<char *>(pointer), num_bytes);
-        CHECK(file.gcount() == (long int) num_bytes) << "Only read " << ToReadableSize(file.gcount()) << " out of "
-                                                     << ToReadableSize(num_bytes) << " from " << path;
-        file.close();
-    };
-
-    template<typename T>
-    inline void mmap_file(std::filesystem::path path, T *&pointer, uint64_t num_elements) {
-        CHECK(std::filesystem::is_regular_file(path)) << "File does not exists: " << path;
-        if (pointer != nullptr) free(pointer);
-        int fd = open(path.c_str(), O_RDONLY, 0);
-        CHECK(fd != -1) << "Failed to open: " << path;
-        pointer = static_cast<T *>(
-                mmap(nullptr, sizeof(T) * num_elements, PROT_READ, MAP_SHARED, fd, 0));
-        CHECK(pointer != MAP_FAILED) << "Failed to map file: " << path;
-        CHECK(close(fd) == 0) << "Failed to close file: " << path;
-    };
-
-    inline GraphType *load_bin(std::string _in_dir, bool _mmap) {
-        GraphType *out = new GraphType;
-        MetaData m_meta;
-        m_meta.read(_in_dir);
-
-        out->m_mmap = _mmap;
-        out->num_vertex = m_meta.num_vertex;
-        out->num_edge = m_meta.num_edge;
-        out->num_triangle = m_meta.num_triangle;
-        out->max_offset = m_meta.max_offset;
-        out->max_degree = m_meta.max_degree;
-        out->max_triangle = m_meta.max_triangle;
-
-        std::filesystem::path indicesFile = _in_dir;
-        if (sizeof(IdType) == sizeof(uint64_t)) indicesFile /= Constant::kIndicesU64File;
-        else if (sizeof(IdType) == sizeof(uint32_t)) indicesFile /= Constant::kIndicesU32File;
-        else exit(-1 && "unsupported IdType");
-
-        read_file<uint64_t>(std::filesystem::path{_in_dir} / Constant::kIndptrU64File, out->m_indptr,
-                            m_meta.num_vertex + 1);
-        read_file<uint64_t>(std::filesystem::path{_in_dir} / Constant::kOffsetU64File, out->m_offset,
-                            m_meta.num_vertex);
-        read_file<uint64_t>(std::filesystem::path{_in_dir} / Constant::kTriangleU64File, out->m_triangles,
-                            m_meta.num_vertex);
-        if (_mmap) {
-            mmap_file<IdType>(indicesFile, out->m_indices, m_meta.num_edge);
-        } else {
-            read_file<IdType>(indicesFile, out->m_indices, m_meta.num_edge);
-        }
-        return out;
-    }
-
     std::ostream &operator<<(std::ostream &os, const VertexSetType &dt) {
         if (dt.vid() == Constant::EmptyID<IdType>()) {
             os << "VertexSet(-1)\t=\t[";
@@ -102,6 +46,23 @@ int parse_num_threads_or_default(int argc, char *argv[], int index) {
     }
     const int parsed = std::stoi(argv[index]);
     return std::max(1, parsed);
+}
+
+bool parse_bool_or_default(int argc, char *argv[], int index, bool default_value) {
+    if (argc <= index) {
+        return default_value;
+    }
+    std::string value = argv[index];
+    std::transform(value.begin(), value.end(), value.begin(), [](unsigned char ch) {
+        return static_cast<char>(std::tolower(ch));
+    });
+    if (value == "1" || value == "true" || value == "yes" || value == "on") {
+        return true;
+    }
+    if (value == "0" || value == "false" || value == "no" || value == "off") {
+        return false;
+    }
+    throw std::invalid_argument(std::string("Invalid boolean flag: ") + argv[index]);
 }
 } // namespace
 
@@ -143,7 +104,18 @@ int main(int argc, char *argv[]){
     std::string in_dir{argv[2]};
     Timer t;
     const int processor_count = parse_num_threads_or_default(argc, argv, 3);
-    GraphType *graph = load_bin(in_dir, false);
+    const bool reorder_by_degree = parse_bool_or_default(argc, argv, 4, false);
+    double reindex_time = 0.0;
+    GraphLoadOptions load_options;
+    load_options.mmap = false;
+    load_options.reorder_by_degree = reorder_by_degree;
+    load_options.reindex_time_seconds = &reindex_time;
+    GraphType *graph = load_bin<GraphType>(in_dir, load_options);
+    if (reorder_by_degree) {
+        LOG(MSG) << "Reindex Time: " << ToReadableDuration(reindex_time);
+    } else {
+        LOG(MSG) << "Reindex Time: disabled";
+    }
     LOG(MSG) << "Load Time: " << ToReadableDuration(t.Passed());
     bool time_out = false;
     double seconds = 24 * 3600;
