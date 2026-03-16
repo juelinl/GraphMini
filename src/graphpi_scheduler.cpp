@@ -659,14 +659,18 @@ double GraphPiScheduler::our_estimate_schedule_restrict(const std::vector<int> &
                                                         const std::vector<std::pair<int, int>> &pairs,
                                                         uint64_t v_cnt,
                                                         uint64_t e_cnt,
-                                                        uint64_t tri_cnt) const {
+                                                        uint64_t tri_cnt,
+                                                        double avg_degree) const {
     const int max_degree = get_max_degree();
     std::vector<double> p_size(max_degree, 1.0);
     std::vector<double> pp_size(max_degree, 1.0);
 
-    const double p0 = static_cast<double>(e_cnt) / static_cast<double>(v_cnt) / static_cast<double>(v_cnt);
-    const double p1 = static_cast<double>(tri_cnt) * static_cast<double>(v_cnt) /
-                      static_cast<double>(e_cnt) / static_cast<double>(e_cnt);
+    const double safe_v_cnt = static_cast<double>(std::max<uint64_t>(v_cnt, 1));
+    const double p0 = avg_degree / safe_v_cnt;
+    const double p1 = (e_cnt == 0)
+                      ? 0.0
+                      : static_cast<double>(tri_cnt) * safe_v_cnt /
+                        static_cast<double>(e_cnt) / static_cast<double>(e_cnt);
 
     p_size[0] = static_cast<double>(v_cnt);
     for (int i = 1; i < max_degree; ++i) {
@@ -751,7 +755,8 @@ double GraphPiScheduler::graphzero_estimate_schedule_restrict(const std::vector<
                                                               uint64_t e_cnt) const {
     const int max_degree = get_max_degree();
     std::vector<double> p_size(max_degree, 1.0);
-    const double p = static_cast<double>(e_cnt) / static_cast<double>(v_cnt) / static_cast<double>(v_cnt);
+    const double safe_v_cnt = static_cast<double>(std::max<uint64_t>(v_cnt, 1));
+    const double p = static_cast<double>(e_cnt) / safe_v_cnt / safe_v_cnt;
     p_size[0] = static_cast<double>(v_cnt);
     for (int i = 1; i < max_degree; ++i) {
         p_size[i] = p_size[i - 1] * p;
@@ -927,6 +932,7 @@ void GraphPiScheduler::get_schedule(const char *input_adj_mat,
                                     uint64_t v_cnt,
                                     uint64_t e_cnt,
                                     uint64_t tri_cnt,
+                                    double avg_degree,
                                     PerfModelType model_type) {
     reset();
     size_ = input_size;
@@ -987,7 +993,7 @@ void GraphPiScheduler::get_schedule(const char *input_adj_mat,
 
         for (const auto &pairs: restricts_vector) {
             const double val = (model_type == PerfModelType::graphpi)
-                               ? our_estimate_schedule_restrict(vec, pairs, v_cnt, e_cnt, tri_cnt)
+                               ? our_estimate_schedule_restrict(vec, pairs, v_cnt, e_cnt, tri_cnt, avg_degree)
                                : graphzero_estimate_schedule_restrict(vec, pairs, v_cnt, e_cnt);
             if (!have_best || val < min_val) {
                 have_best = true;
