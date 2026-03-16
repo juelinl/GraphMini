@@ -25,6 +25,7 @@ public:
                       uint64_t v_cnt,
                       uint64_t e_cnt,
                       uint64_t tri_cnt,
+                      double avg_degree,
                       PerfModelType model_type = PerfModelType::graphpi);
 
     int get_size() const { return size_; }
@@ -66,7 +67,8 @@ private:
                                           const std::vector<std::pair<int, int>> &pairs,
                                           uint64_t v_cnt,
                                           uint64_t e_cnt,
-                                          uint64_t tri_cnt) const;
+                                          uint64_t tri_cnt,
+                                          double avg_degree) const;
     double graphzero_estimate_schedule_restrict(const std::vector<int> &order,
                                                 const std::vector<std::pair<int, int>> &pairs,
                                                 uint64_t v_cnt,
