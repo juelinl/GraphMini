@@ -94,6 +94,7 @@ struct TriangleEstimate {
     std::vector<uint64_t> per_vertex_raw;
     uint64_t estimated_total{0};
     uint64_t max_raw{0};
+    double sampled_average_degree{0.0};
 };
 
 TriangleEstimate estimate_triangle_stats_from_csr(const GraphCSRData &data) {
@@ -120,10 +121,12 @@ TriangleEstimate estimate_triangle_stats_from_csr(const GraphCSRData &data) {
                       });
 
     long double sample_sum = 0.0;
+    long double sample_degree_sum = 0.0;
     for (uint64_t sample_index = 0; sample_index < sample_size; ++sample_index) {
         const uint64_t vertex = order[static_cast<size_t>(sample_index)];
         const auto *vertex_begin = data.indices.data() + data.indptr[vertex];
         const auto *vertex_end = data.indices.data() + data.indptr[vertex + 1];
+        sample_degree_sum += static_cast<long double>(vertex_end - vertex_begin);
 
         uint64_t raw_triangle_count = 0;
         for (auto *neighbor_it = vertex_begin; neighbor_it != vertex_end; ++neighbor_it) {
@@ -139,6 +142,8 @@ TriangleEstimate estimate_triangle_stats_from_csr(const GraphCSRData &data) {
     }
 
     const long double sample_average = sample_sum / static_cast<long double>(sample_size);
+    estimate.sampled_average_degree = static_cast<double>(
+            sample_degree_sum / static_cast<long double>(sample_size));
     const long double estimated_raw_total = sample_average * static_cast<long double>(num_vertex);
     estimate.estimated_total = static_cast<uint64_t>(std::llround(estimated_raw_total / 6.0L));
     return estimate;
@@ -164,7 +169,8 @@ MetaData metadata_from_graph(const Graph &graph) {
                     graph.num_triangle,
                     graph.max_degree,
                     graph.max_offset,
-                    std::max(graph.max_triangle, graph.max_degree));
+                    std::max(graph.max_triangle, graph.max_degree),
+                    graph.scheduler_avg_degree);
 }
 
 std::unique_ptr<Graph> load_graph_from_preprocessed(const std::filesystem::path &graph_dir,
@@ -187,14 +193,19 @@ std::unique_ptr<Graph> build_graph_from_csr(GraphCSRData data, bool reorder_by_d
     const uint64_t max_degree = max_degree_from_indptr(data.indptr);
     const uint64_t max_offset = data.offsets.empty() ? 0
                                                      : *std::max_element(data.offsets.begin(), data.offsets.end());
+    const double global_average_degree = (num_vertex == 0)
+                                         ? 0.0
+                                         : static_cast<double>(num_edge) / static_cast<double>(num_vertex);
 
     uint64_t num_triangle = 0;
     uint64_t max_triangle = 0;
+    double scheduler_avg_degree = global_average_degree;
     if (data.triangles.empty()) {
         TriangleEstimate estimate = estimate_triangle_stats_from_csr(data);
         data.triangles = std::move(estimate.per_vertex_raw);
         num_triangle = estimate.estimated_total;
         max_triangle = estimate.max_raw;
+        scheduler_avg_degree = estimate.sampled_average_degree;
     } else {
         uint64_t raw_triangle_total = 0;
         for (uint64_t triangle_count: data.triangles) {
@@ -216,6 +227,7 @@ std::unique_ptr<Graph> build_graph_from_csr(GraphCSRData data, bool reorder_by_d
     graph->max_degree = max_degree;
     graph->max_offset = max_offset;
     graph->max_triangle = max_triangle;
+    graph->scheduler_avg_degree = scheduler_avg_degree;
 
     graph->m_indptr = new uint64_t[num_vertex + 1];
     std::copy(data.indptr.begin(), data.indptr.end(), graph->m_indptr);

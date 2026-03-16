@@ -181,6 +181,7 @@ inline GraphT *load_bin(const std::string &in_dir, GraphLoadOptions options = {}
     out->max_offset = meta.max_offset;
     out->max_degree = meta.max_degree;
     out->max_triangle = meta.max_triangle;
+    out->scheduler_avg_degree = meta.scheduler_avg_degree;
 
     read_graph_file<uint64_t>(std::filesystem::path{in_dir} / Constant::kIndptrU64File, out->m_indptr,
                               meta.num_vertex + 1);

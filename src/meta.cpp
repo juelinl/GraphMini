@@ -8,6 +8,8 @@
 #include <iosfwd>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <limits>
 #include <unordered_map>
 #include <vector>
 #include <iterator>
@@ -25,6 +27,8 @@ namespace minigraph
         meta << Constant::kMetaMaxDegree << "\t" << max_degree << "\n";
         meta << Constant::kMetaMaxOffset << "\t" << max_offset << "\n";
         meta << Constant::kMetaMaxTriangle << "\t" << max_triangle << "\n";
+        meta << std::setprecision(std::numeric_limits<double>::max_digits10);
+        meta << Constant::kMetaSchedulerAvgDegree << "\t" << scheduler_avg_degree << "\n";
         meta.close();
     }
 
@@ -34,7 +38,7 @@ namespace minigraph
         assert(std::filesystem::is_regular_file(path) && "Meta file does not exists" );
         std::ifstream meta(path);
         std::string line;
-        std::unordered_map<std::string, uint64_t> items;
+        std::unordered_map<std::string, std::string> items;
         while (std::getline(meta, line)) {
             std::istringstream iss(line);
             std::vector<std::string> kv{std::istream_iterator<std::string>{iss},
@@ -50,12 +54,19 @@ namespace minigraph
         assert(items.count(Constant::kMetaMaxDegree) > 0);
         assert(items.count(Constant::kMetaMaxOffset) > 0);
         assert(items.count(Constant::kMetaMaxTriangle) > 0);
-        num_vertex = items[Constant::kMetaNumVertex];
-        num_edge = items[Constant::kMetaNumEdge];
-        num_triangle = items[Constant::kMetaNumTriangle];
-        max_degree = items[Constant::kMetaMaxDegree];
-        max_offset = items[Constant::kMetaMaxOffset];
-        max_triangle = items[Constant::kMetaMaxTriangle];
+        num_vertex = std::stoull(items[Constant::kMetaNumVertex]);
+        num_edge = std::stoull(items[Constant::kMetaNumEdge]);
+        num_triangle = std::stoull(items[Constant::kMetaNumTriangle]);
+        max_degree = std::stoull(items[Constant::kMetaMaxDegree]);
+        max_offset = std::stoull(items[Constant::kMetaMaxOffset]);
+        max_triangle = std::stoull(items[Constant::kMetaMaxTriangle]);
+        if (items.count(Constant::kMetaSchedulerAvgDegree) > 0) {
+            scheduler_avg_degree = std::stod(items[Constant::kMetaSchedulerAvgDegree]);
+        } else {
+            scheduler_avg_degree = (num_vertex == 0)
+                                   ? 0.0
+                                   : static_cast<double>(num_edge) / static_cast<double>(num_vertex);
+        }
         num_triangle /= 6; // remove automorphism to make it in consistent with GraphPi
     }
 }

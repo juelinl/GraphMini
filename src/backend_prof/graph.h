@@ -18,6 +18,7 @@ namespace minigraph {
         uint64_t *m_triangles{nullptr};
         uint64_t num_vertex{0}, num_edge{0}, num_triangle{0};
         uint64_t max_degree{0}, max_offset{0}, max_triangle{0};
+        double scheduler_avg_degree{0.0};
         bool m_mmap{false};
 
         Graph() = default;
