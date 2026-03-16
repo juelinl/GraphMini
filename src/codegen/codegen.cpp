@@ -141,6 +141,7 @@ namespace minigraph {
                                            meta.num_vertex,
                                            meta.num_edge,
                                            meta.num_triangle,
+                                           meta.scheduler_avg_degree,
                                            PerfModelType::graphpi);
                     return capture_schedule_result(scheduler);
                 }
@@ -151,6 +152,7 @@ namespace minigraph {
                                            meta.num_vertex,
                                            meta.num_edge,
                                            meta.num_triangle,
+                                           meta.scheduler_avg_degree,
                                            PerfModelType::graphzero);
                     return capture_schedule_result(scheduler);
                 }

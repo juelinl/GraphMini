@@ -31,6 +31,7 @@ namespace minigraph
         inline static const std::string kMetaMaxDegree = "MAX_DEGREE";
         inline static const std::string kMetaMaxOffset = "MAX_OFFSET";
         inline static const std::string kMetaMaxTriangle = "MAX_TRIANGLE";
+        inline static const std::string kMetaSchedulerAvgDegree = "SCHEDULER_AVG_DEGREE";
         // Graph Data
         inline static const std::string kDataFile = "snap.txt";
         inline static const std::string kIndptrU64File = "indptr_u64.bin";

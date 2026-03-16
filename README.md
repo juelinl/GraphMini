@@ -127,6 +127,7 @@ The extension module is named `pygraphmini`.
     - it selects the top-100 highest-degree vertices
     - computes their triangle counts without canonicality constraints
     - uses the sample average to estimate the graph-wide triangle count
+    - for the `graphpi` scheduler, it also uses those sampled vertices' degrees to derive the average-degree term in the cost model
   - this estimate can be larger than the true global average, but it is intentionally biased toward the high-degree region that dominates runtime
 - `reorder_by_degree`
   - type: `bool`
@@ -275,6 +276,7 @@ If `triangles` is omitted, GraphMini estimates the triangle statistic needed by 
 1. select the top-100 highest-degree vertices
 2. compute their triangle counts without canonicality constraints
 3. use that sample average to estimate the graph-wide triangle count for schedule generation
+4. if the scheduler is `graphpi`, use those same sampled vertices' degrees as the average-degree signal in its cost model
 
 This estimate can be larger than the true graph-wide average, but the high-degree vertices dominate the expensive parts of the search, so their statistics are used to drive scheduling.
 
