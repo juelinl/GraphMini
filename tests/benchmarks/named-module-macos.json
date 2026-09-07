@@ -1,0 +1,409 @@
+{
+  "build_dir": "/Users/juelinliu/Desktop/GraphMini/GraphMini-repo/build-conda",
+  "repeats": 3,
+  "sizes": [
+    6,
+    7
+  ],
+  "language_standard": "gnu++20",
+  "compiler": "clang version 21.1.8\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Users/juelinliu/mamba/envs/graphmini/bin\nConfiguration file: /Users/juelinliu/mamba/envs/graphmini/bin/arm64-apple-darwin-clang++.cfg",
+  "pch_build_seconds": [
+    5.27805487497244,
+    4.336523625010159,
+    3.9631005409755744
+  ],
+  "cases": {
+    "clique6_openmp_none": {
+      "codegen_mean_seconds": 0.00362019,
+      "generated_source_bytes": 2447,
+      "pch_compile_seconds": [
+        0.5398258750210516,
+        0.42355337500339374,
+        0.41095141699770465
+      ],
+      "no_pch_compile_seconds": [
+        3.5562603330472484,
+        3.2008756669820286,
+        3.043348125007469
+      ],
+      "link_seconds": [
+        0.21791641699383035,
+        0.18056733399862424,
+        0.17283970804419369
+      ],
+      "named_module_compile_seconds": [
+        2.318341000005603,
+        2.046058499952778,
+        2.346352750028018
+      ],
+      "named_module_link_seconds": [
+        0.18543587502790615,
+        0.17411591694690287,
+        0.17344279203098267
+      ]
+    },
+    "star6_openmp_none": {
+      "codegen_mean_seconds": 0.000915815,
+      "generated_source_bytes": 3739,
+      "pch_compile_seconds": [
+        0.4295224589877762,
+        0.5799222919740714,
+        0.5534395419526845
+      ],
+      "no_pch_compile_seconds": [
+        3.630818542034831,
+        3.2449885419919156,
+        4.642050458991434
+      ],
+      "link_seconds": [
+        0.17895854194648564,
+        0.21449399995617568,
+        0.2567126250360161
+      ],
+      "named_module_compile_seconds": [
+        2.1601178749697283,
+        2.125925083993934,
+        2.4675267499987967
+      ],
+      "named_module_link_seconds": [
+        0.18049925001105294,
+        0.1651180410408415,
+        0.2606732920394279
+      ]
+    },
+    "cycle6_openmp_none": {
+      "codegen_mean_seconds": 0.00297459,
+      "generated_source_bytes": 2833,
+      "pch_compile_seconds": [
+        0.5835218750289641,
+        1.0011260830215178,
+        0.8725551250390708
+      ],
+      "no_pch_compile_seconds": [
+        3.1747594999615103,
+        4.6744955409667455,
+        4.264515624963678
+      ],
+      "link_seconds": [
+        0.1571076670079492,
+        0.2154341249843128,
+        0.22103424998931587
+      ],
+      "named_module_compile_seconds": [
+        2.5235871669719927,
+        3.8849985410342924,
+        3.440034583036322
+      ],
+      "named_module_link_seconds": [
+        0.16735354205593467,
+        0.2877906669746153,
+        0.18997704098001122
+      ]
+    },
+    "clique6_nested_costmodel": {
+      "codegen_mean_seconds": 0.0026394,
+      "generated_source_bytes": 9409,
+      "pch_compile_seconds": [
+        1.8668963339878246,
+        2.05963716696715,
+        1.7669962079962716
+      ],
+      "no_pch_compile_seconds": [
+        5.17986595799448,
+        4.752480374998413,
+        5.0520450419862755
+      ],
+      "link_seconds": [
+        0.21394637500634417,
+        0.18384445901028812,
+        0.20527808397309855
+      ],
+      "named_module_compile_seconds": [
+        4.427225666993763,
+        3.904277583002113,
+        4.021845833980478
+      ],
+      "named_module_link_seconds": [
+        0.23010466597042978,
+        0.19774354196852073,
+        0.17694741603918374
+      ]
+    },
+    "star6_nested_costmodel": {
+      "codegen_mean_seconds": 0.00148007,
+      "generated_source_bytes": 3789,
+      "pch_compile_seconds": [
+        0.5622460000449792,
+        0.5697227499913424,
+        0.4896633329917677
+      ],
+      "no_pch_compile_seconds": [
+        4.073177041020244,
+        1.7425760829937644,
+        2.2713578330003656
+      ],
+      "link_seconds": [
+        0.18480891699437052,
+        0.10348233400145546,
+        0.25485829199897125
+      ],
+      "named_module_compile_seconds": [
+        4.43570654198993,
+        1.6326620840118267,
+        1.5609024590230547
+      ],
+      "named_module_link_seconds": [
+        0.4266365420189686,
+        0.1302030420047231,
+        0.175445333996322
+      ]
+    },
+    "cycle6_nested_costmodel": {
+      "codegen_mean_seconds": 0.00252799,
+      "generated_source_bytes": 9075,
+      "pch_compile_seconds": [
+        1.37312624999322,
+        1.2960561669897288,
+        1.1872549999970943
+      ],
+      "no_pch_compile_seconds": [
+        3.2463421669672243,
+        2.765847332950216,
+        2.5950364170130342
+      ],
+      "link_seconds": [
+        0.22406174999196082,
+        0.09708237502491102,
+        0.10590091702761129
+      ],
+      "named_module_compile_seconds": [
+        2.1376482080086134,
+        2.446162917010952,
+        2.2402633329620585
+      ],
+      "named_module_link_seconds": [
+        0.08315125002991408,
+        0.1503006659913808,
+        0.13996816700091586
+      ]
+    },
+    "clique7_openmp_none": {
+      "codegen_mean_seconds": 0.069281,
+      "generated_source_bytes": 2770,
+      "pch_compile_seconds": [
+        0.2653918340220116,
+        0.3073859159485437,
+        0.21693420800147578
+      ],
+      "no_pch_compile_seconds": [
+        1.8767230830271728,
+        1.8300976669997908,
+        1.8212330000242218
+      ],
+      "link_seconds": [
+        0.1681459999526851,
+        0.12143137498060241,
+        0.14096849999623373
+      ],
+      "named_module_compile_seconds": [
+        1.3763975000474602,
+        1.3419418340199627,
+        1.3094195839948952
+      ],
+      "named_module_link_seconds": [
+        0.12352750002173707,
+        0.12617558398051187,
+        0.13811708299908787
+      ]
+    },
+    "star7_openmp_none": {
+      "codegen_mean_seconds": 0.00762652,
+      "generated_source_bytes": 10455,
+      "pch_compile_seconds": [
+        0.4626537500298582,
+        0.48785354202846065,
+        0.46893287502462044
+      ],
+      "no_pch_compile_seconds": [
+        1.4755519590107724,
+        1.6823701669927686,
+        1.828843041032087
+      ],
+      "link_seconds": [
+        0.07401670899707824,
+        0.06764766701962799,
+        0.13234599999850616
+      ],
+      "named_module_compile_seconds": [
+        1.1205249579506926,
+        1.1269918750040233,
+        1.2158804169739597
+      ],
+      "named_module_link_seconds": [
+        0.07218212500447407,
+        0.0682339160121046,
+        0.10054199997102842
+      ]
+    },
+    "cycle7_openmp_none": {
+      "codegen_mean_seconds": 0.0385732,
+      "generated_source_bytes": 3329,
+      "pch_compile_seconds": [
+        0.46406849997583777,
+        0.42901804100256413,
+        0.2964740419993177
+      ],
+      "no_pch_compile_seconds": [
+        1.2630380420014262,
+        1.6108650420210324,
+        1.8666609170031734
+      ],
+      "link_seconds": [
+        0.07167758297873661,
+        0.07182491704588756,
+        0.07187620899640024
+      ],
+      "named_module_compile_seconds": [
+        1.1528887919848785,
+        1.3374806670472026,
+        1.1966189999948256
+      ],
+      "named_module_link_seconds": [
+        0.15374916698783636,
+        0.16370500001357868,
+        0.07181841699639335
+      ]
+    },
+    "clique7_nested_costmodel": {
+      "codegen_mean_seconds": 0.0832562,
+      "generated_source_bytes": 13642,
+      "pch_compile_seconds": [
+        1.1044932500226423,
+        0.8421261659823358,
+        0.982147290953435
+      ],
+      "no_pch_compile_seconds": [
+        1.6268020000425167,
+        1.8056102499831468,
+        1.8782678329735063
+      ],
+      "link_seconds": [
+        0.08248312503565103,
+        0.07639374997233972,
+        0.09107199998106807
+      ],
+      "named_module_compile_seconds": [
+        1.538466125028208,
+        1.529009625024628,
+        1.4323699999949895
+      ],
+      "named_module_link_seconds": [
+        0.07415441598277539,
+        0.08074725000187755,
+        0.07778341701487079
+      ]
+    },
+    "star7_nested_costmodel": {
+      "codegen_mean_seconds": 0.0072276,
+      "generated_source_bytes": 10505,
+      "pch_compile_seconds": [
+        0.4874406249728054,
+        0.4425138750229962,
+        0.5375007499824278
+      ],
+      "no_pch_compile_seconds": [
+        1.3495303749805316,
+        1.556869124993682,
+        1.3427761249477044
+      ],
+      "link_seconds": [
+        0.0849159579956904,
+        0.08277220802847296,
+        0.08734387496951967
+      ],
+      "named_module_compile_seconds": [
+        1.3168733330094256,
+        1.1749677500338294,
+        1.262862750038039
+      ],
+      "named_module_link_seconds": [
+        0.14876016601920128,
+        0.07557591702789068,
+        0.08511187502881512
+      ]
+    },
+    "cycle7_nested_costmodel": {
+      "codegen_mean_seconds": 0.030597,
+      "generated_source_bytes": 13246,
+      "pch_compile_seconds": [
+        1.3119965420337394,
+        1.079739624983631,
+        1.1827531249728054
+      ],
+      "no_pch_compile_seconds": [
+        2.0402277919929475,
+        1.9464738750248216,
+        2.092129083990585
+      ],
+      "link_seconds": [
+        0.07905987498816103,
+        0.08003666601143777,
+        0.08286608301568776
+      ],
+      "named_module_compile_seconds": [
+        2.0517107500345446,
+        1.877890457981266,
+        1.9668472080375068
+      ],
+      "named_module_link_seconds": [
+        0.0762577920104377,
+        0.07658654201077297,
+        0.08032766601536423
+      ],
+      "pch_driver_samples": [
+        {
+          "build_seconds": 1.4227805419941433,
+          "load_seconds": 0.5761007079854608,
+          "build_plus_load_seconds": 1.998881249979604
+        },
+        {
+          "build_seconds": 1.276544250024017,
+          "load_seconds": 0.18335616699187085,
+          "build_plus_load_seconds": 1.4599004170158878
+        },
+        {
+          "build_seconds": 1.2647119999746792,
+          "load_seconds": 0.17956091702217236,
+          "build_plus_load_seconds": 1.4442729169968516
+        }
+      ],
+      "named_module_driver_samples": [
+        {
+          "build_seconds": 1.747501999954693,
+          "load_seconds": 0.2182250419864431,
+          "build_plus_load_seconds": 1.9657270419411361
+        },
+        {
+          "build_seconds": 1.9607628329540603,
+          "load_seconds": 0.17156416701618582,
+          "build_plus_load_seconds": 2.132326999970246
+        },
+        {
+          "build_seconds": 2.1838720410014503,
+          "load_seconds": 0.2380377080407925,
+          "build_plus_load_seconds": 2.4219097490422428
+        }
+      ]
+    }
+  },
+  "named_module_bmi_seconds": [
+    4.398900666972622,
+    4.382281666970812,
+    4.231424790981691
+  ],
+  "named_module_object_seconds": [
+    0.1663999580196105,
+    0.14867349999258295,
+    0.1527609580080025
+  ]
+}

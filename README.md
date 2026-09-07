@@ -277,7 +277,10 @@ GraphMini preserves its current performance model:
 3. compile that code into a shared module
 4. load the module back into the current Python process
 
-Compiled plan modules are cached under `build/python_plan_cache`, so repeated use of the same generated code avoids recompiling.
+Compiled plan modules are cached under the selected build directory's
+`python_plan_cache` (or a backend-specific variant), grouped by oneTBB version
+and a runtime-header/build fingerprint. Repeated use of the same generated code
+with the same configuration avoids recompiling.
 
 ## Example: Run on a Preprocessed Graph
 
@@ -488,6 +491,14 @@ Remaining caveats:
 - native Windows builds remain untested
 - the dataset helper scripts are shell scripts aimed at Unix-like environments
 - macOS testing covers small graphs, not the full benchmark datasets
+
+For the PCH/named-module refactor checks and six-/seven-vertex compilation
+measurements on macOS and Ubuntu, see
+[verification results](tests/benchmarks/named-module-verification.md).
+Run `python scripts/verify_platform.py` in the build environment to reproduce
+both backend suites; on Ubuntu with upstream Clang installed, add
+`--compiler clang++`. Run serially per source checkout because runtime code
+generation shares `src/codegen_output/plan.cpp`.
 
 ### Tooling
 

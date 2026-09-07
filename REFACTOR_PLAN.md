@@ -20,9 +20,23 @@ Progress:
 
 - Official named module integrated into opt-in dynamic query builds.
 - Seven-cycle overcount fixed (temporary-buffer lifetime); direct tests cover
-  both normal and profiling runtimes. All 48 larger PCH checks pass the oracle.
+  both normal and profiling runtimes.
 - Strict ordering corrected in IR sorting, with a regression test.
 - Runtime-header/build fingerprints added to the query-library cache.
-- Full macOS named-module correctness checks are in progress.
-- Jupiter access confirmed: Ubuntu 22.04 x86-64. Isolated dependency environment
-  created at `/data/juelin/graphmini-verification/env`; no system packages changed.
+- macOS and Ubuntu full builds and CTest suites pass for both backends.
+- Each platform/backend passes 432 small-pattern and 48 six-/seven-vertex runtime
+  checks against the symmetry-normalized oracle: 1,920 executions in total,
+  zero mismatches. Recorded counts also match across platforms/backends.
+- Jupiter verification uses Ubuntu 22.04 x86-64 and an isolated environment at
+  `/data/juelin/graphmini-verification/env`; no system packages changed.
+- `scripts/verify_platform.py` reproduces both builds, correctness suites, and
+  matched C++20 compilation benchmarks with oneTBB 2023.1.0.
+- Both compilation benchmarks are complete: named-module consumers were
+  1.56–5.47x slower than PCH on macOS and 1.33–3.02x slower on Ubuntu across
+  the 12 cases. PCH remains the default; named modules remain opt-in.
+- Results, limitations, and reproduction commands are recorded in
+  `tests/benchmarks/named-module-verification.md`, with raw samples alongside it.
+
+All six steps above are complete. Further backend/standard-library module work
+is a separate experiment, not a prerequisite for this checkpoint. No changes
+have been pushed to GitHub.

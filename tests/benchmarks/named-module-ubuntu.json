@@ -1,0 +1,409 @@
+{
+  "build_dir": "/data/juelin/graphmini-verification/repo/build-conda",
+  "repeats": 3,
+  "sizes": [
+    6,
+    7
+  ],
+  "language_standard": "gnu++20",
+  "compiler": "clang version 21.1.8 (https://github.com/conda-forge/clangdev-feedstock 334cf9a5e6c0331e9f261eaf01fc3568724fcce9)\nTarget: x86_64-conda-linux-gnu\nThread model: posix\nInstalledDir: /data/juelin/graphmini-verification/env/bin\nConfiguration file: /data/juelin/graphmini-verification/env/bin/x86_64-conda-linux-gnu-clang++.cfg",
+  "pch_build_seconds": [
+    2.7614573850296438,
+    2.814664887962863,
+    2.877522695111111
+  ],
+  "cases": {
+    "clique6_openmp_none": {
+      "codegen_mean_seconds": 0.00259526,
+      "generated_source_bytes": 2447,
+      "pch_compile_seconds": [
+        0.23362513002939522,
+        0.23779998417012393,
+        0.2218991050031036
+      ],
+      "no_pch_compile_seconds": [
+        2.4829185879789293,
+        2.506519465940073,
+        2.5024250529240817
+      ],
+      "link_seconds": [
+        0.10149120911955833,
+        0.1035638980101794,
+        0.10151831503026187
+      ],
+      "named_module_compile_seconds": [
+        0.7019306009169668,
+        0.69658472109586,
+        0.7043487119954079
+      ],
+      "named_module_link_seconds": [
+        0.10412776283919811,
+        0.1040378580801189,
+        0.09961166302673519
+      ]
+    },
+    "star6_openmp_none": {
+      "codegen_mean_seconds": 0.000653838,
+      "generated_source_bytes": 3739,
+      "pch_compile_seconds": [
+        0.2528491821140051,
+        0.24461008282378316,
+        0.24135409202426672
+      ],
+      "no_pch_compile_seconds": [
+        2.5452934368513525,
+        2.5168893809895962,
+        2.5248040470760316
+      ],
+      "link_seconds": [
+        0.10501081217080355,
+        0.1059409820009023,
+        0.09230996202677488
+      ],
+      "named_module_compile_seconds": [
+        0.7259098021313548,
+        0.7345459449570626,
+        0.7274210639297962
+      ],
+      "named_module_link_seconds": [
+        0.10671301884576678,
+        0.10586538189090788,
+        0.0987914230208844
+      ]
+    },
+    "cycle6_openmp_none": {
+      "codegen_mean_seconds": 0.00185682,
+      "generated_source_bytes": 2833,
+      "pch_compile_seconds": [
+        0.35426312405616045,
+        0.3485198160633445,
+        0.35020405310206115
+      ],
+      "no_pch_compile_seconds": [
+        2.6098747157957405,
+        2.6287898011505604,
+        2.628348970087245
+      ],
+      "link_seconds": [
+        0.10401912801899016,
+        0.10139135713689029,
+        0.10191908990964293
+      ],
+      "named_module_compile_seconds": [
+        0.8252827010583133,
+        0.8384375078603625,
+        0.8232728948350996
+      ],
+      "named_module_link_seconds": [
+        0.10342800198122859,
+        0.10392788099125028,
+        0.105141761014238
+      ]
+    },
+    "clique6_nested_costmodel": {
+      "codegen_mean_seconds": 0.00198525,
+      "generated_source_bytes": 9409,
+      "pch_compile_seconds": [
+        0.7277069038245827,
+        0.7441298919729888,
+        0.7309880251996219
+      ],
+      "no_pch_compile_seconds": [
+        3.0399683858267963,
+        3.0199700898956507,
+        3.0113592981360853
+      ],
+      "link_seconds": [
+        0.10196925885975361,
+        0.09841639106161892,
+        0.10480418498627841
+      ],
+      "named_module_compile_seconds": [
+        1.2183860279619694,
+        1.2108523629140109,
+        1.19712477712892
+      ],
+      "named_module_link_seconds": [
+        0.1069870691280812,
+        0.10328976809978485,
+        0.10763494693674147
+      ]
+    },
+    "star6_nested_costmodel": {
+      "codegen_mean_seconds": 0.000638105,
+      "generated_source_bytes": 3789,
+      "pch_compile_seconds": [
+        0.3002648469991982,
+        0.2875266980845481,
+        0.2994763439055532
+      ],
+      "no_pch_compile_seconds": [
+        2.558519789017737,
+        2.590213692979887,
+        2.6034979878459126
+      ],
+      "link_seconds": [
+        0.10160381300374866,
+        0.10541674611158669,
+        0.09273938299156725
+      ],
+      "named_module_compile_seconds": [
+        0.768376488937065,
+        0.7803284800611436,
+        0.7688604488503188
+      ],
+      "named_module_link_seconds": [
+        0.09742926293984056,
+        0.099682830972597,
+        0.10036843689158559
+      ]
+    },
+    "cycle6_nested_costmodel": {
+      "codegen_mean_seconds": 0.0019115,
+      "generated_source_bytes": 9075,
+      "pch_compile_seconds": [
+        0.9467930551618338,
+        0.9462468579877168,
+        0.9610257770400494
+      ],
+      "no_pch_compile_seconds": [
+        3.2643688081298023,
+        3.243983826134354,
+        3.189151799073443
+      ],
+      "link_seconds": [
+        0.1056283840443939,
+        0.1072406000457704,
+        0.10559256607666612
+      ],
+      "named_module_compile_seconds": [
+        1.4174543919507414,
+        1.4129191439133137,
+        1.4172748650889844
+      ],
+      "named_module_link_seconds": [
+        0.1058092899620533,
+        0.10354288900271058,
+        0.10925232293084264
+      ]
+    },
+    "clique7_openmp_none": {
+      "codegen_mean_seconds": 0.0502,
+      "generated_source_bytes": 2770,
+      "pch_compile_seconds": [
+        0.24493504990823567,
+        0.23248551902361214,
+        0.23944894294254482
+      ],
+      "no_pch_compile_seconds": [
+        2.5567052939441055,
+        2.487237907014787,
+        2.562755287857726
+      ],
+      "link_seconds": [
+        0.10328254895284772,
+        0.10037908493541181,
+        0.10388679313473403
+      ],
+      "named_module_compile_seconds": [
+        0.7224797620438039,
+        0.7255266529973596,
+        0.7208213699050248
+      ],
+      "named_module_link_seconds": [
+        0.10613205609843135,
+        0.10693075717426836,
+        0.10340011096559465
+      ]
+    },
+    "star7_openmp_none": {
+      "codegen_mean_seconds": 0.00467404,
+      "generated_source_bytes": 10455,
+      "pch_compile_seconds": [
+        0.5294557199813426,
+        0.4903721329756081,
+        0.4782710869330913
+      ],
+      "no_pch_compile_seconds": [
+        2.7620030511170626,
+        2.7684978838078678,
+        2.7510048300027847
+      ],
+      "link_seconds": [
+        0.10324324108660221,
+        0.10444032796658576,
+        0.09658611402846873
+      ],
+      "named_module_compile_seconds": [
+        0.9655172831844538,
+        1.000601104926318,
+        0.9764390150085092
+      ],
+      "named_module_link_seconds": [
+        0.10150761599652469,
+        0.1028031229507178,
+        0.09744422812946141
+      ]
+    },
+    "cycle7_openmp_none": {
+      "codegen_mean_seconds": 0.0193022,
+      "generated_source_bytes": 3329,
+      "pch_compile_seconds": [
+        0.45600543008185923,
+        0.4532376688439399,
+        0.4664058091584593
+      ],
+      "no_pch_compile_seconds": [
+        2.7453136020340025,
+        2.70823070500046,
+        2.6933841737918556
+      ],
+      "link_seconds": [
+        0.0967518009711057,
+        0.09227722487412393,
+        0.10587326204404235
+      ],
+      "named_module_compile_seconds": [
+        0.9412739060353488,
+        0.951056394027546,
+        0.9150890030432492
+      ],
+      "named_module_link_seconds": [
+        0.09829093609005213,
+        0.10407814686186612,
+        0.10541070508770645
+      ]
+    },
+    "clique7_nested_costmodel": {
+      "codegen_mean_seconds": 0.0504787,
+      "generated_source_bytes": 13642,
+      "pch_compile_seconds": [
+        0.9662609649822116,
+        0.8830405480694026,
+        0.8551919779274613
+      ],
+      "no_pch_compile_seconds": [
+        3.1052639558911324,
+        3.079703585943207,
+        3.147744403919205
+      ],
+      "link_seconds": [
+        0.10762970591895282,
+        0.10485609015449882,
+        0.10389567795209587
+      ],
+      "named_module_compile_seconds": [
+        1.3392251059412956,
+        1.3418892240151763,
+        1.3537661819718778
+      ],
+      "named_module_link_seconds": [
+        0.10042453510686755,
+        0.1059905830770731,
+        0.104192835977301
+      ]
+    },
+    "star7_nested_costmodel": {
+      "codegen_mean_seconds": 0.00479679,
+      "generated_source_bytes": 10505,
+      "pch_compile_seconds": [
+        0.5872257170267403,
+        0.5695716699119657,
+        0.5603192581329495
+      ],
+      "no_pch_compile_seconds": [
+        2.9023569519631565,
+        2.849648213945329,
+        2.89122978807427
+      ],
+      "link_seconds": [
+        0.10764908301644027,
+        0.10701016802340746,
+        0.105173802934587
+      ],
+      "named_module_compile_seconds": [
+        1.0483204489573836,
+        1.083880339981988,
+        1.0303427230101079
+      ],
+      "named_module_link_seconds": [
+        0.10053683421574533,
+        0.10715823201462626,
+        0.10804330394603312
+      ]
+    },
+    "cycle7_nested_costmodel": {
+      "codegen_mean_seconds": 0.0197655,
+      "generated_source_bytes": 13246,
+      "pch_compile_seconds": [
+        1.5471840670797974,
+        1.5203626779839396,
+        1.5306149090174586
+      ],
+      "no_pch_compile_seconds": [
+        3.792196982074529,
+        4.02486110990867,
+        3.797124578151852
+      ],
+      "link_seconds": [
+        0.10602322802878916,
+        0.10556387202814221,
+        0.10507461405359209
+      ],
+      "named_module_compile_seconds": [
+        2.02988223801367,
+        2.0717568518593907,
+        1.9867360698990524
+      ],
+      "named_module_link_seconds": [
+        0.10623714188113809,
+        0.09850096399895847,
+        0.0975707599427551
+      ],
+      "pch_driver_samples": [
+        {
+          "build_seconds": 1.6734176580794156,
+          "load_seconds": 0.0026562558487057686,
+          "build_plus_load_seconds": 1.6760739139281213
+        },
+        {
+          "build_seconds": 1.6398536548949778,
+          "load_seconds": 0.0026565028820186853,
+          "build_plus_load_seconds": 1.6425101577769965
+        },
+        {
+          "build_seconds": 1.6817780199926347,
+          "load_seconds": 0.00250053103081882,
+          "build_plus_load_seconds": 1.6842785510234535
+        }
+      ],
+      "named_module_driver_samples": [
+        {
+          "build_seconds": 2.162421928020194,
+          "load_seconds": 0.0026265541091561317,
+          "build_plus_load_seconds": 2.1650484821293503
+        },
+        {
+          "build_seconds": 2.1413816339336336,
+          "load_seconds": 0.0027139419689774513,
+          "build_plus_load_seconds": 2.144095575902611
+        },
+        {
+          "build_seconds": 2.137556959176436,
+          "load_seconds": 0.0025949289556592703,
+          "build_plus_load_seconds": 2.1401518881320953
+        }
+      ]
+    }
+  },
+  "named_module_bmi_seconds": [
+    3.216627361951396,
+    3.1539227350149304,
+    3.178626606008038
+  ],
+  "named_module_object_seconds": [
+    0.050318608060479164,
+    0.05066808592528105,
+    0.05187982693314552
+  ]
+}

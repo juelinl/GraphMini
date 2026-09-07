@@ -1,0 +1,75 @@
+{
+  "macos": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.7 | packaged by conda-forge | (main, Sep  2 2026, 21:04:32) [Clang 20.1.8 ]",
+    "commit": "e195705afeccb3623441a617345c7648dfc2712b",
+    "checks": [
+      "pch-configure",
+      "pch-build",
+      "pch-ctest",
+      "pch-small",
+      "pch-large",
+      "named-configure",
+      "named-build",
+      "named-ctest",
+      "named-small",
+      "named-large",
+      "benchmark"
+    ],
+    "runtime": {
+      "pch-small": {
+        "executions": 432,
+        "oracle_mismatches": 0
+      },
+      "pch-large": {
+        "executions": 48,
+        "oracle_mismatches": 0
+      },
+      "named-small": {
+        "executions": 432,
+        "oracle_mismatches": 0
+      },
+      "named-large": {
+        "executions": 48,
+        "oracle_mismatches": 0
+      }
+    }
+  },
+  "ubuntu": {
+    "platform": "Linux-5.15.0-187-generic-x86_64-with-glibc2.35",
+    "python": "3.14.7 | packaged by conda-forge | (main, Sep  2 2026, 21:08:32) [GCC 15.3.0]",
+    "commit": "e195705afeccb3623441a617345c7648dfc2712b",
+    "checks": [
+      "pch-configure",
+      "pch-build",
+      "pch-ctest",
+      "pch-small",
+      "pch-large",
+      "named-configure",
+      "named-build",
+      "named-ctest",
+      "named-small",
+      "named-large",
+      "benchmark"
+    ],
+    "runtime": {
+      "pch-small": {
+        "executions": 432,
+        "oracle_mismatches": 0
+      },
+      "pch-large": {
+        "executions": 48,
+        "oracle_mismatches": 0
+      },
+      "named-small": {
+        "executions": 432,
+        "oracle_mismatches": 0
+      },
+      "named-large": {
+        "executions": 48,
+        "oracle_mismatches": 0
+      }
+    }
+  },
+  "cross_platform_backend_counts_identical": true
+}
