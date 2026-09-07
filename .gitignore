@@ -7,6 +7,7 @@ build-conda
 build-conda-py311
 build-header-units
 build-tbb-module
+build-backend-module
 cmake-build-debug
 cmake-build-release
 

@@ -77,6 +77,34 @@ in this directory and set `PYTHONPATH=build-tbb-module/lib` to test that path.
 The default, static plans, and profiling plans retain PCH. The named-module
 and header-unit options are mutually exclusive.
 
+To precompile GraphMini's backend as well, use the experimental backend module:
+
+```bash
+cmake -S . -B build-backend-module -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DGRAPHMINI_BUILD_TESTS=ON -DGRAPHMINI_EXPERIMENTAL_BACKEND_MODULE=ON
+cmake --build build-backend-module --parallel 6
+ctest --test-dir build-backend-module --output-on-failure
+PYTHONPATH=build-backend-module/lib python tests/runtime_large.py
+```
+
+This enables the oneTBB module automatically. Dynamic queries import
+`graphmini.backend`, which exports the stable runtime types and re-exports `tbb`.
+The interface preserves the header-defined types' identity for interoperability
+with the C++17 Python host. Templates/inline methods remain available to the
+optimizer; this is not a conversion of static/profiling plans or `std` to modules.
+PCH remains the default. Use a separate build directory for each experimental
+backend; finished query libraries also have backend-specific caches.
+
+For a serial PCH/backend-module correctness and compilation/API comparison:
+
+```bash
+python scripts/verify_platform.py --backend-module \
+  --module-build build-backend-module --output-dir .verification/backend
+```
+
+On Ubuntu, install upstream Clang and matching `clang-scan-deps` (for example,
+Conda's `clangxx=21` and `clang-tools=21`) and add `--compiler clang++`.
+
 Query-library caches include a fingerprint of runtime headers and compiler/build
 settings, so runtime fixes do not silently reuse stale generated libraries.
 

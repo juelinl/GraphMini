@@ -52,7 +52,8 @@ def main():
     result = {"case": "cycle7_nested_costmodel", "repeats": args.repeats,
               "initial_call_seconds_cache_state_unspecified": initial,
               "expected_matches": expected, "cache_miss_seconds": [], "cache_hit_seconds": []}
-    with tempfile.TemporaryDirectory(prefix="graphmini-api-bench-") as scratch:
+    # Same filesystem as the cache, including servers with a separate /data.
+    with tempfile.TemporaryDirectory(prefix="graphmini-api-bench-", dir=cache.parent) as scratch:
         backup = Path(scratch) / cache.name
         cache.replace(backup)
         try:
