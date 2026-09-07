@@ -1,6 +1,8 @@
 # build directory
 build
 build-ninja
+build-conda
+build-conda-py311
 cmake-build-debug
 cmake-build-release
 

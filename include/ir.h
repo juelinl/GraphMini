@@ -30,7 +30,7 @@ namespace minigraph {
     typedef EdgeIR EdgeRestrictIR;
     typedef MatrixIR MatrixRestrictIR;
 
-    class MiniGraphIR;
+    struct MiniGraphIR;
 
     class VertexSetIR;
 
@@ -43,9 +43,9 @@ namespace minigraph {
         int m_loop_depth{-1}; // VertexIR should include all incoming-edges matched in [0, m_loop_depth]^th vertices
     public:
         int id{-1};
-        inline static AdjMatType adjMatType{AdjMatType::VertexInduced};
+        AdjMatType adjMatType{AdjMatType::VertexInduced};
         VertexSetIR() = default;
-        VertexSetIR(const EdgeIR &edges, const EdgeRestrictIR restricts, int loop_depth);
+        VertexSetIR(const EdgeIR &edges, const EdgeRestrictIR restricts, int loop_depth, AdjMatType query_type);
 
         // true if exactly the same
         bool operator==(const VertexSetIR &rhs) const;
@@ -61,7 +61,7 @@ namespace minigraph {
         bool is_edge(int depth) const { return m_edges[depth]; };
         bool has_id() const { return id != -1; };
         bool is_superset_of(const VertexSetIR &rhs) const;;
-        friend class MiniGraphIR;
+        friend struct MiniGraphIR;
         friend std::ostream &operator<<(std::ostream &out, const VertexSetIR &v);
         friend std::ostream &operator<<(std::ostream &out, const MiniGraphIR &mg);
     };
@@ -99,6 +99,7 @@ namespace minigraph {
     struct PlanIR {
         int p_size{0}, iep_num{0}, iep_depth{0}, iep_redundancy{0};
         MetaData meta;
+        CodeGenConfig config;
         std::vector<int> iep_vals;
         std::vector<std::vector<std::vector<int>>> iep_groups;
         std::vector<std::vector<VertexSetIR>> set_ops;

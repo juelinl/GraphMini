@@ -1,0 +1,19 @@
+name: graphmini
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python=3.14
+  - numpy
+  - cmake
+  - ninja
+  - clang-format
+  - llvm-openmp
+  - cxx-compiler
+  - tbb-devel
+  - fmt
+  - cxxopts
+  - pybind11
+  - pybind11-global
+# Resolve current compatible releases from conda-forge; Python stays on 3.14.
+# On macOS, Xcode Command Line Tools provide the platform SDK.

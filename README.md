@@ -21,7 +21,35 @@ The Python API is the easiest entry point for most users, so this README starts 
 
 ## Python Quick Start
 
+### Alternative: Conda environment
+
+The repository includes `environment.yml` with Python 3.14 and current compatible
+releases of NumPy, CMake, Ninja, the C++ compiler, clang-format, OpenMP, oneTBB,
+fmt, cxxopts, and pybind11. On macOS, Xcode Command Line Tools provide the SDK.
+CMake discovers the installed packages; it does not fetch pinned dependency copies.
+
+```bash
+conda env create -f environment.yml
+conda activate graphmini
+cmake -S . -B build-conda -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DPython3_EXECUTABLE="$CONDA_PREFIX/bin/python" -DOpenMP_ROOT="$CONDA_PREFIX" \
+  -DGRAPHMINI_BUILD_TESTS=ON
+python scripts/install_python.py --build-dir build-conda
+cmake --build build-conda --target compiler_regression
+ctest --test-dir build-conda --output-on-failure
+```
+
+Micromamba users can create the same environment with
+`micromamba create -f environment.yml` and activate it with
+`micromamba activate graphmini`. Use this setup instead of the virtual-environment
+steps below. `build-conda` keeps its Python-specific build separate from `build`.
+
 ### 1. Create a Python environment
+
+For a manual setup, first install oneTBB (including development headers and
+tbbmalloc), fmt, cxxopts, pybind11's CMake package, OpenMP, and a C++17 compiler.
+Set `CMAKE_PREFIX_PATH` to their installation prefix if needed. The Conda setup
+above installs these dependencies together.
 
 ```bash
 python3 -m venv venv
@@ -410,28 +438,29 @@ Current status:
 1. Ubuntu 22.04: supported
 2. Ubuntu 24.04: supported
 3. WSL on Windows: known to work
-4. macOS: portability changes have been added, but this remains untested
+4. macOS arm64: builds and small-graph runtime checks verified with the Conda environment
 5. native Windows: portability changes have been added, but this remains untested
 
 Platform outlook:
 
 - Linux support is already in place.
-- macOS should be closer now because the project already had Apple-specific CMake handling, and the Python installer is no longer Linux-only.
+- macOS arm64 has been verified with compiler regression and runtime compilation tests.
 - native Windows is more plausible now because shared-module loading, process helpers, and graph memory mapping no longer assume POSIX-only APIs.
 
 Remaining caveats:
 
-- macOS and Windows builds are still untested
+- native Windows builds remain untested
 - the dataset helper scripts are shell scripts aimed at Unix-like environments
-- the build and runtime paths are still validated only on Linux in this repository
+- macOS testing covers small graphs, not the full benchmark datasets
 
 ### Tooling
 
 1. CMake >= 3.20
-2. GCC >= 7
-3. Python >= 3.10
+2. A C++17 compiler (the Conda environment supplies the current platform compiler)
+3. Python 3.14 in the supplied environment
 4. `numpy` for the Python CSR API
 5. `clang-format` optional
+6. Installed CMake packages for oneTBB, fmt, cxxopts, and pybind11, plus OpenMP
 
 ## Tested Graph Data
 

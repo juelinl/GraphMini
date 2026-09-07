@@ -1,4 +1,4 @@
-add_subdirectory(codegen)
+add_subdirectory(compiler)
 add_subdirectory(preprocess)
 add_subdirectory(codegen_output)
 
