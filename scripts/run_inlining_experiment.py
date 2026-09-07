@@ -43,7 +43,8 @@ def main():
         run(name + "-build", ["cmake", "--build", str(build), "--parallel", str(args.jobs)])
         run(name + "-ctest", ["ctest", "--test-dir", str(build), "--output-on-failure"])
         commands = subprocess.check_output(["ninja", "-C", str(build), "-t", "commands", "plan_module"], text=True)
-        query_command, = [c for c in commands.splitlines() if " -c " in c and " -o " in c and "/plan.cpp " in c]
+        query_command, = [c for c in commands.splitlines() if " -c " in c and " -o " in c
+                          and "plan_module.dir" in c and "/plan.cpp" in c and "/plan.cppm" not in c]
         assert "-O3" in query_command and ("-fno-inline" in query_command) == disabled
         assert "-ftime-trace" not in query_command
         (out / (name + "-commands.txt")).write_text(commands)
