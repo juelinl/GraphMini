@@ -1,5 +1,4 @@
 """Repeat the seven-cycle comparison in forward/reverse order using existing builds."""
-import argparse
 import json
 import os
 from pathlib import Path
@@ -17,6 +16,11 @@ def main():
         current = {"order": order, "variants": {}}
         for variant in order:
             build = root / ("build-" + variant)
+            cache = (build / "CMakeCache.txt").read_text()
+            assert "CMAKE_BUILD_TYPE:STRING=Release" in cache
+            expected = "ON" if variant.startswith("noinline") else "OFF"
+            assert "GRAPHMINI_EXPERIMENTAL_NO_INLINE:BOOL=" + expected in cache
+            assert "GRAPHMINI_PROFILE_QUERY_COMPILATION:BOOL=OFF" in cache
             current["variants"][variant] = {}
             for kind in ["compile", "runtime"]:
                 name = f"{len(result['rounds'])}-{variant}-{kind}"

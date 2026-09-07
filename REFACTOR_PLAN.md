@@ -70,3 +70,15 @@ Module scanning/collation adds roughly 60–70 ms for the seven-cycle.
 No selective-inlining change has been made. A subsequent experiment should
 target generated task-body complexity/cold runtime code, measure actual API
 latency, and verify graph-execution performance as well as correctness.
+
+## Follow-up: broad no-inline diagnostic
+
+Completed `-O3` versus `-O3 -fno-inline` for PCH and backend modules on macOS and
+Jupiter, with six-/seven-vertex compilation and synthetic execution measurements.
+Both no-inline variants passed the broad oracle suite on both machines (1,728
+checks). A forward/reverse-order seven-cycle confirmation reduced API cache-miss
+time by roughly 50–65% while slowing execution by 2.8–3.4x.
+
+Normal `-O3` remains the default. The experimental flag is available, but no
+selective-inlining or out-of-line implementation split has been made yet.
+Results and limitations: `tests/benchmarks/no-inline-experiment.md`.

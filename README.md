@@ -108,6 +108,10 @@ See the [backend-module experiment results](tests/benchmarks/backend-module-veri
 for correctness coverage, compilation timings, API timings, and limitations.
 For the stage-level GraphPi/Ninja/Clang breakdown and profiling commands, see
 [compilation profiling](tests/benchmarks/compilation-profile.md).
+The optional `GRAPHMINI_EXPERIMENTAL_NO_INLINE=ON` diagnostic keeps `-O3` but
+adds `-fno-inline` to dynamic queries. It is off by default; see the
+[compilation/execution tradeoff](tests/benchmarks/no-inline-experiment.md)
+before using it. It is not a selective inner-loop inlining policy.
 
 Query-library caches include a fingerprint of runtime headers and compiler/build
 settings, so runtime fixes do not silently reuse stale generated libraries.

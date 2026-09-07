@@ -1,0 +1,2455 @@
+{
+  "run": {
+    "commit": "865b4adee7149a8acabc18036888ccb9bb8e770b",
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "stages": [
+      "inline-pch-configure",
+      "inline-pch-build",
+      "inline-pch-ctest",
+      "inline-pch-compile",
+      "inline-pch-runtime",
+      "noinline-pch-configure",
+      "noinline-pch-build",
+      "noinline-pch-ctest",
+      "noinline-pch-compile",
+      "noinline-pch-runtime",
+      "noinline-pch-oracle",
+      "noinline-backend-configure",
+      "noinline-backend-build",
+      "noinline-backend-ctest",
+      "noinline-backend-compile",
+      "noinline-backend-runtime",
+      "noinline-backend-oracle",
+      "inline-backend-configure",
+      "inline-backend-build",
+      "inline-backend-ctest",
+      "inline-backend-compile",
+      "inline-backend-runtime"
+    ],
+    "resume_commits": [
+      "ae6e5fa2afc4a1e3963ac42aa11322f6d13caf41"
+    ]
+  },
+  "variants": {
+    "inline-pch": {
+      "cases": {
+        "clique6_nested_costmodel": {
+          "compile_graph_expected_matches": 28,
+          "runtime_graph_expected_matches": 3003,
+          "samples_seconds": {
+            "api_miss": [
+              0.9031086660106666,
+              0.955096457968466,
+              0.9223998330417089
+            ],
+            "api_hit": [
+              0.0035137090017087758,
+              0.0028330000350251794,
+              0.003274290997069329
+            ],
+            "build": [
+              0.899325167,
+              0.951745208,
+              0.918702875
+            ],
+            "scheduling": [
+              0.002501333,
+              0.002422292,
+              0.002559958
+            ],
+            "compiler": [
+              0.739,
+              0.759,
+              0.751
+            ],
+            "execution_1_threads": [
+              0.0002145602109375,
+              0.00018760868750000001,
+              0.000138602796875,
+              0.0001998144453125,
+              0.000268245109375
+            ],
+            "execution_2_threads": [
+              0.000243687453125,
+              0.000210101203125,
+              0.0001039036484375,
+              9.38265078125e-05,
+              8.75657265625e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002145602109375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00018760868750000001
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000138602796875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001998144453125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000268245109375
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000243687453125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000210101203125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001039036484375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 9.38265078125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 8.75657265625e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.9223998330417089,
+            "api_hit": 0.003274290997069329,
+            "build": 0.918702875,
+            "scheduling": 0.002501333,
+            "compiler": 0.751,
+            "execution_1_threads": 0.0001998144453125,
+            "execution_2_threads": 0.0001039036484375
+          }
+        },
+        "star6_nested_costmodel": {
+          "compile_graph_expected_matches": 168,
+          "runtime_graph_expected_matches": 18018,
+          "samples_seconds": {
+            "api_miss": [
+              0.4785803340491839,
+              0.6024414999992587,
+              0.6157947499887086
+            ],
+            "api_hit": [
+              0.001010499952826649,
+              0.0015362079720944166,
+              0.0013063750229775906
+            ],
+            "build": [
+              0.477057666,
+              0.600085791,
+              0.613549667
+            ],
+            "scheduling": [
+              0.000701584,
+              0.0010555,
+              0.001250958
+            ],
+            "compiler": [
+              0.31,
+              0.392,
+              0.382
+            ],
+            "execution_1_threads": [
+              5.1261359375e-05,
+              4.344271875e-05,
+              4.0261421875e-05,
+              6.37083203125e-05,
+              5.681028125e-05
+            ],
+            "execution_2_threads": [
+              3.20214921875e-05,
+              2.632425e-05,
+              3.10758515625e-05,
+              2.99589609375e-05,
+              2.21457890625e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.1261359375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 4.344271875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 4.0261421875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 6.37083203125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.681028125e-05
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 3.20214921875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.632425e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 3.10758515625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.99589609375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.21457890625e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.6024414999992587,
+            "api_hit": 0.0013063750229775906,
+            "build": 0.600085791,
+            "scheduling": 0.0010555,
+            "compiler": 0.382,
+            "execution_1_threads": 5.1261359375e-05,
+            "execution_2_threads": 2.99589609375e-05
+          }
+        },
+        "cycle6_nested_costmodel": {
+          "compile_graph_expected_matches": 1680,
+          "runtime_graph_expected_matches": 180180,
+          "samples_seconds": {
+            "api_miss": [
+              1.2010205830447376,
+              1.4838912920095026,
+              1.268855958012864
+            ],
+            "api_hit": [
+              0.0030620420002378523,
+              0.0030239170300774276,
+              0.0077357920235954225
+            ],
+            "build": [
+              1.197881542,
+              1.480716209,
+              1.264189459
+            ],
+            "scheduling": [
+              0.00220475,
+              0.002272833,
+              0.003178375
+            ],
+            "compiler": [
+              1.038,
+              1.28,
+              1.059
+            ],
+            "execution_1_threads": [
+              0.0012245452592592593,
+              0.000748035109375,
+              0.0008886383571428571,
+              0.0008299360666666666,
+              0.0008125693442622951
+            ],
+            "execution_2_threads": [
+              0.000690143546875,
+              0.0006945410234375,
+              0.000904082962962963,
+              0.0010949528111111112,
+              0.001055570752688172
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 81,
+                "mean_execution_seconds": 0.0012245452592592593
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000748035109375
+              },
+              {
+                "runs": 112,
+                "mean_execution_seconds": 0.0008886383571428571
+              },
+              {
+                "runs": 120,
+                "mean_execution_seconds": 0.0008299360666666666
+              },
+              {
+                "runs": 122,
+                "mean_execution_seconds": 0.0008125693442622951
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000690143546875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006945410234375
+              },
+              {
+                "runs": 108,
+                "mean_execution_seconds": 0.000904082962962963
+              },
+              {
+                "runs": 90,
+                "mean_execution_seconds": 0.0010949528111111112
+              },
+              {
+                "runs": 93,
+                "mean_execution_seconds": 0.001055570752688172
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.268855958012864,
+            "api_hit": 0.0030620420002378523,
+            "build": 1.264189459,
+            "scheduling": 0.002272833,
+            "compiler": 1.059,
+            "execution_1_threads": 0.0008299360666666666,
+            "execution_2_threads": 0.000904082962962963
+          }
+        },
+        "clique7_nested_costmodel": {
+          "compile_graph_expected_matches": 8,
+          "runtime_graph_expected_matches": 3432,
+          "samples_seconds": {
+            "api_miss": [
+              1.8408187499735504,
+              1.6185252090217546,
+              2.2343957080156542
+            ],
+            "api_hit": [
+              0.07259033399168402,
+              0.07723533402895555,
+              0.0850738330045715
+            ],
+            "build": [
+              1.744805833,
+              1.548044458,
+              2.169664959
+            ],
+            "scheduling": [
+              0.093379125,
+              0.068496417,
+              0.062316083
+            ],
+            "compiler": [
+              1.435,
+              1.303,
+              1.844
+            ],
+            "execution_1_threads": [
+              0.00022519790625,
+              0.00019342250000000001,
+              0.000319812515625,
+              0.00035839028125,
+              0.0002818518828125
+            ],
+            "execution_2_threads": [
+              0.0002186028671875,
+              0.0002151663203125,
+              0.00023729584375,
+              0.00025640884375,
+              0.0002467415703125
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00022519790625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00019342250000000001
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000319812515625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00035839028125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002818518828125
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002186028671875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002151663203125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00023729584375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00025640884375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002467415703125
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.8408187499735504,
+            "api_hit": 0.07723533402895555,
+            "build": 1.744805833,
+            "scheduling": 0.068496417,
+            "compiler": 1.435,
+            "execution_1_threads": 0.0002818518828125,
+            "execution_2_threads": 0.00023729584375
+          }
+        },
+        "star7_nested_costmodel": {
+          "compile_graph_expected_matches": 56,
+          "runtime_graph_expected_matches": 24024,
+          "samples_seconds": {
+            "api_miss": [
+              1.2304362919530831,
+              1.0160466249799356,
+              1.3111811249982566
+            ],
+            "api_hit": [
+              0.00962004199391231,
+              0.007749791024252772,
+              0.010218833980616182
+            ],
+            "build": [
+              1.22131025,
+              1.006433334,
+              1.296396
+            ],
+            "scheduling": [
+              0.007452333,
+              0.007756791,
+              0.012321208
+            ],
+            "compiler": [
+              0.971,
+              0.724,
+              0.94
+            ],
+            "execution_1_threads": [
+              0.0001973713359375,
+              0.0002647900078125,
+              0.0002831474453125,
+              0.0003001568984375,
+              0.0002558567265625
+            ],
+            "execution_2_threads": [
+              0.0001017070859375,
+              0.00010132646875,
+              0.0001051767421875,
+              0.000106263015625,
+              0.000127961625
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001973713359375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002647900078125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002831474453125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003001568984375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002558567265625
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001017070859375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00010132646875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001051767421875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000106263015625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000127961625
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.2304362919530831,
+            "api_hit": 0.00962004199391231,
+            "build": 1.22131025,
+            "scheduling": 0.007756791,
+            "compiler": 0.94,
+            "execution_1_threads": 0.0002647900078125,
+            "execution_2_threads": 0.0001051767421875
+          }
+        },
+        "cycle7_nested_costmodel": {
+          "compile_graph_expected_matches": 2880,
+          "runtime_graph_expected_matches": 1235520,
+          "samples_seconds": {
+            "api_miss": [
+              2.910001958021894,
+              3.1834674169658683,
+              2.9222529160324484
+            ],
+            "api_hit": [
+              0.03139812499284744,
+              0.040478583017829806,
+              0.023349666967988014
+            ],
+            "build": [
+              2.867321833,
+              3.136462916,
+              2.8927235
+            ],
+            "scheduling": [
+              0.0393945,
+              0.044349834,
+              0.027853625
+            ],
+            "compiler": [
+              2.476,
+              2.853,
+              2.625
+            ],
+            "execution_1_threads": [
+              0.0105669123,
+              0.009182571727272727,
+              0.011209092555555555,
+              0.0065551588125,
+              0.007930387692307693
+            ],
+            "execution_2_threads": [
+              0.006883258333333333,
+              0.006954619466666667,
+              0.007520535928571428,
+              0.008018535076923078,
+              0.007544461428571429
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 10,
+                "mean_execution_seconds": 0.0105669123
+              },
+              {
+                "runs": 11,
+                "mean_execution_seconds": 0.009182571727272727
+              },
+              {
+                "runs": 9,
+                "mean_execution_seconds": 0.011209092555555555
+              },
+              {
+                "runs": 16,
+                "mean_execution_seconds": 0.0065551588125
+              },
+              {
+                "runs": 13,
+                "mean_execution_seconds": 0.007930387692307693
+              }
+            ],
+            "2": [
+              {
+                "runs": 15,
+                "mean_execution_seconds": 0.006883258333333333
+              },
+              {
+                "runs": 15,
+                "mean_execution_seconds": 0.006954619466666667
+              },
+              {
+                "runs": 14,
+                "mean_execution_seconds": 0.007520535928571428
+              },
+              {
+                "runs": 13,
+                "mean_execution_seconds": 0.008018535076923078
+              },
+              {
+                "runs": 14,
+                "mean_execution_seconds": 0.007544461428571429
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 2.9222529160324484,
+            "api_hit": 0.03139812499284744,
+            "build": 2.8927235,
+            "scheduling": 0.0393945,
+            "compiler": 2.625,
+            "execution_1_threads": 0.009182571727272727,
+            "execution_2_threads": 0.007520535928571428
+          }
+        }
+      }
+    },
+    "noinline-pch": {
+      "cases": {
+        "clique6_nested_costmodel": {
+          "compile_graph_expected_matches": 28,
+          "runtime_graph_expected_matches": 3003,
+          "samples_seconds": {
+            "api_miss": [
+              1.3117462499649264,
+              1.0845615839934908,
+              1.0455547089804895
+            ],
+            "api_hit": [
+              0.005448708019685,
+              0.004549541976302862,
+              0.0029804580262862146
+            ],
+            "build": [
+              1.307411,
+              1.078701208,
+              1.040146958
+            ],
+            "scheduling": [
+              0.0021395,
+              0.003663375,
+              0.004070375
+            ],
+            "compiler": [
+              1.051,
+              0.777,
+              0.779
+            ],
+            "execution_1_threads": [
+              0.0004440488046875,
+              0.0006377031171875,
+              0.000433553375,
+              0.000535995046875,
+              0.0004244192734375
+            ],
+            "execution_2_threads": [
+              0.0003374889453125,
+              0.000275824875,
+              0.0003128730234375,
+              0.00028165003125,
+              0.0002659840390625
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0004440488046875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006377031171875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000433553375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000535995046875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0004244192734375
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003374889453125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000275824875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003128730234375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00028165003125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002659840390625
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.0845615839934908,
+            "api_hit": 0.004549541976302862,
+            "build": 1.078701208,
+            "scheduling": 0.003663375,
+            "compiler": 0.779,
+            "execution_1_threads": 0.0004440488046875,
+            "execution_2_threads": 0.00028165003125
+          }
+        },
+        "star6_nested_costmodel": {
+          "compile_graph_expected_matches": 168,
+          "runtime_graph_expected_matches": 18018,
+          "samples_seconds": {
+            "api_miss": [
+              0.707794499990996,
+              0.6031911669997498,
+              0.5782411670079455
+            ],
+            "api_hit": [
+              0.0018897499539889395,
+              0.0012517499853856862,
+              0.0028596249758265913
+            ],
+            "build": [
+              0.705541042,
+              0.599677375,
+              0.575751416
+            ],
+            "scheduling": [
+              0.000838125,
+              0.002134334,
+              0.001260041
+            ],
+            "compiler": [
+              0.473,
+              0.364,
+              0.328
+            ],
+            "execution_1_threads": [
+              0.000185847984375,
+              0.00020796675,
+              0.0001749029453125,
+              0.000142390609375,
+              0.0001300260859375
+            ],
+            "execution_2_threads": [
+              7.23548984375e-05,
+              7.3483078125e-05,
+              8.20774609375e-05,
+              8.32903359375e-05,
+              9.86129765625e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000185847984375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00020796675
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001749029453125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000142390609375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001300260859375
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.23548984375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.3483078125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 8.20774609375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 8.32903359375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 9.86129765625e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.6031911669997498,
+            "api_hit": 0.0018897499539889395,
+            "build": 0.599677375,
+            "scheduling": 0.001260041,
+            "compiler": 0.364,
+            "execution_1_threads": 0.0001749029453125,
+            "execution_2_threads": 8.20774609375e-05
+          }
+        },
+        "cycle6_nested_costmodel": {
+          "compile_graph_expected_matches": 1680,
+          "runtime_graph_expected_matches": 180180,
+          "samples_seconds": {
+            "api_miss": [
+              0.7815650419797748,
+              0.6357923750183545,
+              0.6999522080295719
+            ],
+            "api_hit": [
+              0.0030500409775413573,
+              0.0032394580193795264,
+              0.003844625025521964
+            ],
+            "build": [
+              0.778395625,
+              0.632043708,
+              0.694531625
+            ],
+            "scheduling": [
+              0.002077042,
+              0.002777791,
+              0.003953
+            ],
+            "compiler": [
+              0.59,
+              0.426,
+              0.425
+            ],
+            "execution_1_threads": [
+              0.0029383235882352943,
+              0.0029894773636363636,
+              0.002562582230769231,
+              0.0022775927954545453,
+              0.0033036302903225808
+            ],
+            "execution_2_threads": [
+              0.001550689723076923,
+              0.001806912890909091,
+              0.002807856,
+              0.0023358373095238097,
+              0.001952386450980392
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 34,
+                "mean_execution_seconds": 0.0029383235882352943
+              },
+              {
+                "runs": 33,
+                "mean_execution_seconds": 0.0029894773636363636
+              },
+              {
+                "runs": 39,
+                "mean_execution_seconds": 0.002562582230769231
+              },
+              {
+                "runs": 44,
+                "mean_execution_seconds": 0.0022775927954545453
+              },
+              {
+                "runs": 31,
+                "mean_execution_seconds": 0.0033036302903225808
+              }
+            ],
+            "2": [
+              {
+                "runs": 65,
+                "mean_execution_seconds": 0.001550689723076923
+              },
+              {
+                "runs": 55,
+                "mean_execution_seconds": 0.001806912890909091
+              },
+              {
+                "runs": 35,
+                "mean_execution_seconds": 0.002807856
+              },
+              {
+                "runs": 42,
+                "mean_execution_seconds": 0.0023358373095238097
+              },
+              {
+                "runs": 51,
+                "mean_execution_seconds": 0.001952386450980392
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.6999522080295719,
+            "api_hit": 0.0032394580193795264,
+            "build": 0.694531625,
+            "scheduling": 0.002777791,
+            "compiler": 0.426,
+            "execution_1_threads": 0.0029383235882352943,
+            "execution_2_threads": 0.001952386450980392
+          }
+        },
+        "clique7_nested_costmodel": {
+          "compile_graph_expected_matches": 8,
+          "runtime_graph_expected_matches": 3432,
+          "samples_seconds": {
+            "api_miss": [
+              0.9067752500413917,
+              0.9088605829747394,
+              0.9091260409913957
+            ],
+            "api_hit": [
+              0.049008125031832606,
+              0.06754208303755149,
+              0.05711020901799202
+            ],
+            "build": [
+              0.853242625,
+              0.842311791,
+              0.856152458
+            ],
+            "scheduling": [
+              0.052188083,
+              0.0648645,
+              0.051813792
+            ],
+            "compiler": [
+              0.643,
+              0.656,
+              0.667
+            ],
+            "execution_1_threads": [
+              0.000943655679245283,
+              0.0011248194482758622,
+              0.0012234963875,
+              0.0012954182207792209,
+              0.0011343143863636364
+            ],
+            "execution_2_threads": [
+              0.00103417225,
+              0.0012917674868421053,
+              0.0008626397636363637,
+              0.0006788170078125,
+              0.0007769550238095238
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 106,
+                "mean_execution_seconds": 0.000943655679245283
+              },
+              {
+                "runs": 87,
+                "mean_execution_seconds": 0.0011248194482758622
+              },
+              {
+                "runs": 80,
+                "mean_execution_seconds": 0.0012234963875
+              },
+              {
+                "runs": 77,
+                "mean_execution_seconds": 0.0012954182207792209
+              },
+              {
+                "runs": 88,
+                "mean_execution_seconds": 0.0011343143863636364
+              }
+            ],
+            "2": [
+              {
+                "runs": 96,
+                "mean_execution_seconds": 0.00103417225
+              },
+              {
+                "runs": 76,
+                "mean_execution_seconds": 0.0012917674868421053
+              },
+              {
+                "runs": 110,
+                "mean_execution_seconds": 0.0008626397636363637
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006788170078125
+              },
+              {
+                "runs": 126,
+                "mean_execution_seconds": 0.0007769550238095238
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.9088605829747394,
+            "api_hit": 0.05711020901799202,
+            "build": 0.853242625,
+            "scheduling": 0.052188083,
+            "compiler": 0.656,
+            "execution_1_threads": 0.0011343143863636364,
+            "execution_2_threads": 0.0008626397636363637
+          }
+        },
+        "star7_nested_costmodel": {
+          "compile_graph_expected_matches": 56,
+          "runtime_graph_expected_matches": 24024,
+          "samples_seconds": {
+            "api_miss": [
+              0.6301826660055667,
+              0.7547308339853771,
+              0.7337476249667816
+            ],
+            "api_hit": [
+              0.010283374984283,
+              0.00821554200956598,
+              0.009475291008129716
+            ],
+            "build": [
+              0.621878541,
+              0.744797292,
+              0.722826375
+            ],
+            "scheduling": [
+              0.006211875,
+              0.007622209,
+              0.008878083
+            ],
+            "compiler": [
+              0.409,
+              0.455,
+              0.472
+            ],
+            "execution_1_threads": [
+              0.0011243404942528736,
+              0.000984829603960396,
+              0.0011156507528089887,
+              0.000794801072,
+              0.0008555290086956522
+            ],
+            "execution_2_threads": [
+              0.000644265625,
+              0.0004931484765625,
+              0.0003609280390625,
+              0.000449439171875,
+              0.000698140234375
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 87,
+                "mean_execution_seconds": 0.0011243404942528736
+              },
+              {
+                "runs": 101,
+                "mean_execution_seconds": 0.000984829603960396
+              },
+              {
+                "runs": 89,
+                "mean_execution_seconds": 0.0011156507528089887
+              },
+              {
+                "runs": 125,
+                "mean_execution_seconds": 0.000794801072
+              },
+              {
+                "runs": 115,
+                "mean_execution_seconds": 0.0008555290086956522
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000644265625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0004931484765625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003609280390625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000449439171875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000698140234375
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.7337476249667816,
+            "api_hit": 0.009475291008129716,
+            "build": 0.722826375,
+            "scheduling": 0.007622209,
+            "compiler": 0.455,
+            "execution_1_threads": 0.000984829603960396,
+            "execution_2_threads": 0.0004931484765625
+          }
+        },
+        "cycle7_nested_costmodel": {
+          "compile_graph_expected_matches": 2880,
+          "runtime_graph_expected_matches": 1235520,
+          "samples_seconds": {
+            "api_miss": [
+              1.0887020000373013,
+              1.1047821249812841,
+              1.0621231670374982
+            ],
+            "api_hit": [
+              0.026455166982486844,
+              0.028421834053006023,
+              0.04122254200046882
+            ],
+            "build": [
+              1.065694542,
+              1.055715208,
+              1.026874709
+            ],
+            "scheduling": [
+              0.021310833,
+              0.046806958,
+              0.033407625
+            ],
+            "compiler": [
+              0.855,
+              0.81,
+              0.757
+            ],
+            "execution_1_threads": [
+              0.020137341399999998,
+              0.021232097333333335,
+              0.019821493,
+              0.027133375,
+              0.02871309375
+            ],
+            "execution_2_threads": [
+              0.016588624857142856,
+              0.0195519305,
+              0.016710159833333335,
+              0.0210072418,
+              0.017335402833333333
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 5,
+                "mean_execution_seconds": 0.020137341399999998
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.021232097333333335
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.019821493
+              },
+              {
+                "runs": 4,
+                "mean_execution_seconds": 0.027133375
+              },
+              {
+                "runs": 4,
+                "mean_execution_seconds": 0.02871309375
+              }
+            ],
+            "2": [
+              {
+                "runs": 7,
+                "mean_execution_seconds": 0.016588624857142856
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.0195519305
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.016710159833333335
+              },
+              {
+                "runs": 5,
+                "mean_execution_seconds": 0.0210072418
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.017335402833333333
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.0887020000373013,
+            "api_hit": 0.028421834053006023,
+            "build": 1.055715208,
+            "scheduling": 0.033407625,
+            "compiler": 0.81,
+            "execution_1_threads": 0.021232097333333335,
+            "execution_2_threads": 0.017335402833333333
+          }
+        }
+      },
+      "oracle_executions": 432,
+      "oracle_mismatches": 0
+    },
+    "inline-backend": {
+      "cases": {
+        "clique6_nested_costmodel": {
+          "compile_graph_expected_matches": 28,
+          "runtime_graph_expected_matches": 3003,
+          "samples_seconds": {
+            "api_miss": [
+              2.188053750025574,
+              1.0557626669760793,
+              1.1939072080422193
+            ],
+            "api_hit": [
+              0.0019229580066166818,
+              0.0019124170066788793,
+              0.0024624999496154487
+            ],
+            "build": [
+              2.182241292,
+              1.047067209,
+              1.189804375
+            ],
+            "scheduling": [
+              0.004116167,
+              0.002902875,
+              0.001994208
+            ],
+            "compiler": [
+              1.397,
+              0.765,
+              0.863
+            ],
+            "execution_1_threads": [
+              9.06468046875e-05,
+              6.52618125e-05,
+              5.5326546875e-05,
+              5.9189140625e-05,
+              5.85373828125e-05
+            ],
+            "execution_2_threads": [
+              4.51803515625e-05,
+              5.83867265625e-05,
+              4.9513015625e-05,
+              5.30605234375e-05,
+              5.6252953125e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 9.06468046875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 6.52618125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.5326546875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.9189140625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.85373828125e-05
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 4.51803515625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.83867265625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 4.9513015625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.30605234375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 5.6252953125e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.1939072080422193,
+            "api_hit": 0.0019229580066166818,
+            "build": 1.189804375,
+            "scheduling": 0.002902875,
+            "compiler": 0.863,
+            "execution_1_threads": 5.9189140625e-05,
+            "execution_2_threads": 5.30605234375e-05
+          }
+        },
+        "star6_nested_costmodel": {
+          "compile_graph_expected_matches": 168,
+          "runtime_graph_expected_matches": 18018,
+          "samples_seconds": {
+            "api_miss": [
+              0.5230619580252096,
+              0.5394382500089705,
+              0.5806079169851728
+            ],
+            "api_hit": [
+              0.001275832997635007,
+              0.0010414169519208372,
+              0.0008592079975642264
+            ],
+            "build": [
+              0.520505375,
+              0.537708833,
+              0.578885541
+            ],
+            "scheduling": [
+              0.000894916,
+              0.000739,
+              0.000630833
+            ],
+            "compiler": [
+              0.249,
+              0.27,
+              0.306
+            ],
+            "execution_1_threads": [
+              1.88063125e-05,
+              2.05676640625e-05,
+              2.4459109375e-05,
+              2.80885625e-05,
+              2.5280296875e-05
+            ],
+            "execution_2_threads": [
+              2.0595453125e-05,
+              1.830365625e-05,
+              1.74641875e-05,
+              1.96669453125e-05,
+              1.673734375e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 1.88063125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.05676640625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.4459109375e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.80885625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.5280296875e-05
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 2.0595453125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 1.830365625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 1.74641875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 1.96669453125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 1.673734375e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.5394382500089705,
+            "api_hit": 0.0010414169519208372,
+            "build": 0.537708833,
+            "scheduling": 0.000739,
+            "compiler": 0.27,
+            "execution_1_threads": 2.4459109375e-05,
+            "execution_2_threads": 1.830365625e-05
+          }
+        },
+        "cycle6_nested_costmodel": {
+          "compile_graph_expected_matches": 1680,
+          "runtime_graph_expected_matches": 180180,
+          "samples_seconds": {
+            "api_miss": [
+              2.4986759159946814,
+              1.5298621660331264,
+              3.3343793749809265
+            ],
+            "api_hit": [
+              0.0019400420133024454,
+              0.009707333985716105,
+              0.0029935420025140047
+            ],
+            "build": [
+              2.485708667,
+              1.526430625,
+              3.318264
+            ],
+            "scheduling": [
+              0.010282041,
+              0.001518791,
+              0.004121416
+            ],
+            "compiler": [
+              2.0,
+              1.115,
+              2.539
+            ],
+            "execution_1_threads": [
+              0.000584742890625,
+              0.0007035315234375,
+              0.0006128202734375,
+              0.0005907223515625,
+              0.0005598313515625
+            ],
+            "execution_2_threads": [
+              0.0005552171328125,
+              0.0005135074921875,
+              0.000469924796875,
+              0.000461103484375,
+              0.00045924615625
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000584742890625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0007035315234375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006128202734375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0005907223515625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0005598313515625
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0005552171328125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0005135074921875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000469924796875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000461103484375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00045924615625
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 2.4986759159946814,
+            "api_hit": 0.0029935420025140047,
+            "build": 2.485708667,
+            "scheduling": 0.004121416,
+            "compiler": 2.0,
+            "execution_1_threads": 0.0005907223515625,
+            "execution_2_threads": 0.000469924796875
+          }
+        },
+        "clique7_nested_costmodel": {
+          "compile_graph_expected_matches": 8,
+          "runtime_graph_expected_matches": 3432,
+          "samples_seconds": {
+            "api_miss": [
+              1.0444162499625236,
+              1.1547460420406424,
+              1.0836024160380475
+            ],
+            "api_hit": [
+              0.03916154202306643,
+              0.04128187499009073,
+              0.042071167030371726
+            ],
+            "build": [
+              1.012946667,
+              1.114661667,
+              1.042826667
+            ],
+            "scheduling": [
+              0.030483,
+              0.038627417,
+              0.039423458
+            ],
+            "compiler": [
+              0.774,
+              0.841,
+              0.789
+            ],
+            "execution_1_threads": [
+              0.000176890921875,
+              0.0002006855078125,
+              0.00020431315625,
+              0.0001805363828125,
+              0.00020406609375
+            ],
+            "execution_2_threads": [
+              0.00019843784375,
+              0.0001739781796875,
+              0.0001931900859375,
+              0.00024761003125,
+              0.0001668466875
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000176890921875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002006855078125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00020431315625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001805363828125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00020406609375
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00019843784375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001739781796875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001931900859375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00024761003125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001668466875
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.0836024160380475,
+            "api_hit": 0.04128187499009073,
+            "build": 1.042826667,
+            "scheduling": 0.038627417,
+            "compiler": 0.789,
+            "execution_1_threads": 0.0002006855078125,
+            "execution_2_threads": 0.0001931900859375
+          }
+        },
+        "star7_nested_costmodel": {
+          "compile_graph_expected_matches": 56,
+          "runtime_graph_expected_matches": 24024,
+          "samples_seconds": {
+            "api_miss": [
+              0.6960915839881636,
+              0.7389147919602692,
+              0.7093560840003192
+            ],
+            "api_hit": [
+              0.004356042016297579,
+              0.004254375002346933,
+              0.003931833954993635
+            ],
+            "build": [
+              0.6913585,
+              0.733556209,
+              0.703661834
+            ],
+            "scheduling": [
+              0.003693708,
+              0.004474375,
+              0.004459958
+            ],
+            "compiler": [
+              0.453,
+              0.452,
+              0.47
+            ],
+            "execution_1_threads": [
+              0.000143097296875,
+              0.00016563184375,
+              0.0001454717265625,
+              0.0001345093984375,
+              0.0001592998359375
+            ],
+            "execution_2_threads": [
+              0.000104616546875,
+              9.51806640625e-05,
+              0.0001341481328125,
+              7.7722953125e-05,
+              8.964521875e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000143097296875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00016563184375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001454717265625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001345093984375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001592998359375
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000104616546875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 9.51806640625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001341481328125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.7722953125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 8.964521875e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.7093560840003192,
+            "api_hit": 0.004254375002346933,
+            "build": 0.703661834,
+            "scheduling": 0.004459958,
+            "compiler": 0.453,
+            "execution_1_threads": 0.0001454717265625,
+            "execution_2_threads": 9.51806640625e-05
+          }
+        },
+        "cycle7_nested_costmodel": {
+          "compile_graph_expected_matches": 2880,
+          "runtime_graph_expected_matches": 1235520,
+          "samples_seconds": {
+            "api_miss": [
+              1.4269150419859216,
+              1.298075250000693,
+              1.471470499993302
+            ],
+            "api_hit": [
+              0.022465625021141022,
+              0.017732250038534403,
+              0.024030958011280745
+            ],
+            "build": [
+              1.410569958,
+              1.273827708,
+              1.451376125
+            ],
+            "scheduling": [
+              0.015232417,
+              0.020161958,
+              0.018077667
+            ],
+            "compiler": [
+              1.179,
+              1.041,
+              1.157
+            ],
+            "execution_1_threads": [
+              0.005494811421052632,
+              0.0053931271578947365,
+              0.005549537210526316,
+              0.005310000052631579,
+              0.005413907947368421
+            ],
+            "execution_2_threads": [
+              0.0037868472962962964,
+              0.0037755631851851853,
+              0.003819933592592593,
+              0.00403688504,
+              0.003946256538461539
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 19,
+                "mean_execution_seconds": 0.005494811421052632
+              },
+              {
+                "runs": 19,
+                "mean_execution_seconds": 0.0053931271578947365
+              },
+              {
+                "runs": 19,
+                "mean_execution_seconds": 0.005549537210526316
+              },
+              {
+                "runs": 19,
+                "mean_execution_seconds": 0.005310000052631579
+              },
+              {
+                "runs": 19,
+                "mean_execution_seconds": 0.005413907947368421
+              }
+            ],
+            "2": [
+              {
+                "runs": 27,
+                "mean_execution_seconds": 0.0037868472962962964
+              },
+              {
+                "runs": 27,
+                "mean_execution_seconds": 0.0037755631851851853
+              },
+              {
+                "runs": 27,
+                "mean_execution_seconds": 0.003819933592592593
+              },
+              {
+                "runs": 25,
+                "mean_execution_seconds": 0.00403688504
+              },
+              {
+                "runs": 26,
+                "mean_execution_seconds": 0.003946256538461539
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.4269150419859216,
+            "api_hit": 0.022465625021141022,
+            "build": 1.410569958,
+            "scheduling": 0.018077667,
+            "compiler": 1.157,
+            "execution_1_threads": 0.005413907947368421,
+            "execution_2_threads": 0.003819933592592593
+          }
+        }
+      }
+    },
+    "noinline-backend": {
+      "cases": {
+        "clique6_nested_costmodel": {
+          "compile_graph_expected_matches": 28,
+          "runtime_graph_expected_matches": 3003,
+          "samples_seconds": {
+            "api_miss": [
+              1.247211208974477,
+              1.0106725829537027,
+              0.9966206250246614
+            ],
+            "api_hit": [
+              0.0028101669740863144,
+              0.004605292051564902,
+              0.0024864589795470238
+            ],
+            "build": [
+              1.244129083,
+              1.006727875,
+              0.991447917
+            ],
+            "scheduling": [
+              0.002044,
+              0.002581541,
+              0.004072833
+            ],
+            "compiler": [
+              0.959,
+              0.677,
+              0.612
+            ],
+            "execution_1_threads": [
+              0.0006172190859375,
+              0.00039894303125,
+              0.0003871927265625,
+              0.0003896578828125,
+              0.0003811110078125
+            ],
+            "execution_2_threads": [
+              0.000250428109375,
+              0.00027925650781250003,
+              0.0003106624140625,
+              0.000343050796875,
+              0.0003271672890625
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006172190859375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00039894303125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003871927265625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003896578828125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003811110078125
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000250428109375
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00027925650781250003
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003106624140625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000343050796875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0003271672890625
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.0106725829537027,
+            "api_hit": 0.0028101669740863144,
+            "build": 1.006727875,
+            "scheduling": 0.002581541,
+            "compiler": 0.677,
+            "execution_1_threads": 0.0003896578828125,
+            "execution_2_threads": 0.0003106624140625
+          }
+        },
+        "star6_nested_costmodel": {
+          "compile_graph_expected_matches": 168,
+          "runtime_graph_expected_matches": 18018,
+          "samples_seconds": {
+            "api_miss": [
+              0.6266346250195056,
+              0.6411246249917895,
+              0.7731886249966919
+            ],
+            "api_hit": [
+              0.0011314169969409704,
+              0.0020991669734939933,
+              0.001309624989517033
+            ],
+            "build": [
+              0.625070167,
+              0.639169333,
+              0.771163291
+            ],
+            "scheduling": [
+              0.000833042,
+              0.00095175,
+              0.001194833
+            ],
+            "compiler": [
+              0.292,
+              0.308,
+              0.425
+            ],
+            "execution_1_threads": [
+              0.000198080046875,
+              0.0001681126953125,
+              0.0002173255,
+              0.000242062546875,
+              0.000180949828125
+            ],
+            "execution_2_threads": [
+              7.74944921875e-05,
+              7.73486953125e-05,
+              7.7351640625e-05,
+              7.51615e-05,
+              8.312171875e-05
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000198080046875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0001681126953125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0002173255
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000242062546875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000180949828125
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.74944921875e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.73486953125e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.7351640625e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 7.51615e-05
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 8.312171875e-05
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.6411246249917895,
+            "api_hit": 0.001309624989517033,
+            "build": 0.639169333,
+            "scheduling": 0.00095175,
+            "compiler": 0.308,
+            "execution_1_threads": 0.000198080046875,
+            "execution_2_threads": 7.7351640625e-05
+          }
+        },
+        "cycle6_nested_costmodel": {
+          "compile_graph_expected_matches": 1680,
+          "runtime_graph_expected_matches": 180180,
+          "samples_seconds": {
+            "api_miss": [
+              1.067403084016405,
+              1.3165476670255885,
+              0.8534672500099987
+            ],
+            "api_hit": [
+              0.004678166995290667,
+              0.004212833009660244,
+              0.0025212919572368264
+            ],
+            "build": [
+              1.063241333,
+              1.310493042,
+              0.847056417
+            ],
+            "scheduling": [
+              0.00259025,
+              0.003448791,
+              0.004490292
+            ],
+            "compiler": [
+              0.725,
+              0.832,
+              0.477
+            ],
+            "execution_1_threads": [
+              0.002127054063829787,
+              0.0022121123260869565,
+              0.0021645154130434784,
+              0.0020770162040816328,
+              0.00200086418
+            ],
+            "execution_2_threads": [
+              0.0016935776610169492,
+              0.0018206084181818182,
+              0.0014602686666666668,
+              0.0016312869672131147,
+              0.0016637381666666667
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 47,
+                "mean_execution_seconds": 0.002127054063829787
+              },
+              {
+                "runs": 46,
+                "mean_execution_seconds": 0.0022121123260869565
+              },
+              {
+                "runs": 46,
+                "mean_execution_seconds": 0.0021645154130434784
+              },
+              {
+                "runs": 49,
+                "mean_execution_seconds": 0.0020770162040816328
+              },
+              {
+                "runs": 50,
+                "mean_execution_seconds": 0.00200086418
+              }
+            ],
+            "2": [
+              {
+                "runs": 59,
+                "mean_execution_seconds": 0.0016935776610169492
+              },
+              {
+                "runs": 55,
+                "mean_execution_seconds": 0.0018206084181818182
+              },
+              {
+                "runs": 69,
+                "mean_execution_seconds": 0.0014602686666666668
+              },
+              {
+                "runs": 61,
+                "mean_execution_seconds": 0.0016312869672131147
+              },
+              {
+                "runs": 60,
+                "mean_execution_seconds": 0.0016637381666666667
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.067403084016405,
+            "api_hit": 0.004212833009660244,
+            "build": 1.063241333,
+            "scheduling": 0.003448791,
+            "compiler": 0.725,
+            "execution_1_threads": 0.002127054063829787,
+            "execution_2_threads": 0.0016637381666666667
+          }
+        },
+        "clique7_nested_costmodel": {
+          "compile_graph_expected_matches": 8,
+          "runtime_graph_expected_matches": 3432,
+          "samples_seconds": {
+            "api_miss": [
+              1.2207772079855204,
+              1.255510792019777,
+              1.242708167003002
+            ],
+            "api_hit": [
+              0.04875812499085441,
+              0.04502629197668284,
+              0.045640749973244965
+            ],
+            "build": [
+              1.180258875,
+              1.181178833,
+              1.190311542
+            ],
+            "scheduling": [
+              0.039115916,
+              0.071866708,
+              0.050934333
+            ],
+            "compiler": [
+              0.81,
+              0.792,
+              0.872
+            ],
+            "execution_1_threads": [
+              0.0009180096666666667,
+              0.0014302208285714285,
+              0.0014725161492537314,
+              0.0010474666808510638,
+              0.0010285247499999999
+            ],
+            "execution_2_threads": [
+              0.000740607078125,
+              0.000728599296875,
+              0.00081829135,
+              0.0010404375108695651,
+              0.0010787124835164835
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 108,
+                "mean_execution_seconds": 0.0009180096666666667
+              },
+              {
+                "runs": 70,
+                "mean_execution_seconds": 0.0014302208285714285
+              },
+              {
+                "runs": 67,
+                "mean_execution_seconds": 0.0014725161492537314
+              },
+              {
+                "runs": 94,
+                "mean_execution_seconds": 0.0010474666808510638
+              },
+              {
+                "runs": 96,
+                "mean_execution_seconds": 0.0010285247499999999
+              }
+            ],
+            "2": [
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000740607078125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.000728599296875
+              },
+              {
+                "runs": 120,
+                "mean_execution_seconds": 0.00081829135
+              },
+              {
+                "runs": 92,
+                "mean_execution_seconds": 0.0010404375108695651
+              },
+              {
+                "runs": 91,
+                "mean_execution_seconds": 0.0010787124835164835
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.242708167003002,
+            "api_hit": 0.045640749973244965,
+            "build": 1.181178833,
+            "scheduling": 0.050934333,
+            "compiler": 0.81,
+            "execution_1_threads": 0.0010474666808510638,
+            "execution_2_threads": 0.00081829135
+          }
+        },
+        "star7_nested_costmodel": {
+          "compile_graph_expected_matches": 56,
+          "runtime_graph_expected_matches": 24024,
+          "samples_seconds": {
+            "api_miss": [
+              0.9786427500075661,
+              1.04384974995628,
+              0.9323607909609564
+            ],
+            "api_hit": [
+              0.008686707995366305,
+              0.012520375021267682,
+              0.005953415995463729
+            ],
+            "build": [
+              0.967765459,
+              1.033441166,
+              0.9190715
+            ],
+            "scheduling": [
+              0.00895325,
+              0.008067292,
+              0.011789542
+            ],
+            "compiler": [
+              0.558,
+              0.543,
+              0.442
+            ],
+            "execution_1_threads": [
+              0.0008326384491525423,
+              0.0007615536875,
+              0.0008341634871794871,
+              0.0007175553515625,
+              0.0008251935169491525
+            ],
+            "execution_2_threads": [
+              0.0009602082897196262,
+              0.0006494586796875,
+              0.0006913656015625,
+              0.00047293128125,
+              0.0005810362109375
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 118,
+                "mean_execution_seconds": 0.0008326384491525423
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0007615536875
+              },
+              {
+                "runs": 117,
+                "mean_execution_seconds": 0.0008341634871794871
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0007175553515625
+              },
+              {
+                "runs": 118,
+                "mean_execution_seconds": 0.0008251935169491525
+              }
+            ],
+            "2": [
+              {
+                "runs": 107,
+                "mean_execution_seconds": 0.0009602082897196262
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006494586796875
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0006913656015625
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.00047293128125
+              },
+              {
+                "runs": 128,
+                "mean_execution_seconds": 0.0005810362109375
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 0.9786427500075661,
+            "api_hit": 0.008686707995366305,
+            "build": 0.967765459,
+            "scheduling": 0.00895325,
+            "compiler": 0.543,
+            "execution_1_threads": 0.0008251935169491525,
+            "execution_2_threads": 0.0006494586796875
+          }
+        },
+        "cycle7_nested_costmodel": {
+          "compile_graph_expected_matches": 2880,
+          "runtime_graph_expected_matches": 1235520,
+          "samples_seconds": {
+            "api_miss": [
+              1.2320217080414295,
+              1.3082830000203103,
+              1.3172416249872185
+            ],
+            "api_hit": [
+              0.03902216599090025,
+              0.03321854199748486,
+              0.023212041007354856
+            ],
+            "build": [
+              1.211153875,
+              1.279282625,
+              1.268351042
+            ],
+            "scheduling": [
+              0.019388917,
+              0.027440042,
+              0.047162292
+            ],
+            "compiler": [
+              0.768,
+              0.778,
+              0.828
+            ],
+            "execution_1_threads": [
+              0.0201801502,
+              0.0183746875,
+              0.018799861,
+              0.018796069333333332,
+              0.018047
+            ],
+            "execution_2_threads": [
+              0.017433194333333332,
+              0.018817986333333335,
+              0.021509875,
+              0.014651851142857143,
+              0.014280863142857142
+            ]
+          },
+          "execution_batches": {
+            "1": [
+              {
+                "runs": 5,
+                "mean_execution_seconds": 0.0201801502
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.0183746875
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.018799861
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.018796069333333332
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.018047
+              }
+            ],
+            "2": [
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.017433194333333332
+              },
+              {
+                "runs": 6,
+                "mean_execution_seconds": 0.018817986333333335
+              },
+              {
+                "runs": 5,
+                "mean_execution_seconds": 0.021509875
+              },
+              {
+                "runs": 7,
+                "mean_execution_seconds": 0.014651851142857143
+              },
+              {
+                "runs": 7,
+                "mean_execution_seconds": 0.014280863142857142
+              }
+            ]
+          },
+          "median_seconds": {
+            "api_miss": 1.3082830000203103,
+            "api_hit": 0.03321854199748486,
+            "build": 1.268351042,
+            "scheduling": 0.027440042,
+            "compiler": 0.778,
+            "execution_1_threads": 0.018796069333333332,
+            "execution_2_threads": 0.017433194333333332
+          }
+        }
+      },
+      "oracle_executions": 432,
+      "oracle_mismatches": 0
+    }
+  }
+}
