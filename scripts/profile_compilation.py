@@ -101,6 +101,10 @@ def main():
                 try:
                     for repetition in range(args.repeats):
                         cache.unlink(missing_ok=True)  # benchmark-generated library only
+                        # Compact outside the measured call, so Ninja does not
+                        # rewrite its historical log during an incremental build.
+                        subprocess.run(["ninja", "-C", str(build), "-t", "recompact"],
+                                       capture_output=True, check=True)
                         before = log.read_text().splitlines()
                         trace_start = time.time_ns()
                         miss, actual = compile_once()
