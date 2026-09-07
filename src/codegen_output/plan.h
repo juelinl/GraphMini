@@ -1,5 +1,9 @@
 #pragma once
+#ifdef GRAPHMINI_USE_HEADER_UNIT
+import "../backend/backend.h";
+#else
 #include "../backend/backend.h"
+#endif
 namespace minigraph
 {
     using GraphType = Graph;

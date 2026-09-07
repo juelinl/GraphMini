@@ -8,35 +8,12 @@ import argparse
 import json
 import numpy as np
 import pygraphmini as gm
+from matching_oracle import count_matches, matrix
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--results", help="Write counts and oracle mismatches to JSON")
 parser.add_argument("--baseline", help="Compare counts to a previous build's JSON instead of the oracle")
 args = parser.parse_args()
-
-
-def count_matches(data, query, induced):
-    n, k = len(data), len(query)
-    automorphisms = sum(
-        all(query[i][j] == query[p[i]][p[j]] for i in range(k) for j in range(k))
-        for p in itertools.permutations(range(k))
-    )
-    embeddings = sum(
-        all(
-            data[p[i]][p[j]] == query[i][j]
-            if induced else not query[i][j] or data[p[i]][p[j]]
-            for i in range(k) for j in range(i)
-        )
-        for p in itertools.permutations(range(n), k)
-    )
-    return embeddings // automorphisms
-
-
-def matrix(n, edges):
-    result = [[0] * n for _ in range(n)]
-    for i, j in edges:
-        result[i][j] = result[j][i] = 1
-    return result
 
 
 data = matrix(6, [(0, 1), (0, 2), (0, 3), (0, 4), (1, 2), (1, 3), (2, 3), (3, 4), (4, 5)])

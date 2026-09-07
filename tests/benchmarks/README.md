@@ -1,5 +1,8 @@
 # Runtime compilation baseline
 
+The [C++20 header-unit experiment](header-units.md) compares imports with PCH
+under matched flags and documents correctness checks and current limitations.
+
 See [six- and seven-vertex measurements](large-patterns.md) for the larger-pattern
 follow-up. The current harness also includes cycles and accepts `--sizes 6 7`.
 

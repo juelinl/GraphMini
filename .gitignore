@@ -3,6 +3,7 @@ build
 build-ninja
 build-conda
 build-conda-py311
+build-header-units
 cmake-build-debug
 cmake-build-release
 
@@ -13,3 +14,4 @@ venv
 .vscode
 .idea
 .cache
+__pycache__/
