@@ -22,6 +22,9 @@ def main():
     if args.resume:
         current = summary["commit"]
         summary = json.loads((out / "summary.json").read_text())
+        subprocess.run(["git", "diff", "--quiet", summary["commit"], "HEAD", "--",
+                        "CMakeLists.txt", "src", "include", "scripts/benchmark_inlining.py",
+                        "scripts/profile_compilation.py"], cwd=root, check=True)
         summary.setdefault("resume_commits", []).append(current)
 
     def run(name, command, env=None):
