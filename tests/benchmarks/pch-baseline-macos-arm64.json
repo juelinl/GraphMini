@@ -1,0 +1,84 @@
+{
+  "build_dir": "/Users/juelinliu/Desktop/GraphMini/GraphMini-repo/build-conda",
+  "repeats": 3,
+  "compiler": "clang version 21.1.8\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Users/juelinliu/mamba/envs/graphmini/bin\nConfiguration file: /Users/juelinliu/mamba/envs/graphmini/bin/arm64-apple-darwin-clang++.cfg",
+  "pch_build_seconds": [
+    1.3497147500165738,
+    1.39530058397213,
+    1.275473041983787
+  ],
+  "cases": {
+    "clique_openmp_none": {
+      "codegen_mean_seconds": 0.000123696,
+      "pch_compile_seconds": [
+        0.3282663749996573,
+        0.24646300001768395,
+        0.22688012500293553
+      ],
+      "no_pch_compile_seconds": [
+        1.4403635410126299,
+        1.4149324579630047,
+        1.2687709580059163
+      ],
+      "link_seconds": [
+        0.17933083302341402,
+        0.1386645000311546,
+        0.15742812503594905
+      ]
+    },
+    "star_openmp_none": {
+      "codegen_mean_seconds": 4.17604e-05,
+      "pch_compile_seconds": [
+        0.3149115000269376,
+        0.335616750002373,
+        0.3060782910324633
+      ],
+      "no_pch_compile_seconds": [
+        1.3267481660004705,
+        1.4684195410227403,
+        1.4024144579889253
+      ],
+      "link_seconds": [
+        0.16666887502651662,
+        0.15292975003831089,
+        0.0872066660085693
+      ]
+    },
+    "clique_nested_costmodel": {
+      "codegen_mean_seconds": 6.06042e-05,
+      "pch_compile_seconds": [
+        0.5520080419955775,
+        0.8809808749938384,
+        1.0973167910124175
+      ],
+      "no_pch_compile_seconds": [
+        2.220734625007026,
+        2.678026957961265,
+        2.0200928749982268
+      ],
+      "link_seconds": [
+        0.11364670796319842,
+        0.23423241602722555,
+        0.197196958004497
+      ]
+    },
+    "star_nested_costmodel": {
+      "codegen_mean_seconds": 3.80542e-05,
+      "pch_compile_seconds": [
+        0.488565124978777,
+        0.3741320419940166,
+        0.502631375042256
+      ],
+      "no_pch_compile_seconds": [
+        1.8205366249894723,
+        1.7834319170215167,
+        1.53992000001017
+      ],
+      "link_seconds": [
+        0.11990587500622496,
+        0.15865545900305733,
+        0.18265341699589044
+      ]
+    }
+  }
+}
