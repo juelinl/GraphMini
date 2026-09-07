@@ -1,5 +1,7 @@
 #pragma once
-#ifdef GRAPHMINI_USE_HEADER_UNIT
+#ifdef GRAPHMINI_USE_BACKEND_MODULE
+import graphmini.backend;
+#elif defined(GRAPHMINI_USE_HEADER_UNIT)
 import "../backend/backend.h";
 #else
 #include "../backend/backend.h"

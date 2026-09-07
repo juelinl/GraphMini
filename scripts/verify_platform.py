@@ -19,6 +19,8 @@ def main():
     parser.add_argument("--compiler", help="Explicit C++ compiler, e.g. clang++ on Ubuntu")
     parser.add_argument("--jobs", type=int, default=6)
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--backend-module", action="store_true",
+                        help="Verify the full backend module instead of the TBB-only variant")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     out = args.output_dir.resolve()
@@ -34,11 +36,13 @@ def main():
         summary["checks"].append(name)
         (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n")
 
-    for mode, path in [("pch", args.pch_build.resolve()), ("named", args.module_build.resolve())]:
+    module_mode = "backend" if args.backend_module else "named"
+    for mode, path in [("pch", args.pch_build.resolve()), (module_mode, args.module_build.resolve())]:
         configure = ["cmake", "-S", str(root), "-B", str(path), "-G", "Ninja",
                      "-DCMAKE_BUILD_TYPE=Release", "-DGRAPHMINI_BUILD_TESTS=ON",
                      "-DGRAPHMINI_EXPERIMENTAL_HEADER_UNITS=OFF",
-                     "-DGRAPHMINI_EXPERIMENTAL_TBB_MODULE=" + ("ON" if mode == "named" else "OFF")]
+                     "-DGRAPHMINI_EXPERIMENTAL_TBB_MODULE=" + ("OFF" if mode == "pch" else "ON"),
+                     "-DGRAPHMINI_EXPERIMENTAL_BACKEND_MODULE=" + ("ON" if mode == "backend" else "OFF")]
         if args.compiler:
             configure.append("-DCMAKE_CXX_COMPILER=" + args.compiler)
         run(mode + "-configure", configure)
@@ -48,11 +52,17 @@ def main():
         for size, script in [("small", "runtime_smoke.py"), ("large", "runtime_large.py")]:
             run(mode + "-" + size, [sys.executable, str(root / "tests" / script),
                                      "--results", str(out / (mode + "-" + size + ".json"))], env)
+        if args.backend_module:
+            run(mode + "-api", [sys.executable, str(root / "scripts/benchmark_compile_api.py"),
+                               "--repeats", str(args.repeats),
+                               "--output", str(out / (mode + "-api.json"))], env)
     run("benchmark", [sys.executable, str(root / "scripts/benchmark_compilation.py"),
                       "--build-dir", str(args.pch_build.resolve()), "--sizes", "6", "7",
                       "--repeats", str(args.repeats), "--tbb-module-source",
                       str(args.module_build.resolve() / "generated/tbb-module/tbb.cppm"),
-                      "--driver-case", "cycle7_nested_costmodel", "--output", str(out / "benchmark.json")])
+                      "--driver-case", "cycle7_nested_costmodel", "--output", str(out / "benchmark.json")]
+        + (["--backend-module-source", str(root / "src/backend/graphmini_backend.cppm")]
+           if args.backend_module else []))
     print("All verification stages passed; results:", out, flush=True)
 
 

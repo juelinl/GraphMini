@@ -67,7 +67,11 @@ def main():
     parser.add_argument("--tbb-module-source", type=Path,
                         help="Compare the generated, compatibility-patched official tbb.cppm with C++20 PCH")
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--backend-module-source", type=Path,
+                        help="Also compare the complete backend module; requires --tbb-module-source")
     args = parser.parse_args()
+    if args.backend_module_source and not args.tbb_module_source:
+        parser.error("--backend-module-source requires --tbb-module-source")
     if args.repeats < 1:
         parser.error("--repeats must be positive")
     build = args.build_dir.resolve()
@@ -117,6 +121,11 @@ def main():
         unit_path = scratch / "backend.pcm"
         named_pcm = scratch / "tbb.pcm"
         named_obj = scratch / "tbb.o"
+        backend_pcm = scratch / "graphmini.backend.pcm"
+        backend_obj = scratch / "graphmini.backend.o"
+        backend_flags = ["-DGRAPHMINI_USE_BACKEND_MODULE=1",
+                         f"-fmodule-file=tbb={named_pcm}",
+                         f"-fmodule-file=graphmini.backend={backend_pcm}"]
         _, generated = run([str(build / "bin/compilation_benchmark"), str(scratch),
                             *map(str, args.sizes)], build)
         codegen = {parts[1]: float(parts[2]) for line in generated.splitlines()
@@ -147,6 +156,16 @@ def main():
             for _ in range(args.repeats):
                 results["named_module_bmi_seconds"].append(run(command, build)[0])
                 results["named_module_object_seconds"].append(run(object_command, build)[0])
+        if args.backend_module_source:
+            command = rewrite(compile_cmd, backend_pcm, args.backend_module_source.resolve(), use_pch=False)
+            command[command.index("-c")] = "--precompile"
+            command.append(f"-fmodule-file=tbb={named_pcm}")
+            object_command = rewrite(compile_cmd, backend_obj, backend_pcm, use_pch=False)
+            object_command.append(f"-fmodule-file=tbb={named_pcm}")
+            results["backend_module_bmi_seconds"], results["backend_module_object_seconds"] = [], []
+            for _ in range(args.repeats):
+                results["backend_module_bmi_seconds"].append(run(command, build)[0])
+                results["backend_module_object_seconds"].append(run(object_command, build)[0])
         for name, seconds in codegen.items():
             item = {"codegen_mean_seconds": seconds,
                     "generated_source_bytes": (scratch / (name + ".cpp")).stat().st_size,
@@ -156,6 +175,8 @@ def main():
                 item.update(header_unit_compile_seconds=[], header_unit_link_seconds=[])
             if args.tbb_module_source:
                 item.update(named_module_compile_seconds=[], named_module_link_seconds=[])
+            if args.backend_module_source:
+                item.update(backend_module_compile_seconds=[], backend_module_link_seconds=[])
             obj = scratch / (name + ".o")
             shared = scratch / (name + Path(link[link.index("-o") + 1]).suffix)
             for repeat in range(args.repeats):
@@ -163,6 +184,8 @@ def main():
                 modes = ["pch", "no_pch"] + (["header_unit"] if args.header_units else [])
                 if args.tbb_module_source:
                     modes.append("named_module")
+                if args.backend_module_source:
+                    modes.append("backend_module")
                 modes = modes[repeat % len(modes):] + modes[:repeat % len(modes)]
                 for mode in modes:
                     use_pch = mode == "pch"
@@ -172,6 +195,8 @@ def main():
                         command.extend(["-DGRAPHMINI_USE_HEADER_UNIT=1", f"-fmodule-file={unit_path}"])
                     if mode == "named_module":
                         command.extend(["-DGRAPHMINI_USE_TBB_MODULE=1", f"-fmodule-file=tbb={named_pcm}"])
+                    if mode == "backend_module":
+                        command.extend(backend_flags)
                     key = mode + "_compile_seconds"
                     item[key].append(run(command, build)[0])
                     if mode != "no_pch":
@@ -179,6 +204,8 @@ def main():
                         command = [str(obj) if x == original_object else x for x in command]
                         if mode == "named_module":
                             command.append(str(named_obj))
+                        if mode == "backend_module":
+                            command.extend([str(named_obj), str(backend_obj)])
                         key = "link_seconds" if use_pch else mode + "_link_seconds"
                         item[key].append(run(command, build)[0])
             results["cases"][name] = item
@@ -186,6 +213,8 @@ def main():
                 driver_modes = ["pch"] + (["header_unit"] if args.header_units else [])
                 if args.tbb_module_source:
                     driver_modes.append("named_module")
+                if args.backend_module_source:
+                    driver_modes.append("backend_module")
                 for mode in driver_modes:
                     command = rewrite(compile_cmd, obj, scratch / (name + ".cpp"), mode == "pch")
                     command.extend(["-I", str(source.parent)])
@@ -193,9 +222,13 @@ def main():
                         command.extend(["-DGRAPHMINI_USE_HEADER_UNIT=1", f"-fmodule-file={unit_path}"])
                     if mode == "named_module":
                         command.extend(["-DGRAPHMINI_USE_TBB_MODULE=1", f"-fmodule-file=tbb={named_pcm}"])
+                    if mode == "backend_module":
+                        command.extend(backend_flags)
                     link_command = [str(obj) if x == original_object else x for x in rewrite(link, shared)]
                     if mode == "named_module":
                         link_command.append(str(named_obj))
+                    if mode == "backend_module":
+                        link_command.extend([str(named_obj), str(backend_obj)])
                     item[mode + "_driver_samples"] = measure_driver(
                         scratch, build, command, link_command, obj, shared, args.repeats)
             print(name, {key: round(statistics.median(value), 4)
