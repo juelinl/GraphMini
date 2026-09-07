@@ -57,8 +57,22 @@ by oneTBB version so an upgrade does not reuse old query binaries.
 On the tested Clang 21/libc++ setup, upstream 2023.1.0's unmodified `tbb.cppm`
 currently fails to compile: it unconditionally exports `cache_aligned_resource`
 and `scalable_memory_resource`, while oneTBB's feature check disables those
-declarations for libc++. Header/PCH builds work; named-module integration needs
-a compatibility fix. The upstream source is left unmodified.
+declarations for libc++. An opt-in build-local workaround is available:
+
+```bash
+cmake -S . -B build-tbb-module -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DGRAPHMINI_BUILD_TESTS=ON -DGRAPHMINI_EXPERIMENTAL_TBB_MODULE=ON
+cmake --build build-tbb-module --target tbb_module_smoke
+ctest --test-dir build-tbb-module -R '^tbb_module_smoke$' --output-on-failure
+```
+
+This requires CMake 3.28+ and upstream Clang/Ninja. CMake generates a copy at
+`build-tbb-module/generated/tbb-module/tbb.cppm`, adding the existing feature
+guard around just those two exports for 2023.1.0. Installed and vendor sources
+remain untouched. The `graphmini_tbb_module` target exposes the named `tbb`
+module; its smoke test imports it and exercises parallel execution and both
+allocator types. Query plans still use PCH (or the separate header-unit option);
+this workaround does not yet switch query code generation to `import tbb`.
 
 ### 1. Create a Python environment
 
