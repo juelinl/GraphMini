@@ -71,8 +71,14 @@ This requires CMake 3.28+ and upstream Clang/Ninja. CMake generates a copy at
 guard around just those two exports for 2023.1.0. Installed and vendor sources
 remain untouched. The `graphmini_tbb_module` target exposes the named `tbb`
 module; its smoke test imports it and exercises parallel execution and both
-allocator types. Query plans still use PCH (or the separate header-unit option);
-this workaround does not yet switch query code generation to `import tbb`.
+allocator types. With this option enabled, dynamic query plans also use
+`import tbb` through the backend header. Build `pygraphmini` and `plan_module`
+in this directory and set `PYTHONPATH=build-tbb-module/lib` to test that path.
+The default, static plans, and profiling plans retain PCH. The named-module
+and header-unit options are mutually exclusive.
+
+Query-library caches include a fingerprint of runtime headers and compiler/build
+settings, so runtime fixes do not silently reuse stale generated libraries.
 
 ### 1. Create a Python environment
 

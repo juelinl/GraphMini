@@ -1,7 +1,7 @@
 """Check benchmark-sized queries against symmetry-normalized exhaustive counts.
 
 Select the desired extension using PYTHONPATH=<build>/lib. Like compile_plan,
-this test updates src/codegen_output/plan.cpp.
+this test updates src/codegen_output/plan.cpp, restoring it on normal exit.
 """
 import itertools
 import argparse
@@ -10,6 +10,9 @@ import random
 import numpy as np
 import pygraphmini as gm
 from matching_oracle import count_matches, matrix
+from runtime_test_support import restore_generated_plan_at_exit
+
+restore_generated_plan_at_exit()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--results", help="Save counts, including any oracle mismatches")

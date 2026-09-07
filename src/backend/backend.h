@@ -8,8 +8,12 @@
 #include "graph.h"
 #include "minigraph.h"
 #include <omp.h>
+#ifdef GRAPHMINI_USE_TBB_MODULE
+import tbb;
+#else
 #include <oneapi/tbb/parallel_for.h>
 #include <oneapi/tbb/tick_count.h>
+#endif
 namespace minigraph {
     struct cc {
         alignas(64) long long count{0};

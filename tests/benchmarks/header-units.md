@@ -1,5 +1,10 @@
 # Experimental C++20 header units
 
+Historical report: the seven-cycle mismatch recorded below has since been fixed
+by retaining pooled-buffer ownership across chained temporary set operations.
+The current large-pattern suite is expected to pass the oracle. The build cache
+now also fingerprints runtime headers and compiler/build settings.
+
 The recorded experiment below used oneTBB 2023.0.0. The later dependency upgrade
 to 2023.1.0 supplies an official `tbb.cppm`, but these results do not measure it.
 

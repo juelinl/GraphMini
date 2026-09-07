@@ -49,6 +49,11 @@ int main(int argc, char **argv) {
                             ++cases;
                         }
 #ifdef GRAPHMINI_REFACTORED
+    // Sorting IR must be asymmetric even when edge/restriction counts disagree.
+    VertexSetIR sparse(EdgeIR(1), EdgeRestrictIR(3), 2, EdgeInduced);
+    VertexSetIR dense(EdgeIR(3), EdgeRestrictIR(0), 2, EdgeInduced);
+    if (!(sparse < dense) || dense < sparse || sparse < sparse)
+        throw std::runtime_error("IR ordering is not a strict weak order");
     // Planning another query mode must not change an existing IR's semantics.
     CodeGenConfig config;
     config.schedulerType = SchedulerType::GraphPi;

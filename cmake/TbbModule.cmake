@@ -34,7 +34,7 @@ file(CONFIGURE OUTPUT "${tbb_generated_dir}/tbb.cppm" CONTENT "${tbb_module_text
 add_library(graphmini_tbb_module STATIC)
 target_compile_features(graphmini_tbb_module PUBLIC cxx_std_20)
 set_target_properties(graphmini_tbb_module PROPERTIES CXX_SCAN_FOR_MODULES ON)
-target_link_libraries(graphmini_tbb_module PUBLIC TBB::tbb TBB::tbbmalloc)
+target_link_libraries(graphmini_tbb_module PUBLIC TBB::tbb TBB::tbbmalloc OpenMP::OpenMP_CXX)
 target_sources(graphmini_tbb_module PUBLIC FILE_SET CXX_MODULES
     BASE_DIRS "${tbb_generated_dir}" FILES "${tbb_generated_dir}/tbb.cppm")
 

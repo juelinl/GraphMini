@@ -64,6 +64,8 @@ def main():
     parser.add_argument("--header-units", action="store_true",
                         help="Compare C++20 header units, PCH, and textual headers with identical flags")
     parser.add_argument("--driver-case", help="Also time CMake build and library load for this case name")
+    parser.add_argument("--tbb-module-source", type=Path,
+                        help="Compare the generated, compatibility-patched official tbb.cppm with C++20 PCH")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.repeats < 1:
@@ -73,10 +75,10 @@ def main():
     lines = commands.splitlines()
     pch = shlex.split(next(line for line in lines if "-emit-pch" in line))
     compile_cmd = shlex.split(next(line for line in lines if "-include-pch" in line))
-    if args.header_units:
+    if args.header_units or args.tbb_module_source:
         pch = ["-std=gnu++20" if x.startswith("-std=") else x for x in pch]
         compile_cmd = ["-std=gnu++20" if x.startswith("-std=") else x for x in compile_cmd]
-    link_line = next(line for line in lines if "-dynamiclib" in line)
+    link_line = next(line for line in lines if "-dynamiclib" in line or " -shared " in line)
     # CMake's macOS Ninja rule wraps the actual link command with shell no-ops.
     link = shlex.split(link_line.removeprefix(": && ").removesuffix(" && :"))
     source = Path(compile_cmd[compile_cmd.index("-c") + 1])
@@ -113,6 +115,8 @@ def main():
         scratch = Path(scratch)
         pch_path = scratch / "backend.pch"
         unit_path = scratch / "backend.pcm"
+        named_pcm = scratch / "tbb.pcm"
+        named_obj = scratch / "tbb.o"
         _, generated = run([str(build / "bin/compilation_benchmark"), str(scratch),
                             *map(str, args.sizes)], build)
         codegen = {parts[1]: float(parts[2]) for line in generated.splitlines()
@@ -120,7 +124,7 @@ def main():
         if args.driver_case and args.driver_case not in codegen:
             parser.error("--driver-case must name a generated benchmark case")
         results = {"build_dir": str(build), "repeats": args.repeats, "sizes": args.sizes,
-                   "language_standard": "gnu++20" if args.header_units else "build default",
+                   "language_standard": "gnu++20" if args.header_units or args.tbb_module_source else "build default",
                    "compiler": run([compile_cmd[0], "--version"], build)[1].strip(),
                    "pch_build_seconds": [], "cases": {}}
         # Each invocation regenerates the PCH. This is artifact-cold, not an OS
@@ -134,6 +138,15 @@ def main():
                                                unit_path)
             results["header_unit_build_seconds"] = [
                 run(unit_command, build)[0] for _ in range(args.repeats)]
+        if args.tbb_module_source:
+            named_source = args.tbb_module_source.resolve()
+            command = rewrite(compile_cmd, named_pcm, named_source, use_pch=False)
+            command[command.index("-c")] = "--precompile"
+            object_command = rewrite(compile_cmd, named_obj, named_pcm, use_pch=False)
+            results["named_module_bmi_seconds"], results["named_module_object_seconds"] = [], []
+            for _ in range(args.repeats):
+                results["named_module_bmi_seconds"].append(run(command, build)[0])
+                results["named_module_object_seconds"].append(run(object_command, build)[0])
         for name, seconds in codegen.items():
             item = {"codegen_mean_seconds": seconds,
                     "generated_source_bytes": (scratch / (name + ".cpp")).stat().st_size,
@@ -141,11 +154,15 @@ def main():
                     "link_seconds": []}
             if args.header_units:
                 item.update(header_unit_compile_seconds=[], header_unit_link_seconds=[])
+            if args.tbb_module_source:
+                item.update(named_module_compile_seconds=[], named_module_link_seconds=[])
             obj = scratch / (name + ".o")
-            shared = scratch / (name + ".dylib")
+            shared = scratch / (name + Path(link[link.index("-o") + 1]).suffix)
             for repeat in range(args.repeats):
                 # Alternate order to reduce systematic cache/thermal bias.
                 modes = ["pch", "no_pch"] + (["header_unit"] if args.header_units else [])
+                if args.tbb_module_source:
+                    modes.append("named_module")
                 modes = modes[repeat % len(modes):] + modes[:repeat % len(modes)]
                 for mode in modes:
                     use_pch = mode == "pch"
@@ -153,21 +170,32 @@ def main():
                     command.extend(["-I", str(source.parent)])
                     if mode == "header_unit":
                         command.extend(["-DGRAPHMINI_USE_HEADER_UNIT=1", f"-fmodule-file={unit_path}"])
+                    if mode == "named_module":
+                        command.extend(["-DGRAPHMINI_USE_TBB_MODULE=1", f"-fmodule-file=tbb={named_pcm}"])
                     key = mode + "_compile_seconds"
                     item[key].append(run(command, build)[0])
                     if mode != "no_pch":
                         command = rewrite(link, shared)
                         command = [str(obj) if x == original_object else x for x in command]
-                        key = "link_seconds" if use_pch else "header_unit_link_seconds"
+                        if mode == "named_module":
+                            command.append(str(named_obj))
+                        key = "link_seconds" if use_pch else mode + "_link_seconds"
                         item[key].append(run(command, build)[0])
             results["cases"][name] = item
             if name == args.driver_case:
-                for mode in (["pch", "header_unit"] if args.header_units else ["pch"]):
+                driver_modes = ["pch"] + (["header_unit"] if args.header_units else [])
+                if args.tbb_module_source:
+                    driver_modes.append("named_module")
+                for mode in driver_modes:
                     command = rewrite(compile_cmd, obj, scratch / (name + ".cpp"), mode == "pch")
                     command.extend(["-I", str(source.parent)])
                     if mode == "header_unit":
                         command.extend(["-DGRAPHMINI_USE_HEADER_UNIT=1", f"-fmodule-file={unit_path}"])
+                    if mode == "named_module":
+                        command.extend(["-DGRAPHMINI_USE_TBB_MODULE=1", f"-fmodule-file=tbb={named_pcm}"])
                     link_command = [str(obj) if x == original_object else x for x in rewrite(link, shared)]
+                    if mode == "named_module":
+                        link_command.append(str(named_obj))
                     item[mode + "_driver_samples"] = measure_driver(
                         scratch, build, command, link_command, obj, shared, args.repeats)
             print(name, {key: round(statistics.median(value), 4)

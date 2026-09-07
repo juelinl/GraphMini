@@ -1,7 +1,7 @@
 """Run with PYTHONPATH=<build>/lib and the build tools on PATH.
 
 Checks compiled counts against an independent exhaustive matcher on tiny graphs.
-Like compile_plan itself, this test updates src/codegen_output/plan.cpp.
+Temporarily updates src/codegen_output/plan.cpp and restores it on normal exit.
 """
 import itertools
 import argparse
@@ -9,6 +9,9 @@ import json
 import numpy as np
 import pygraphmini as gm
 from matching_oracle import count_matches, matrix
+from runtime_test_support import restore_generated_plan_at_exit
+
+restore_generated_plan_at_exit()
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--results", help="Write counts and oracle mismatches to JSON")

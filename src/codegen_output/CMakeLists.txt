@@ -3,7 +3,12 @@ add_library(plan STATIC
 target_precompile_headers(plan PUBLIC ../backend/backend.h)
 target_link_libraries(plan PUBLIC OpenMP::OpenMP_CXX TBB::tbb TBB::tbbmalloc)
 
-if(GRAPHMINI_EXPERIMENTAL_HEADER_UNITS)
+if(GRAPHMINI_EXPERIMENTAL_TBB_MODULE)
+    add_library(plan_module SHARED plan.cpp plan.h)
+    set_target_properties(plan_module PROPERTIES CXX_STANDARD 20 CXX_SCAN_FOR_MODULES ON)
+    target_compile_definitions(plan_module PRIVATE GRAPHMINI_USE_TBB_MODULE=1)
+    target_link_libraries(plan_module PRIVATE graphmini_tbb_module)
+elseif(GRAPHMINI_EXPERIMENTAL_HEADER_UNITS)
     add_library(plan_module SHARED plan_header_unit.cpp plan.h)
     set_target_properties(plan_module PROPERTIES CXX_STANDARD 20 CXX_SCAN_FOR_MODULES OFF)
     set(header_unit "${CMAKE_CURRENT_BINARY_DIR}/graphmini_backend.pcm")

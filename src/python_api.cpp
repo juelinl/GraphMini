@@ -127,9 +127,11 @@ std::string hash_code_string(const std::string &code) {
 
 std::filesystem::path plan_cache_dir() {
     std::filesystem::path cache_dir(PROJECT_BINARY_DIR);
-    cache_dir /= GRAPHMINI_EXPERIMENTAL_HEADER_UNITS
-                         ? "python_plan_cache_header_units" : "python_plan_cache";
+    cache_dir /= GRAPHMINI_EXPERIMENTAL_TBB_MODULE ? "python_plan_cache_tbb_module"
+                 : GRAPHMINI_EXPERIMENTAL_HEADER_UNITS ? "python_plan_cache_header_units"
+                                                       : "python_plan_cache";
     cache_dir /= "tbb-" GRAPHMINI_TBB_VERSION;
+    cache_dir /= GRAPHMINI_PLAN_BUILD_ID;
     std::filesystem::create_directories(cache_dir);
     return cache_dir;
 }

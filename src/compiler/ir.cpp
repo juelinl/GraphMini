@@ -45,12 +45,12 @@ bool VertexSetIR::same_iep_computation(const VertexSetIR &rhs) const {
 }
 
 bool VertexSetIR::operator<(const VertexSetIR &rhs) const {
-    if (m_loop_depth < rhs.loop_depth())
-        return true;
-    else if (edge_num() < rhs.edge_num())
-        return true;
-    else if (restrict_num() < rhs.restrict_num())
-        return true;
+    if (m_loop_depth != rhs.loop_depth())
+        return m_loop_depth < rhs.loop_depth();
+    if (edge_num() != rhs.edge_num())
+        return edge_num() < rhs.edge_num();
+    if (restrict_num() != rhs.restrict_num())
+        return restrict_num() < rhs.restrict_num();
     for (int i = 0; i <= m_loop_depth; i++) {
         if (is_edge(i) && !rhs.is_edge(i)) {
             return false;

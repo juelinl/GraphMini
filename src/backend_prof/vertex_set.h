@@ -138,9 +138,11 @@ namespace minigraph {
         inline VertexSet subtract(const VertexSet &other) const;
         inline size_t subtract_cnt(const VertexSet &other, IdType upper) const;
         inline size_t subtract_cnt(const VertexSet &other) const;
-        inline VertexSet bounded(IdType upper) const;
+        inline VertexSet bounded(IdType upper) const &;
+        inline VertexSet bounded(IdType upper) &&;
         inline size_t bounded_cnt(IdType upper) const;
-        inline VertexSet remove(IdType id) const;
+        inline VertexSet remove(IdType id) const &;
+        inline VertexSet remove(IdType id) &&;
         inline size_t remove_cnt(IdType id) const;
         inline VertexSet indices(const VertexSet &_vertex) const;
     };
@@ -344,7 +346,7 @@ namespace minigraph {
         return out_size;
     };
 
-    VertexSet VertexSet::bounded(IdType upper) const {
+    VertexSet VertexSet::bounded(IdType upper) const & {
         size_t idx_l = 0;
         if (size() > 64) {
             size_t count = size();
@@ -382,7 +384,7 @@ namespace minigraph {
         return idx_l;
     }
 
-    VertexSet VertexSet::remove(IdType upper) const {
+    VertexSet VertexSet::remove(IdType upper) const & {
         size_t idx_l = 0;
         if (size() > 64) {
             size_t count = size();
@@ -412,6 +414,24 @@ namespace minigraph {
         };
 
         return VertexSet(INVALID_ID, m_data, m_size);
+    }
+
+    // A view into an rvalue must retain its workspace after the temporary dies.
+    // Lvalue operations intentionally remain borrowed views of their live parent.
+    VertexSet VertexSet::bounded(IdType upper) && {
+        VertexSet out = static_cast<const VertexSet&>(*this).bounded(upper);
+        out.m_pooled = m_pooled;
+        m_pooled = false;
+        return out;
+    }
+
+    VertexSet VertexSet::remove(IdType upper) && {
+        VertexSet out = static_cast<const VertexSet&>(*this).remove(upper);
+        if (out.m_data == m_data) {
+            out.m_pooled = m_pooled;
+            m_pooled = false;
+        }
+        return out;
     }
 
     size_t VertexSet::remove_cnt(IdType upper) const {

@@ -3,6 +3,9 @@ project(GraphMini)
 option(GRAPHMINI_BUILD_TESTS "Build compiler regression tests" OFF)
 option(GRAPHMINI_EXPERIMENTAL_HEADER_UNITS "Use a Clang C++20 header unit for dynamic query plans" OFF)
 option(GRAPHMINI_EXPERIMENTAL_TBB_MODULE "Build the official TBB module with a build-local compatibility fix" OFF)
+if(GRAPHMINI_EXPERIMENTAL_HEADER_UNITS AND GRAPHMINI_EXPERIMENTAL_TBB_MODULE)
+    message(FATAL_ERROR "Select either header units or the named TBB module, not both")
+endif()
 if(GRAPHMINI_EXPERIMENTAL_HEADER_UNITS)
     if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR NOT CMAKE_GENERATOR MATCHES "Ninja")
         message(FATAL_ERROR "Experimental header units require upstream Clang and Ninja")
@@ -69,6 +72,19 @@ find_package(OpenMP REQUIRED COMPONENTS CXX)
 set(PROJECT_PROFILE_DIR "${PROJECT_SOURCE_DIR}/profile/")
 set(PROJECT_LOG_DIR "${PROJECT_SOURCE_DIR}/log/")
 set(PROJECT_PLAN_DIR "${PROJECT_SOURCE_DIR}/plan/")
+
+# Generated text alone does not identify a usable query library: runtime headers
+# and compiler/build settings also affect its ABI and behavior.
+file(GLOB plan_runtime_inputs CONFIGURE_DEPENDS
+    "${PROJECT_SOURCE_DIR}/src/backend/*.h" "${PROJECT_SOURCE_DIR}/include/*.h"
+    "${PROJECT_SOURCE_DIR}/src/codegen_output/plan.h")
+set(plan_build_fingerprint "${CMAKE_CXX_COMPILER};${CMAKE_CXX_COMPILER_VERSION};${CMAKE_BUILD_TYPE};${CMAKE_CXX_FLAGS};${CMAKE_CXX_FLAGS_RELEASE};${CMAKE_CXX_FLAGS_DEBUG};${OpenMP_CXX_FLAGS};${TBB_VERSION};${TBB_DIR};${GRAPHMINI_EXPERIMENTAL_HEADER_UNITS};${GRAPHMINI_EXPERIMENTAL_TBB_MODULE}")
+foreach(input IN LISTS plan_runtime_inputs)
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${input}")
+    file(SHA256 "${input}" input_hash)
+    string(APPEND plan_build_fingerprint ";${input_hash}")
+endforeach()
+string(SHA256 GRAPHMINI_PLAN_BUILD_ID "${plan_build_fingerprint}")
 
 configure_file(include/configure.h.in ${PROJECT_BINARY_DIR}/configure/configure.h)
 message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
