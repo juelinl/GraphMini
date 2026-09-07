@@ -23,6 +23,7 @@ def main():
     parser.add_argument("--kind", choices=["compile", "runtime"], required=True)
     parser.add_argument("--build-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--case", help="Measure only this case, for alternating-order confirmations")
     args = parser.parse_args()
     restore_generated_plan_at_exit()
     build = args.build_dir.resolve()
@@ -34,6 +35,8 @@ def main():
     for size in [6, 7]:
         for family in ["clique", "star", "cycle"]:
             name = f"{family}{size}_nested_costmodel"
+            if args.case and args.case != name:
+                continue
             query = matrix(size, [(i, j) for i in range(size) for j in range(i + 1, size)
                                   if family == "clique" or (family == "star" and i == 0)
                                   or (family == "cycle" and (j == i + 1 or (i == 0 and j == size - 1)))])
