@@ -12,14 +12,22 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--compiler")
     parser.add_argument("--jobs", type=int, default=6)
+    parser.add_argument("--resume", action="store_true", help="Continue completed stages in the same checkout")
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     out = root / ".verification/inlining"
     out.mkdir(parents=True, exist_ok=True)
     summary = {"commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
                "platform": platform.platform(), "stages": []}
+    if args.resume:
+        current = summary["commit"]
+        summary = json.loads((out / "summary.json").read_text())
+        summary.setdefault("resume_commits", []).append(current)
 
     def run(name, command, env=None):
+        if name in summary["stages"]:
+            print(name, "already passed", flush=True)
+            return
         print(name, flush=True)
         with (out / (name + ".log")).open("w") as log:
             subprocess.run(command, cwd=root, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
@@ -44,7 +52,8 @@ def main():
         run(name + "-ctest", ["ctest", "--test-dir", str(build), "--output-on-failure"])
         commands = subprocess.check_output(["ninja", "-C", str(build), "-t", "commands", "plan_module"], text=True)
         query_command, = [c for c in commands.splitlines() if " -c " in c and " -o " in c
-                          and "plan_module.dir" in c and "/plan.cpp" in c and "/plan.cppm" not in c]
+                          and "plan_module.dir" in c and "/plan.cpp" in c and "/plan.cppm" not in c
+                          and "clang-scan-deps" not in c]
         assert "-O3" in query_command and ("-fno-inline" in query_command) == disabled
         assert "-ftime-trace" not in query_command
         (out / (name + "-commands.txt")).write_text(commands)
