@@ -40,3 +40,20 @@ Progress:
 All six steps above are complete. Further backend/standard-library module work
 is a separate experiment, not a prerequisite for this checkpoint. No changes
 have been pushed to GitHub.
+
+## Follow-up: precompile the complete backend
+
+Completed the opt-in `graphmini.backend` module prototype. It exports the stable
+runtime interface with preserved C++17-host type identity and re-exports `tbb`.
+Both platforms pass the C++17 interoperability test and all 1,920 canonical
+PCH/backend-module oracle executions. The shared generated source and benchmark
+cache entries are restored after tests.
+
+Matched C++20 consumer compilation is near PCH on macOS and faster in this
+Ubuntu run, but the actual seven-cycle `compile_plan()` cache miss remains
+slower with modules. PCH therefore remains the default. Full results and raw
+samples are in `tests/benchmarks/backend-module-verification.md`.
+
+Any next performance phase should profile the real API's module scanning/build
+driver overhead. Neither broader module exports nor faster direct compilation
+alone should be used as the criterion for changing defaults.

@@ -1,0 +1,630 @@
+{
+  "verification": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "python": "3.14.7 | packaged by conda-forge | (main, Sep  2 2026, 21:04:32) [Clang 20.1.8 ]",
+    "commit": "8b489596ddeee661b4f7b75062bcfd50fe0a3f80",
+    "checks": [
+      "pch-configure",
+      "pch-build",
+      "pch-ctest",
+      "pch-small",
+      "pch-large",
+      "pch-api",
+      "backend-configure",
+      "backend-build",
+      "backend-ctest",
+      "backend-small",
+      "backend-large",
+      "backend-api",
+      "benchmark"
+    ]
+  },
+  "benchmark": {
+    "build_dir": "/Users/juelinliu/Desktop/GraphMini/GraphMini-repo/build-conda",
+    "repeats": 3,
+    "sizes": [
+      6,
+      7
+    ],
+    "language_standard": "gnu++20",
+    "compiler": "clang version 21.1.8\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Users/juelinliu/mamba/envs/graphmini/bin\nConfiguration file: /Users/juelinliu/mamba/envs/graphmini/bin/arm64-apple-darwin-clang++.cfg",
+    "pch_build_seconds": [
+      1.0775539579917677,
+      0.958668083010707,
+      0.973203957953956
+    ],
+    "cases": {
+      "clique6_openmp_none": {
+        "codegen_mean_seconds": 0.00129187,
+        "generated_source_bytes": 2447,
+        "pch_compile_seconds": [
+          0.23191725002834573,
+          0.14012629102217034,
+          0.13744958298048005
+        ],
+        "no_pch_compile_seconds": [
+          0.8378617919515818,
+          0.8415499159600586,
+          0.8481204170384444
+        ],
+        "link_seconds": [
+          0.06509112496860325,
+          0.0655409159953706,
+          0.06191054201917723
+        ],
+        "named_module_compile_seconds": [
+          0.5770555830094963,
+          0.5902985419961624,
+          0.6020236249896698
+        ],
+        "named_module_link_seconds": [
+          0.06299004197353497,
+          0.06379024998750538,
+          0.06092795799486339
+        ],
+        "backend_module_compile_seconds": [
+          0.14846245903754607,
+          0.14866762497695163,
+          0.14563629101030529
+        ],
+        "backend_module_link_seconds": [
+          0.06422808294882998,
+          0.06232125003589317,
+          0.06228854204528034
+        ]
+      },
+      "star6_openmp_none": {
+        "codegen_mean_seconds": 0.000392544,
+        "generated_source_bytes": 3739,
+        "pch_compile_seconds": [
+          0.15091975004179403,
+          0.15124470903538167,
+          0.15615358302602544
+        ],
+        "no_pch_compile_seconds": [
+          0.8396029160358012,
+          0.8665348339709453,
+          0.8844143329770304
+        ],
+        "link_seconds": [
+          0.06415362498955801,
+          0.06373562500812113,
+          0.06477875000564381
+        ],
+        "named_module_compile_seconds": [
+          0.6107677079853602,
+          0.7095921249710955,
+          0.631665916997008
+        ],
+        "named_module_link_seconds": [
+          0.06569183402461931,
+          0.06099945801543072,
+          0.06560341600561514
+        ],
+        "backend_module_compile_seconds": [
+          0.16115449997596443,
+          0.1592889999737963,
+          0.16056566702900454
+        ],
+        "backend_module_link_seconds": [
+          0.06454629194922745,
+          0.061710292007774115,
+          0.06804679200286046
+        ]
+      },
+      "cycle6_openmp_none": {
+        "codegen_mean_seconds": 0.00105892,
+        "generated_source_bytes": 2833,
+        "pch_compile_seconds": [
+          0.21454112499486655,
+          0.2190982080064714,
+          0.21737608301918954
+        ],
+        "no_pch_compile_seconds": [
+          0.925253875029739,
+          0.9316099580028094,
+          0.9187855000491254
+        ],
+        "link_seconds": [
+          0.0625679160002619,
+          0.06523545796517283,
+          0.06500812503509223
+        ],
+        "named_module_compile_seconds": [
+          0.684097167046275,
+          0.7164806670043617,
+          0.6893884579767473
+        ],
+        "named_module_link_seconds": [
+          0.06268908403581008,
+          0.06273250002413988,
+          0.061964666994754225
+        ],
+        "backend_module_compile_seconds": [
+          0.22714100003940985,
+          0.2171335419989191,
+          0.21871666598599404
+        ],
+        "backend_module_link_seconds": [
+          0.06337445898680016,
+          0.0657363329664804,
+          0.0636926669976674
+        ]
+      },
+      "clique6_nested_costmodel": {
+        "codegen_mean_seconds": 0.00129489,
+        "generated_source_bytes": 9409,
+        "pch_compile_seconds": [
+          0.5235199999879114,
+          0.5044309160439298,
+          0.5048715409939177
+        ],
+        "no_pch_compile_seconds": [
+          1.1801057920092717,
+          1.1966757499612868,
+          1.1971558749792166
+        ],
+        "link_seconds": [
+          0.06345575000159442,
+          0.062206749978940934,
+          0.06527145800646394
+        ],
+        "named_module_compile_seconds": [
+          0.9845775830326602,
+          0.9633282919530757,
+          1.216767416044604
+        ],
+        "named_module_link_seconds": [
+          0.06690683402121067,
+          0.06471462501212955,
+          0.08330675004981458
+        ],
+        "backend_module_compile_seconds": [
+          0.5179415000020526,
+          0.5158449579612352,
+          0.6093908750335686
+        ],
+        "backend_module_link_seconds": [
+          0.0642796250176616,
+          0.06523791700601578,
+          0.06570725003257394
+        ]
+      },
+      "star6_nested_costmodel": {
+        "codegen_mean_seconds": 0.000396046,
+        "generated_source_bytes": 3789,
+        "pch_compile_seconds": [
+          0.18750441598240286,
+          0.1827725000330247,
+          0.18552679097047076
+        ],
+        "no_pch_compile_seconds": [
+          0.9160823750426061,
+          0.882098457950633,
+          0.9129155839909799
+        ],
+        "link_seconds": [
+          0.06283829099265859,
+          0.0632960419752635,
+          0.06527287501376122
+        ],
+        "named_module_compile_seconds": [
+          0.6780969160026871,
+          0.6429421249777079,
+          0.6406066669733264
+        ],
+        "named_module_link_seconds": [
+          0.0662955409497954,
+          0.06482274999143556,
+          0.06498099997406825
+        ],
+        "backend_module_compile_seconds": [
+          0.19954341603443027,
+          0.19187999999849126,
+          0.19732591701904312
+        ],
+        "backend_module_link_seconds": [
+          0.06487166596343741,
+          0.065373792022001,
+          0.06451758299954236
+        ]
+      },
+      "cycle6_nested_costmodel": {
+        "codegen_mean_seconds": 0.0010615,
+        "generated_source_bytes": 9075,
+        "pch_compile_seconds": [
+          0.547652667039074,
+          0.5533169590053149,
+          0.5819279580027796
+        ],
+        "no_pch_compile_seconds": [
+          1.2441011669579893,
+          1.2582154999836348,
+          1.3004875830374658
+        ],
+        "link_seconds": [
+          0.06336045800708234,
+          0.06607116694794968,
+          0.06497441697865725
+        ],
+        "named_module_compile_seconds": [
+          1.133136624994222,
+          1.005774958000984,
+          1.0194088330026716
+        ],
+        "named_module_link_seconds": [
+          0.06637479097116739,
+          0.06534508400363848,
+          0.06431033299304545
+        ],
+        "backend_module_compile_seconds": [
+          0.5696031249826774,
+          0.565583500021603,
+          0.6226661250111647
+        ],
+        "backend_module_link_seconds": [
+          0.06421525002224371,
+          0.06489054096164182,
+          0.0661206670338288
+        ]
+      },
+      "clique7_openmp_none": {
+        "codegen_mean_seconds": 0.0289707,
+        "generated_source_bytes": 2770,
+        "pch_compile_seconds": [
+          0.14948941697366536,
+          0.14497695898171514,
+          0.14783416700083762
+        ],
+        "no_pch_compile_seconds": [
+          0.8443770830053836,
+          0.8834770829998888,
+          0.8541450410266407
+        ],
+        "link_seconds": [
+          0.062113334017340094,
+          0.06442091695498675,
+          0.06279249995714054
+        ],
+        "named_module_compile_seconds": [
+          0.6039255419746041,
+          0.6263824580237269,
+          0.618193166970741
+        ],
+        "named_module_link_seconds": [
+          0.0606043339939788,
+          0.06610012496821582,
+          0.06545125000411645
+        ],
+        "backend_module_compile_seconds": [
+          0.16473512502852827,
+          0.15057512500789016,
+          0.15276475000428036
+        ],
+        "backend_module_link_seconds": [
+          0.06519425002625212,
+          0.06629354105098173,
+          0.06298829097067937
+        ]
+      },
+      "star7_openmp_none": {
+        "codegen_mean_seconds": 0.00289124,
+        "generated_source_bytes": 10455,
+        "pch_compile_seconds": [
+          0.4165455420152284,
+          0.3134987090015784,
+          0.31163754197768867
+        ],
+        "no_pch_compile_seconds": [
+          1.0570773339713924,
+          0.9983537080115639,
+          1.0302081249537878
+        ],
+        "link_seconds": [
+          0.0661236250307411,
+          0.06476208299864084,
+          0.06092874996829778
+        ],
+        "named_module_compile_seconds": [
+          0.7687796659884043,
+          0.7677499579731375,
+          0.7874856670387089
+        ],
+        "named_module_link_seconds": [
+          0.06263633404159918,
+          0.0652899169945158,
+          0.06636379199335352
+        ],
+        "backend_module_compile_seconds": [
+          0.31698383402545005,
+          0.32486058300128207,
+          0.33228724997024983
+        ],
+        "backend_module_link_seconds": [
+          0.061427292006555945,
+          0.06370945798698813,
+          0.06445554102538154
+        ]
+      },
+      "cycle7_openmp_none": {
+        "codegen_mean_seconds": 0.0105631,
+        "generated_source_bytes": 3329,
+        "pch_compile_seconds": [
+          0.25832983397413045,
+          0.26837183302268386,
+          0.26221370801795274
+        ],
+        "no_pch_compile_seconds": [
+          0.9890417919959873,
+          0.9654238749644719,
+          0.9643034160253592
+        ],
+        "link_seconds": [
+          0.06363579200115055,
+          0.06439679197501391,
+          0.06865291600115597
+        ],
+        "named_module_compile_seconds": [
+          0.734600749972742,
+          0.7158417089958675,
+          0.7280515410238877
+        ],
+        "named_module_link_seconds": [
+          0.0615593750262633,
+          0.06283287500264123,
+          0.0625796249951236
+        ],
+        "backend_module_compile_seconds": [
+          0.2614440830075182,
+          0.25790287501877174,
+          0.2589783340226859
+        ],
+        "backend_module_link_seconds": [
+          0.06316479196539149,
+          0.0624426249996759,
+          0.06417616695398465
+        ]
+      },
+      "clique7_nested_costmodel": {
+        "codegen_mean_seconds": 0.0292618,
+        "generated_source_bytes": 13642,
+        "pch_compile_seconds": [
+          0.593501917028334,
+          0.6102880000253208,
+          0.6057962080230936
+        ],
+        "no_pch_compile_seconds": [
+          1.2856219169916585,
+          1.2903703339979984,
+          1.2973689580103382
+        ],
+        "link_seconds": [
+          0.06343741703312844,
+          0.062360042007640004,
+          0.06416091596474871
+        ],
+        "named_module_compile_seconds": [
+          1.0528599999961443,
+          1.0706930000451393,
+          1.0450942909810692
+        ],
+        "named_module_link_seconds": [
+          0.06209149997448549,
+          0.06708183401497081,
+          0.06166433298494667
+        ],
+        "backend_module_compile_seconds": [
+          0.622966083989013,
+          0.7172873750096187,
+          0.6044354169862345
+        ],
+        "backend_module_link_seconds": [
+          0.06035112502286211,
+          0.06456095800967887,
+          0.06337120803073049
+        ]
+      },
+      "star7_nested_costmodel": {
+        "codegen_mean_seconds": 0.00296486,
+        "generated_source_bytes": 10505,
+        "pch_compile_seconds": [
+          0.34932999999728054,
+          0.35899800003971905,
+          0.3505913330009207
+        ],
+        "no_pch_compile_seconds": [
+          1.0853890830185264,
+          1.0582256669877097,
+          1.0481124999932945
+        ],
+        "link_seconds": [
+          0.06118554202839732,
+          0.06318050000118092,
+          0.06445516704116017
+        ],
+        "named_module_compile_seconds": [
+          0.850567375018727,
+          0.8216995419934392,
+          0.8172279579448514
+        ],
+        "named_module_link_seconds": [
+          0.06573858298361301,
+          0.06550274998880923,
+          0.06571483297739178
+        ],
+        "backend_module_compile_seconds": [
+          0.36852483300026506,
+          0.3701114170253277,
+          0.35977654199814424
+        ],
+        "backend_module_link_seconds": [
+          0.06548720900900662,
+          0.061770624946802855,
+          0.06304320896742865
+        ]
+      },
+      "cycle7_nested_costmodel": {
+        "codegen_mean_seconds": 0.0104362,
+        "generated_source_bytes": 13246,
+        "pch_compile_seconds": [
+          0.8808357500238344,
+          0.8728019999689423,
+          0.87859804200707
+        ],
+        "no_pch_compile_seconds": [
+          1.5571651670034043,
+          1.6884836669778451,
+          2.1896708330023102
+        ],
+        "link_seconds": [
+          0.06441129103768617,
+          0.0660207910113968,
+          0.0642995000234805
+        ],
+        "named_module_compile_seconds": [
+          1.3545103750075214,
+          1.3565349170239642,
+          1.3221622090204619
+        ],
+        "named_module_link_seconds": [
+          0.06475366704398766,
+          0.0650408340152353,
+          0.06476916698738933
+        ],
+        "backend_module_compile_seconds": [
+          0.9013924170285463,
+          0.8936220000032336,
+          0.8719306660350412
+        ],
+        "backend_module_link_seconds": [
+          0.06514820799930021,
+          0.06664012500550598,
+          0.0629878340405412
+        ],
+        "pch_driver_samples": [
+          {
+            "build_seconds": 1.20952141599264,
+            "load_seconds": 0.3018385420436971,
+            "build_plus_load_seconds": 1.511359958036337
+          },
+          {
+            "build_seconds": 1.0030688749975525,
+            "load_seconds": 0.17664012499153614,
+            "build_plus_load_seconds": 1.1797089999890886
+          },
+          {
+            "build_seconds": 1.0338302919990383,
+            "load_seconds": 0.17544691695366055,
+            "build_plus_load_seconds": 1.2092772089526989
+          }
+        ],
+        "named_module_driver_samples": [
+          {
+            "build_seconds": 1.53516462497646,
+            "load_seconds": 0.21140354097587988,
+            "build_plus_load_seconds": 1.7465681659523398
+          },
+          {
+            "build_seconds": 1.4470743749989197,
+            "load_seconds": 0.17686666699592024,
+            "build_plus_load_seconds": 1.62394104199484
+          },
+          {
+            "build_seconds": 1.533262333017774,
+            "load_seconds": 0.1588617080124095,
+            "build_plus_load_seconds": 1.6921240410301834
+          }
+        ],
+        "backend_module_driver_samples": [
+          {
+            "build_seconds": 1.076147916028276,
+            "load_seconds": 0.18726725003216416,
+            "build_plus_load_seconds": 1.2634151660604402
+          },
+          {
+            "build_seconds": 0.966670666995924,
+            "load_seconds": 0.18850175000261515,
+            "build_plus_load_seconds": 1.1551724169985391
+          },
+          {
+            "build_seconds": 0.9736473329830915,
+            "load_seconds": 0.16938437498174608,
+            "build_plus_load_seconds": 1.1430317079648376
+          }
+        ]
+      }
+    },
+    "named_module_bmi_seconds": [
+      1.1473821669933386,
+      1.11008212500019,
+      1.1319449580041692
+    ],
+    "named_module_object_seconds": [
+      0.05057695903815329,
+      0.04677449999144301,
+      0.049118583963718265
+    ],
+    "backend_module_bmi_seconds": [
+      1.2949015410267748,
+      1.2850988330319524,
+      1.2995172920054756
+    ],
+    "backend_module_object_seconds": [
+      0.059080000035464764,
+      0.0544202079763636,
+      0.05809662502724677
+    ]
+  },
+  "api": {
+    "pch": {
+      "case": "cycle7_nested_costmodel",
+      "repeats": 3,
+      "initial_call_seconds_cache_state_unspecified": 0.017264458001591265,
+      "expected_matches": 2880,
+      "cache_miss_seconds": [
+        0.9644289169809781,
+        0.9750996669754386,
+        0.9704151249607094
+      ],
+      "cache_hit_seconds": [
+        0.0147179170162417,
+        0.015465666016098112,
+        0.014424707973375916
+      ]
+    },
+    "backend": {
+      "case": "cycle7_nested_costmodel",
+      "repeats": 3,
+      "initial_call_seconds_cache_state_unspecified": 0.018684917013160884,
+      "expected_matches": 2880,
+      "cache_miss_seconds": [
+        1.0864187499973923,
+        1.0525624580332078,
+        1.1546667920192704
+      ],
+      "cache_hit_seconds": [
+        0.01609437499428168,
+        0.016088334028609097,
+        0.01639383297879249
+      ]
+    }
+  },
+  "runtime": {
+    "pch-small": {
+      "executions": 432,
+      "oracle_mismatches": 0
+    },
+    "pch-large": {
+      "executions": 48,
+      "oracle_mismatches": 0
+    },
+    "backend-small": {
+      "executions": 432,
+      "oracle_mismatches": 0
+    },
+    "backend-large": {
+      "executions": 48,
+      "oracle_mismatches": 0
+    }
+  }
+}

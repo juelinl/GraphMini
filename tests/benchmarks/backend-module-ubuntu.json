@@ -1,0 +1,630 @@
+{
+  "verification": {
+    "platform": "Linux-5.15.0-187-generic-x86_64-with-glibc2.35",
+    "python": "3.14.7 | packaged by conda-forge | (main, Sep  2 2026, 21:08:32) [GCC 15.3.0]",
+    "commit": "8b489596ddeee661b4f7b75062bcfd50fe0a3f80",
+    "checks": [
+      "pch-configure",
+      "pch-build",
+      "pch-ctest",
+      "pch-small",
+      "pch-large",
+      "pch-api",
+      "backend-configure",
+      "backend-build",
+      "backend-ctest",
+      "backend-small",
+      "backend-large",
+      "backend-api",
+      "benchmark"
+    ]
+  },
+  "benchmark": {
+    "build_dir": "/data/juelin/GraphMini/build-conda",
+    "repeats": 3,
+    "sizes": [
+      6,
+      7
+    ],
+    "language_standard": "gnu++20",
+    "compiler": "clang version 21.1.8 (https://github.com/conda-forge/clangdev-feedstock 334cf9a5e6c0331e9f261eaf01fc3568724fcce9)\nTarget: x86_64-conda-linux-gnu\nThread model: posix\nInstalledDir: /data/juelin/graphmini-verification/env/bin\nConfiguration file: /data/juelin/graphmini-verification/env/bin/x86_64-conda-linux-gnu-clang++.cfg",
+    "pch_build_seconds": [
+      2.7961743238847703,
+      2.8062254928518087,
+      2.7763827410526574
+    ],
+    "cases": {
+      "clique6_openmp_none": {
+        "codegen_mean_seconds": 0.00252673,
+        "generated_source_bytes": 2447,
+        "pch_compile_seconds": [
+          0.24424033984541893,
+          0.23681108211167157,
+          0.23191115190275013
+        ],
+        "no_pch_compile_seconds": [
+          2.740778817795217,
+          2.4846429680474102,
+          2.6493125238921493
+        ],
+        "link_seconds": [
+          0.10905608418397605,
+          0.10561894485726953,
+          0.10819686995819211
+        ],
+        "named_module_compile_seconds": [
+          0.6996909950394183,
+          0.7418877549935132,
+          0.723854374838993
+        ],
+        "named_module_link_seconds": [
+          0.10000462713651359,
+          0.11072617094032466,
+          0.10989074595272541
+        ],
+        "backend_module_compile_seconds": [
+          0.17622747202403843,
+          0.1694376189261675,
+          0.16805551201105118
+        ],
+        "backend_module_link_seconds": [
+          0.10734516498632729,
+          0.10478641302324831,
+          0.10277759004384279
+        ]
+      },
+      "star6_openmp_none": {
+        "codegen_mean_seconds": 0.000640155,
+        "generated_source_bytes": 3739,
+        "pch_compile_seconds": [
+          0.25409138412214816,
+          0.2431617840193212,
+          0.25930614001117647
+        ],
+        "no_pch_compile_seconds": [
+          2.6418690690770745,
+          2.539056133944541,
+          2.5412675209809095
+        ],
+        "link_seconds": [
+          0.10603192681446671,
+          0.1054697569925338,
+          0.10308209410868585
+        ],
+        "named_module_compile_seconds": [
+          0.7262715210672468,
+          0.7405154870357364,
+          0.7451769299805164
+        ],
+        "named_module_link_seconds": [
+          0.10291488515213132,
+          0.10345316817983985,
+          0.10240734298713505
+        ],
+        "backend_module_compile_seconds": [
+          0.19742065016180277,
+          0.1951252231374383,
+          0.19374807714484632
+        ],
+        "backend_module_link_seconds": [
+          0.10418012295849621,
+          0.102288574911654,
+          0.10901627293787897
+        ]
+      },
+      "cycle6_openmp_none": {
+        "codegen_mean_seconds": 0.0019283,
+        "generated_source_bytes": 2833,
+        "pch_compile_seconds": [
+          0.3519357058685273,
+          0.35445629991590977,
+          0.35124085401184857
+        ],
+        "no_pch_compile_seconds": [
+          2.6480743719730526,
+          2.643302680924535,
+          2.6427719448693097
+        ],
+        "link_seconds": [
+          0.09894150705076754,
+          0.09934064606204629,
+          0.1052848978433758
+        ],
+        "named_module_compile_seconds": [
+          0.8429678569082171,
+          0.8655347300227731,
+          0.8380745828617364
+        ],
+        "named_module_link_seconds": [
+          0.11423854995518923,
+          0.10154463909566402,
+          0.09943767497316003
+        ],
+        "backend_module_compile_seconds": [
+          0.3041275928262621,
+          0.3063099018763751,
+          0.29695449490100145
+        ],
+        "backend_module_link_seconds": [
+          0.10412386385723948,
+          0.10140755400061607,
+          0.09546409687027335
+        ]
+      },
+      "clique6_nested_costmodel": {
+        "codegen_mean_seconds": 0.00200477,
+        "generated_source_bytes": 9409,
+        "pch_compile_seconds": [
+          0.7463803319260478,
+          0.7213758260477334,
+          0.7232970600016415
+        ],
+        "no_pch_compile_seconds": [
+          2.987624550005421,
+          2.9916191808879375,
+          3.0383882909081876
+        ],
+        "link_seconds": [
+          0.10519704385660589,
+          0.1051704790443182,
+          0.108225435949862
+        ],
+        "named_module_compile_seconds": [
+          1.2120189419947565,
+          1.2053131589200348,
+          1.196461657062173
+        ],
+        "named_module_link_seconds": [
+          0.10689521417953074,
+          0.10400567995384336,
+          0.10441809496842325
+        ],
+        "backend_module_compile_seconds": [
+          0.7083815580699593,
+          0.7152211759239435,
+          0.7261527229566127
+        ],
+        "backend_module_link_seconds": [
+          0.09734130091965199,
+          0.1049318399745971,
+          0.09731291513890028
+        ]
+      },
+      "star6_nested_costmodel": {
+        "codegen_mean_seconds": 0.000651127,
+        "generated_source_bytes": 3789,
+        "pch_compile_seconds": [
+          0.2988341827876866,
+          0.28560895402915776,
+          0.2956971959210932
+        ],
+        "no_pch_compile_seconds": [
+          2.55490277800709,
+          2.5016441710758954,
+          2.5511658389586955
+        ],
+        "link_seconds": [
+          0.10717143910005689,
+          0.10537313180975616,
+          0.10723732691258192
+        ],
+        "named_module_compile_seconds": [
+          0.7595958691090345,
+          0.7730335958767682,
+          0.7690557050518692
+        ],
+        "named_module_link_seconds": [
+          0.10245435894466937,
+          0.103876031935215,
+          0.1019683841150254
+        ],
+        "backend_module_compile_seconds": [
+          0.2532243588939309,
+          0.26432682503946126,
+          0.2710644418839365
+        ],
+        "backend_module_link_seconds": [
+          0.10238163196481764,
+          0.10001341509632766,
+          0.1013953851070255
+        ]
+      },
+      "cycle6_nested_costmodel": {
+        "codegen_mean_seconds": 0.00196889,
+        "generated_source_bytes": 9075,
+        "pch_compile_seconds": [
+          0.9401637730188668,
+          0.9399513709358871,
+          0.9288793988525867
+        ],
+        "no_pch_compile_seconds": [
+          3.175645094132051,
+          3.1624081609770656,
+          3.18582866108045
+        ],
+        "link_seconds": [
+          0.10741717088967562,
+          0.10274396790191531,
+          0.10056897206231952
+        ],
+        "named_module_compile_seconds": [
+          1.4331874041818082,
+          1.4291139231063426,
+          1.3970701731741428
+        ],
+        "named_module_link_seconds": [
+          0.10681324894540012,
+          0.10285292193293571,
+          0.0981993090827018
+        ],
+        "backend_module_compile_seconds": [
+          0.9227432229090482,
+          0.9037046800367534,
+          0.9123429749161005
+        ],
+        "backend_module_link_seconds": [
+          0.10767519287765026,
+          0.10411288100294769,
+          0.10740223596803844
+        ]
+      },
+      "clique7_openmp_none": {
+        "codegen_mean_seconds": 0.0502977,
+        "generated_source_bytes": 2770,
+        "pch_compile_seconds": [
+          0.23865675111301243,
+          0.23916832683607936,
+          0.23530682898126543
+        ],
+        "no_pch_compile_seconds": [
+          2.4925949389580637,
+          2.5469299131073058,
+          2.523673560936004
+        ],
+        "link_seconds": [
+          0.10058719385415316,
+          0.09245879109948874,
+          0.10458754794672132
+        ],
+        "named_module_compile_seconds": [
+          0.7178842830471694,
+          0.7061546589247882,
+          0.718124981969595
+        ],
+        "named_module_link_seconds": [
+          0.10540946805849671,
+          0.10270027187652886,
+          0.10176640306599438
+        ],
+        "backend_module_compile_seconds": [
+          0.17679152498021722,
+          0.1694980280008167,
+          0.17275776504538953
+        ],
+        "backend_module_link_seconds": [
+          0.10443935706280172,
+          0.09267504909075797,
+          0.10565292905084789
+        ]
+      },
+      "star7_openmp_none": {
+        "codegen_mean_seconds": 0.00477014,
+        "generated_source_bytes": 10455,
+        "pch_compile_seconds": [
+          0.490547627909109,
+          0.5005891670007259,
+          0.509645031997934
+        ],
+        "no_pch_compile_seconds": [
+          2.7929258919321,
+          2.7532664639875293,
+          2.8789822158869356
+        ],
+        "link_seconds": [
+          0.10197873087599874,
+          0.10419343411922455,
+          0.10778230498544872
+        ],
+        "named_module_compile_seconds": [
+          0.994453804101795,
+          0.9851504841353744,
+          0.9718374579679221
+        ],
+        "named_module_link_seconds": [
+          0.10647800494916737,
+          0.10471634403802454,
+          0.10506264492869377
+        ],
+        "backend_module_compile_seconds": [
+          0.4328751489520073,
+          0.4314704018179327,
+          0.4511112729087472
+        ],
+        "backend_module_link_seconds": [
+          0.09880860196426511,
+          0.10175779997371137,
+          0.10632921010255814
+        ]
+      },
+      "cycle7_openmp_none": {
+        "codegen_mean_seconds": 0.0194045,
+        "generated_source_bytes": 3329,
+        "pch_compile_seconds": [
+          0.45436309184879065,
+          0.461950174998492,
+          0.4623250199947506
+        ],
+        "no_pch_compile_seconds": [
+          2.7245487309992313,
+          2.7157871332019567,
+          2.7345936608035117
+        ],
+        "link_seconds": [
+          0.10035711294040084,
+          0.09578291093930602,
+          0.10589921195060015
+        ],
+        "named_module_compile_seconds": [
+          0.9215543270111084,
+          0.9367591831833124,
+          0.936030742013827
+        ],
+        "named_module_link_seconds": [
+          0.10321266786195338,
+          0.0979254140984267,
+          0.10031655593775213
+        ],
+        "backend_module_compile_seconds": [
+          0.41251216595992446,
+          0.39483521482907236,
+          0.3999937770422548
+        ],
+        "backend_module_link_seconds": [
+          0.09935213904827833,
+          0.09890223713591695,
+          0.10779907484538853
+        ]
+      },
+      "clique7_nested_costmodel": {
+        "codegen_mean_seconds": 0.0495925,
+        "generated_source_bytes": 13642,
+        "pch_compile_seconds": [
+          0.8806181789841503,
+          0.8696567779406905,
+          0.8546774939168245
+        ],
+        "no_pch_compile_seconds": [
+          3.368030378827825,
+          3.1067230068147182,
+          3.090253714006394
+        ],
+        "link_seconds": [
+          0.10726219904609025,
+          0.10897532198578119,
+          0.10274205077439547
+        ],
+        "named_module_compile_seconds": [
+          1.382823634892702,
+          1.3322954270988703,
+          1.3601229239720851
+        ],
+        "named_module_link_seconds": [
+          0.10391837009228766,
+          0.10582657693885267,
+          0.10024617216549814
+        ],
+        "backend_module_compile_seconds": [
+          0.8255617648828775,
+          0.8523363799322397,
+          0.8650439358316362
+        ],
+        "backend_module_link_seconds": [
+          0.10225913696922362,
+          0.10582751291804016,
+          0.10614881804212928
+        ]
+      },
+      "star7_nested_costmodel": {
+        "codegen_mean_seconds": 0.00468895,
+        "generated_source_bytes": 10505,
+        "pch_compile_seconds": [
+          0.5469276458024979,
+          0.5661142428871244,
+          0.5607765079475939
+        ],
+        "no_pch_compile_seconds": [
+          2.8035905330907553,
+          2.8280208550859243,
+          2.9918325059115887
+        ],
+        "link_seconds": [
+          0.10063992301002145,
+          0.09861613204702735,
+          0.10070999409072101
+        ],
+        "named_module_compile_seconds": [
+          1.0298385778442025,
+          1.0333706650417298,
+          1.0148692741058767
+        ],
+        "named_module_link_seconds": [
+          0.10282973106950521,
+          0.09708855394273996,
+          0.10408512107096612
+        ],
+        "backend_module_compile_seconds": [
+          0.5218785929027945,
+          0.5238768539857119,
+          0.5262288339436054
+        ],
+        "backend_module_link_seconds": [
+          0.10523107694461942,
+          0.10342329205013812,
+          0.10243711294606328
+        ]
+      },
+      "cycle7_nested_costmodel": {
+        "codegen_mean_seconds": 0.0194578,
+        "generated_source_bytes": 13246,
+        "pch_compile_seconds": [
+          1.5986706030089408,
+          1.5177843340206891,
+          1.4991756160743535
+        ],
+        "no_pch_compile_seconds": [
+          3.914463971974328,
+          3.8621434280648828,
+          3.752440173178911
+        ],
+        "link_seconds": [
+          0.10919679491780698,
+          0.10545144486241043,
+          0.10344957397319376
+        ],
+        "named_module_compile_seconds": [
+          2.095482336822897,
+          1.9915894570294768,
+          1.971755234990269
+        ],
+        "named_module_link_seconds": [
+          0.10481789102777839,
+          0.10657372395507991,
+          0.10533333686180413
+        ],
+        "backend_module_compile_seconds": [
+          1.5555948030669242,
+          1.4975430390331894,
+          1.4747181590646505
+        ],
+        "backend_module_link_seconds": [
+          0.10865593608468771,
+          0.1045668600127101,
+          0.10495970887131989
+        ],
+        "pch_driver_samples": [
+          {
+            "build_seconds": 1.6641699401661754,
+            "load_seconds": 0.0025929040275514126,
+            "build_plus_load_seconds": 1.6667628441937268
+          },
+          {
+            "build_seconds": 1.6433212559204549,
+            "load_seconds": 0.002439633011817932,
+            "build_plus_load_seconds": 1.6457608889322728
+          },
+          {
+            "build_seconds": 1.6666919079143554,
+            "load_seconds": 0.002538102911785245,
+            "build_plus_load_seconds": 1.6692300108261406
+          }
+        ],
+        "named_module_driver_samples": [
+          {
+            "build_seconds": 2.1113314111717045,
+            "load_seconds": 0.0026457759086042643,
+            "build_plus_load_seconds": 2.113977187080309
+          },
+          {
+            "build_seconds": 2.124714015983045,
+            "load_seconds": 0.0023031579330563545,
+            "build_plus_load_seconds": 2.1270171739161015
+          },
+          {
+            "build_seconds": 2.1031183172017336,
+            "load_seconds": 0.002377751050516963,
+            "build_plus_load_seconds": 2.1054960682522506
+          }
+        ],
+        "backend_module_driver_samples": [
+          {
+            "build_seconds": 1.6010989379137754,
+            "load_seconds": 0.0027465010061860085,
+            "build_plus_load_seconds": 1.6038454389199615
+          },
+          {
+            "build_seconds": 1.6086961911059916,
+            "load_seconds": 0.0027302189264446497,
+            "build_plus_load_seconds": 1.6114264100324363
+          },
+          {
+            "build_seconds": 1.6250976340379566,
+            "load_seconds": 0.002713755937293172,
+            "build_plus_load_seconds": 1.6278113899752498
+          }
+        ]
+      }
+    },
+    "named_module_bmi_seconds": [
+      3.4033945391420275,
+      3.505609557032585,
+      3.36838604696095
+    ],
+    "named_module_object_seconds": [
+      0.05383927398361266,
+      0.057284948881715536,
+      0.055168363032862544
+    ],
+    "backend_module_bmi_seconds": [
+      3.397069945000112,
+      3.542721648933366,
+      3.734484750078991
+    ],
+    "backend_module_object_seconds": [
+      0.06966834096238017,
+      0.07613416714593768,
+      0.06997056119143963
+    ]
+  },
+  "api": {
+    "pch": {
+      "case": "cycle7_nested_costmodel",
+      "repeats": 3,
+      "initial_call_seconds_cache_state_unspecified": 0.02287689596414566,
+      "expected_matches": 2880,
+      "cache_miss_seconds": [
+        1.5116336469072849,
+        1.5034589630085975,
+        1.5341286559123546
+      ],
+      "cache_hit_seconds": [
+        0.03463604813441634,
+        0.03309157188050449,
+        0.03084760205820203
+      ]
+    },
+    "backend": {
+      "case": "cycle7_nested_costmodel",
+      "repeats": 3,
+      "initial_call_seconds_cache_state_unspecified": 0.022332258988171816,
+      "expected_matches": 2880,
+      "cache_miss_seconds": [
+        1.844560793833807,
+        1.874290370149538,
+        1.717681349022314
+      ],
+      "cache_hit_seconds": [
+        0.033769679022952914,
+        0.03177636303007603,
+        0.03261234099045396
+      ]
+    }
+  },
+  "runtime": {
+    "pch-small": {
+      "executions": 432,
+      "oracle_mismatches": 0
+    },
+    "pch-large": {
+      "executions": 48,
+      "oracle_mismatches": 0
+    },
+    "backend-small": {
+      "executions": 432,
+      "oracle_mismatches": 0
+    },
+    "backend-large": {
+      "executions": 48,
+      "oracle_mismatches": 0
+    }
+  }
+}
