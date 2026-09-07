@@ -1,0 +1,244 @@
+{
+  "build_dir": "/Users/juelinliu/Desktop/GraphMini/GraphMini-repo/build-conda",
+  "repeats": 3,
+  "sizes": [
+    6,
+    7
+  ],
+  "compiler": "clang version 21.1.8\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Users/juelinliu/mamba/envs/graphmini/bin\nConfiguration file: /Users/juelinliu/mamba/envs/graphmini/bin/arm64-apple-darwin-clang++.cfg",
+  "pch_build_seconds": [
+    1.749148792005144,
+    1.3459523330093361,
+    1.2476452089613304
+  ],
+  "cases": {
+    "clique6_openmp_none": {
+      "codegen_mean_seconds": 0.00188743,
+      "generated_source_bytes": 2447,
+      "pch_compile_seconds": [
+        0.33976141700986773,
+        0.20104420802090317,
+        0.18914608395425603
+      ],
+      "no_pch_compile_seconds": [
+        1.3359629169572145,
+        1.1722484579659067,
+        1.5239115419681184
+      ],
+      "link_seconds": [
+        0.18109562498284504,
+        0.08986083295894787,
+        0.08983320801053196
+      ]
+    },
+    "star6_openmp_none": {
+      "codegen_mean_seconds": 0.000619227,
+      "generated_source_bytes": 3739,
+      "pch_compile_seconds": [
+        0.27947241597576067,
+        0.21972724999068305,
+        0.21013245900394395
+      ],
+      "no_pch_compile_seconds": [
+        2.460486750002019,
+        0.9205248329672031,
+        0.924305833003018
+      ],
+      "link_seconds": [
+        0.09859533404232934,
+        0.08321937499567866,
+        0.09531729103764519
+      ]
+    },
+    "cycle6_openmp_none": {
+      "codegen_mean_seconds": 0.00178164,
+      "generated_source_bytes": 2833,
+      "pch_compile_seconds": [
+        0.3323130829958245,
+        0.390592249983456,
+        0.4194062919705175
+      ],
+      "no_pch_compile_seconds": [
+        1.1278820830048062,
+        1.234400084009394,
+        1.412090249999892
+      ],
+      "link_seconds": [
+        0.09446162503445521,
+        0.11525041697314009,
+        0.14105224999366328
+      ]
+    },
+    "clique6_nested_costmodel": {
+      "codegen_mean_seconds": 0.00284624,
+      "generated_source_bytes": 9409,
+      "pch_compile_seconds": [
+        1.1388903339975514,
+        1.2390914160059765,
+        0.9845692499657162
+      ],
+      "no_pch_compile_seconds": [
+        2.270457750011701,
+        2.5146444169804454,
+        1.8688808750011958
+      ],
+      "link_seconds": [
+        0.10710512497462332,
+        0.1628777080331929,
+        0.1386492500314489
+      ]
+    },
+    "star6_nested_costmodel": {
+      "codegen_mean_seconds": 0.00090854,
+      "generated_source_bytes": 3789,
+      "pch_compile_seconds": [
+        0.3730382500216365,
+        0.27893729199422523,
+        0.3494277090067044
+      ],
+      "no_pch_compile_seconds": [
+        1.4417330420110375,
+        1.2719381659990177,
+        1.5448246250161901
+      ],
+      "link_seconds": [
+        0.10614758299198002,
+        0.15045291697606444,
+        0.09136858297279105
+      ]
+    },
+    "cycle6_nested_costmodel": {
+      "codegen_mean_seconds": 0.00258785,
+      "generated_source_bytes": 9075,
+      "pch_compile_seconds": [
+        1.0408111669821665,
+        1.188634624995757,
+        0.9985602500382811
+      ],
+      "no_pch_compile_seconds": [
+        2.4289815420052037,
+        1.7707554579828866,
+        2.136971124971751
+      ],
+      "link_seconds": [
+        0.10363862500526011,
+        0.13708254200173542,
+        0.17674354102928191
+      ]
+    },
+    "clique7_openmp_none": {
+      "codegen_mean_seconds": 0.0665046,
+      "generated_source_bytes": 2770,
+      "pch_compile_seconds": [
+        0.26452970900572836,
+        0.21305433299858123,
+        0.3244104590266943
+      ],
+      "no_pch_compile_seconds": [
+        1.4856206249678507,
+        1.1759205419803038,
+        1.6309107079869136
+      ],
+      "link_seconds": [
+        0.15680270898155868,
+        0.1599494589609094,
+        0.12208900001132861
+      ]
+    },
+    "star7_openmp_none": {
+      "codegen_mean_seconds": 0.00591093,
+      "generated_source_bytes": 10455,
+      "pch_compile_seconds": [
+        0.6995303750154562,
+        0.7526431250153109,
+        0.7144221669877879
+      ],
+      "no_pch_compile_seconds": [
+        2.3836510829860345,
+        2.237014999962412,
+        1.8306775420205668
+      ],
+      "link_seconds": [
+        0.23152975004632026,
+        0.14841808303026482,
+        0.14830608299234882
+      ]
+    },
+    "cycle7_openmp_none": {
+      "codegen_mean_seconds": 0.0174293,
+      "generated_source_bytes": 3329,
+      "pch_compile_seconds": [
+        0.6118809579638764,
+        0.3826455420348793,
+        0.5776922079967335
+      ],
+      "no_pch_compile_seconds": [
+        1.5148141250247136,
+        1.562291499983985,
+        1.8245009160018526
+      ],
+      "link_seconds": [
+        0.162416624953039,
+        0.17677612497936934,
+        0.11061291600344703
+      ]
+    },
+    "clique7_nested_costmodel": {
+      "codegen_mean_seconds": 0.0519242,
+      "generated_source_bytes": 13642,
+      "pch_compile_seconds": [
+        1.1814833329990506,
+        1.3402282919851132,
+        1.1914173749973997
+      ],
+      "no_pch_compile_seconds": [
+        2.101990290975664,
+        2.6273847090196796,
+        1.857797583041247
+      ],
+      "link_seconds": [
+        0.0847584999864921,
+        0.17253983399132267,
+        0.1412172500276938
+      ]
+    },
+    "star7_nested_costmodel": {
+      "codegen_mean_seconds": 0.00463189,
+      "generated_source_bytes": 10505,
+      "pch_compile_seconds": [
+        0.5848084590397775,
+        0.6042776249814779,
+        0.6375776660279371
+      ],
+      "no_pch_compile_seconds": [
+        1.3646082089981064,
+        1.3308386669959873,
+        1.9656668749521486
+      ],
+      "link_seconds": [
+        0.10729570803232491,
+        0.13197295903228223,
+        0.11901112500345334
+      ]
+    },
+    "cycle7_nested_costmodel": {
+      "codegen_mean_seconds": 0.0155757,
+      "generated_source_bytes": 13246,
+      "pch_compile_seconds": [
+        1.9997264170087874,
+        1.7446946669952013,
+        1.3830493339919485
+      ],
+      "no_pch_compile_seconds": [
+        3.075017374998424,
+        2.719370874983724,
+        3.252877750026528
+      ],
+      "link_seconds": [
+        0.15430758299771696,
+        0.09747150004841387,
+        0.09332029201323166
+      ]
+    }
+  }
+}

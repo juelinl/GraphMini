@@ -26,6 +26,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", type=Path, default=Path("build-conda"))
     parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument("--sizes", type=int, nargs="+", default=[4], choices=range(4, 8))
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.repeats < 1:
@@ -71,10 +72,11 @@ def main():
     with tempfile.TemporaryDirectory(prefix="graphmini-compile-bench-") as scratch:
         scratch = Path(scratch)
         pch_path = scratch / "backend.pch"
-        _, generated = run([str(build / "bin/compilation_benchmark"), str(scratch)], build)
+        _, generated = run([str(build / "bin/compilation_benchmark"), str(scratch),
+                            *map(str, args.sizes)], build)
         codegen = {parts[1]: float(parts[2]) for line in generated.splitlines()
                    if (parts := line.split()) and parts[0] == "BENCHMARK"}
-        results = {"build_dir": str(build), "repeats": args.repeats,
+        results = {"build_dir": str(build), "repeats": args.repeats, "sizes": args.sizes,
                    "compiler": run([compile_cmd[0], "--version"], build)[1].strip(),
                    "pch_build_seconds": [], "cases": {}}
         # Each invocation regenerates the PCH. This is artifact-cold, not an OS
@@ -83,6 +85,7 @@ def main():
             results["pch_build_seconds"].append(run(rewrite(pch, pch_path), build)[0])
         for name, seconds in codegen.items():
             item = {"codegen_mean_seconds": seconds,
+                    "generated_source_bytes": (scratch / (name + ".cpp")).stat().st_size,
                     "pch_compile_seconds": [], "no_pch_compile_seconds": [],
                     "link_seconds": []}
             obj = scratch / (name + ".o")

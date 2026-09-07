@@ -1,5 +1,8 @@
 # Runtime compilation baseline
 
+See [six- and seven-vertex measurements](large-patterns.md) for the larger-pattern
+follow-up. The current harness also includes cycles and accepts `--sizes 6 7`.
+
 The first baseline uses macOS 26.6.2, Apple A18 Pro, Conda Clang 21.1.8,
 C++17, `-O3`, and the existing `plan_module` compile/link flags. Results are
 exploratory: three repetitions, not a controlled performance guarantee.
