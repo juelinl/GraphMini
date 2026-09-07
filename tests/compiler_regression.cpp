@@ -1,6 +1,7 @@
 #include "codegen.h"
 #ifdef GRAPHMINI_REFACTORED
 #include "compiler/planning.h"
+#include "iep_redundancy.hpp"
 #endif
 #include <filesystem>
 #include <fstream>
@@ -64,6 +65,17 @@ int main(int argc, char **argv) {
     auto iep = compile_edge_induced_iep(patterns[2], config, meta);
     if (iep.iep_num <= 1 || iep.iep_set.empty())
         throw std::runtime_error("IEP path was not exercised");
+    for (auto scheduler : {SchedulerType::GraphPi, SchedulerType::GraphMini,
+                           SchedulerType::GraphZero}) {
+        config.schedulerType = scheduler;
+        if (compile_edge_induced_iep(patterns[2], config, meta).iep_redundancy != 2)
+            throw std::runtime_error("Incorrect star IEP symmetry factor");
+    }
+    if (iep_redundancy(5, 3, {{1, 2}, {2, 3}, {3, 4}}) != 6 ||
+        iep_redundancy(5, 3, {{1, 2}, {1, 3}, {1, 4}}) != 1 ||
+        iep_redundancy(5, 3, {{1, 2}, {2, 3}, {1, 4}}) != 2 ||
+        iep_redundancy(4, 1, {{1, 2}, {2, 3}}) != 1)
+        throw std::runtime_error("Incorrect general IEP symmetry factor");
 #endif
     std::cout << "Validated " << cases << " compiler configurations\n";
 }

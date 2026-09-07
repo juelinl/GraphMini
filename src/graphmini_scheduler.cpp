@@ -1,4 +1,5 @@
 #include "graphmini_scheduler.hpp"
+#include "iep_redundancy.hpp"
 #include "logging.h"
 
 #include <algorithm>
@@ -869,7 +870,8 @@ void GraphMiniScheduler::get_in_exclusion_optimize_group(int depth,
 }
 
 void GraphMiniScheduler::set_in_exclusion_optimize_redundancy() {
-    in_exclusion_optimize_redundancy_ = 1;
+    in_exclusion_optimize_redundancy_ =
+            iep_redundancy(size_, in_exclusion_optimize_num_, restrict_pair);
 }
 
 void GraphMiniScheduler::get_schedule(const char *input_adj_mat,

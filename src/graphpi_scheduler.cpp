@@ -1,4 +1,5 @@
 #include "graphpi_scheduler.hpp"
+#include "iep_redundancy.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -920,11 +921,8 @@ void GraphPiScheduler::get_in_exclusion_optimize_group(int depth,
 }
 
 void GraphPiScheduler::set_in_exclusion_optimize_redundancy() {
-    // GraphMini only needs a stable redundancy factor to compile and generate code.
-    // The original GraphPi implementation estimates this by running its matcher on a
-    // synthetic complete graph, which drags in the full graph/MPI stack. Keep the
-    // standalone scheduler self-contained by falling back to the non-optimized factor.
-    in_exclusion_optimize_redundancy_ = 1;
+    in_exclusion_optimize_redundancy_ =
+            iep_redundancy(size_, in_exclusion_optimize_num_, restrict_pair);
 }
 
 void GraphPiScheduler::get_schedule(const char *input_adj_mat,
