@@ -57,3 +57,16 @@ samples are in `tests/benchmarks/backend-module-verification.md`.
 Any next performance phase should profile the real API's module scanning/build
 driver overhead. Neither broader module exports nor faster direct compilation
 alone should be used as the criterion for changing defaults.
+
+## Follow-up: profile before selective inlining
+
+Completed stage-level API, Ninja, and Clang profiling on macOS and Jupiter for
+six-/seven-vertex clique/star/cycle queries, with cache misses/hits and untraced
+controls. See `tests/benchmarks/compilation-profile.md` and its raw sample
+summaries. The dominant measured cost is LLVM optimization/code generation;
+GraphPi scheduling accounts for about 0.1–5% of cache misses in these cases.
+Module scanning/collation adds roughly 60–70 ms for the seven-cycle.
+
+No selective-inlining change has been made. A subsequent experiment should
+target generated task-body complexity/cold runtime code, measure actual API
+latency, and verify graph-execution performance as well as correctness.

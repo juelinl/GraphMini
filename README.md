@@ -106,6 +106,8 @@ On Ubuntu, install upstream Clang and matching `clang-scan-deps` (for example,
 Conda's `clangxx=21` and `clang-tools=21`) and add `--compiler clang++`.
 See the [backend-module experiment results](tests/benchmarks/backend-module-verification.md)
 for correctness coverage, compilation timings, API timings, and limitations.
+For the stage-level GraphPi/Ninja/Clang breakdown and profiling commands, see
+[compilation profiling](tests/benchmarks/compilation-profile.md).
 
 Query-library caches include a fingerprint of runtime headers and compiler/build
 settings, so runtime fixes do not silently reuse stale generated libraries.

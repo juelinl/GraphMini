@@ -1,0 +1,2239 @@
+{
+  "run": {
+    "commit": "49e1765c6b68b0732cd193cfe738bf4f10b8746d",
+    "platform": "Linux-5.15.0-187-generic-x86_64-with-glibc2.35",
+    "python": "3.14.7 | packaged by conda-forge | (main, Sep  2 2026, 21:08:32) [GCC 15.3.0]",
+    "stages": [
+      "pch-control-configure",
+      "pch-control-build",
+      "pch-control-api",
+      "pch-trace-configure",
+      "pch-trace-build",
+      "pch-trace-ctest",
+      "pch-trace-profile",
+      "backend-control-configure",
+      "backend-control-build",
+      "backend-control-api",
+      "backend-trace-configure",
+      "backend-trace-build",
+      "backend-trace-ctest",
+      "backend-trace-profile"
+    ]
+  },
+  "modes": {
+    "pch": {
+      "profile_commit": "49e1765c6b68b0732cd193cfe738bf4f10b8746d",
+      "control_api": {
+        "case": "cycle7_nested_costmodel",
+        "repeats": 3,
+        "initial_call_seconds_cache_state_unspecified": 0.023759644012898207,
+        "expected_matches": 2880,
+        "cache_miss_seconds": [
+          1.5307557410560548,
+          1.5117351599037647,
+          1.48777597816661
+        ],
+        "cache_hit_seconds": [
+          0.03606758383102715,
+          0.0360997321549803,
+          0.03358072810806334
+        ]
+      },
+      "cases": {
+        "clique6_nested_costmodel": {
+          "expected_matches": 28,
+          "samples_seconds": {
+            "miss_api_wall": [
+              0.8823513209354132,
+              0.8629840079229325,
+              0.8711484409868717
+            ],
+            "hit_api_wall": [
+              0.004601050866767764,
+              0.004510719794780016,
+              0.004649520153179765
+            ],
+            "auxiliary_planning": [
+              9.665e-06,
+              1.0679e-05,
+              1.5929e-05
+            ],
+            "base_ir": [
+              5.429e-06,
+              6.439e-06,
+              1.0552e-05
+            ],
+            "build": [
+              0.878461319,
+              0.85872653,
+              0.863427039
+            ],
+            "cache_lookup": [
+              2.1962e-05,
+              2.3434e-05,
+              3.8641e-05
+            ],
+            "codegen_total": [
+              0.003317454,
+              0.003715453,
+              0.006992973
+            ],
+            "compile_total": [
+              0.882303245,
+              0.862942573,
+              0.871096313
+            ],
+            "cpp_emission": [
+              0.000149274,
+              0.000174765,
+              0.000322352
+            ],
+            "library_copy": [
+              0.000273483,
+              0.000274336,
+              0.000265137
+            ],
+            "library_load": [
+              3.7033e-05,
+              3.4959e-05,
+              3.774e-05
+            ],
+            "metadata_and_config": [
+              3.054e-06,
+              2.879e-06,
+              5.533e-06
+            ],
+            "planning_total": [
+              0.003155833,
+              0.003526941,
+              0.006649823
+            ],
+            "schedule_diagnostics": [
+              4.4032e-05,
+              5.1836e-05,
+              8.8103e-05
+            ],
+            "scheduling": [
+              0.003099665,
+              0.003461489,
+              0.006539442
+            ],
+            "source_write": [
+              0.000175583,
+              0.000151474,
+              0.000313505
+            ],
+            "ninja_build_system_check": [
+              0.018,
+              0.019,
+              0.017
+            ],
+            "ninja_dependency_scan": [
+              0,
+              0,
+              0
+            ],
+            "ninja_dependency_collation": [
+              0,
+              0,
+              0
+            ],
+            "ninja_consumer_compile": [
+              0.725,
+              0.712,
+              0.712
+            ],
+            "ninja_link": [
+              0.105,
+              0.097,
+              0.103
+            ],
+            "build_residual": [
+              0.030461319000000042,
+              0.03072653000000003,
+              0.03142703899999999
+            ],
+            "clang_ExecuteCompiler": [
+              0.675393,
+              0.665924,
+              0.670702
+            ],
+            "clang_Frontend": [
+              0.111876,
+              0.108147,
+              0.109444
+            ],
+            "clang_Backend": [
+              0.557227,
+              0.551566,
+              0.555513
+            ],
+            "clang_Optimizer": [
+              0.361152,
+              0.357042,
+              0.360626
+            ],
+            "clang_CodeGenPasses": [
+              0.194712,
+              0.193162,
+              0.193575
+            ],
+            "clang_InlinerPass": [
+              0.039973,
+              0.039542,
+              0.040045
+            ],
+            "clang_InstCombinePass": [
+              0.06375,
+              0.063175,
+              0.064256
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 0.8711484409868717,
+            "hit_api_wall": 0.004601050866767764,
+            "auxiliary_planning": 1.0679e-05,
+            "base_ir": 6.439e-06,
+            "build": 0.863427039,
+            "cache_lookup": 2.3434e-05,
+            "codegen_total": 0.003715453,
+            "compile_total": 0.871096313,
+            "cpp_emission": 0.000174765,
+            "library_copy": 0.000273483,
+            "library_load": 3.7033e-05,
+            "metadata_and_config": 3.054e-06,
+            "planning_total": 0.003526941,
+            "schedule_diagnostics": 5.1836e-05,
+            "scheduling": 0.003461489,
+            "source_write": 0.000175583,
+            "ninja_build_system_check": 0.018,
+            "ninja_dependency_scan": 0,
+            "ninja_dependency_collation": 0,
+            "ninja_consumer_compile": 0.712,
+            "ninja_link": 0.103,
+            "build_residual": 0.03072653000000003,
+            "clang_ExecuteCompiler": 0.670702,
+            "clang_Frontend": 0.109444,
+            "clang_Backend": 0.555513,
+            "clang_Optimizer": 0.360626,
+            "clang_CodeGenPasses": 0.193575,
+            "clang_InlinerPass": 0.039973,
+            "clang_InstCombinePass": 0.06375
+          }
+        },
+        "star6_nested_costmodel": {
+          "expected_matches": 168,
+          "samples_seconds": {
+            "miss_api_wall": [
+              0.4006463969126344,
+              0.40201359800994396,
+              0.39771924493834376
+            ],
+            "hit_api_wall": [
+              0.0017242259345948696,
+              0.0020968029275536537,
+              0.0018312630709260702
+            ],
+            "auxiliary_planning": [
+              6.919e-06,
+              1.0537e-05,
+              1.0744e-05
+            ],
+            "base_ir": [
+              4.552e-06,
+              7.7e-06,
+              7.884e-06
+            ],
+            "build": [
+              0.39924677,
+              0.399731407,
+              0.395513598
+            ],
+            "cache_lookup": [
+              1.6012e-05,
+              2.5117e-05,
+              2.483e-05
+            ],
+            "codegen_total": [
+              0.000994051,
+              0.001781677,
+              0.001737838
+            ],
+            "compile_total": [
+              0.400607964,
+              0.401968429,
+              0.397673375
+            ],
+            "cpp_emission": [
+              6.3384e-05,
+              0.000104597,
+              0.000103789
+            ],
+            "library_copy": [
+              0.000194363,
+              0.000208403,
+              0.000202616
+            ],
+            "library_load": [
+              3.7709e-05,
+              3.6572e-05,
+              3.5554e-05
+            ],
+            "metadata_and_config": [
+              2.522e-06,
+              3.862e-06,
+              3.687e-06
+            ],
+            "planning_total": [
+              0.000920696,
+              0.001661288,
+              0.001617943
+            ],
+            "schedule_diagnostics": [
+              3.665e-05,
+              5.7877e-05,
+              5.633e-05
+            ],
+            "scheduling": [
+              0.000870669,
+              0.001581319,
+              0.00153889
+            ],
+            "source_write": [
+              0.000103246,
+              0.000166836,
+              0.00014126
+            ],
+            "ninja_build_system_check": [
+              0.017,
+              0.015,
+              0.017
+            ],
+            "ninja_dependency_scan": [
+              0,
+              0,
+              0
+            ],
+            "ninja_dependency_collation": [
+              0,
+              0,
+              0
+            ],
+            "ninja_consumer_compile": [
+              0.251,
+              0.249,
+              0.244
+            ],
+            "ninja_link": [
+              0.106,
+              0.103,
+              0.105
+            ],
+            "build_residual": [
+              0.025246769999999974,
+              0.03273140699999999,
+              0.02951359800000003
+            ],
+            "clang_ExecuteCompiler": [
+              0.205375,
+              0.210535,
+              0.204854
+            ],
+            "clang_Frontend": [
+              0.050348,
+              0.05097,
+              0.050548
+            ],
+            "clang_Backend": [
+              0.149339,
+              0.154339,
+              0.148656
+            ],
+            "clang_Optimizer": [
+              0.097814,
+              0.102253,
+              0.097954
+            ],
+            "clang_CodeGenPasses": [
+              0.050173,
+              0.050684,
+              0.049342
+            ],
+            "clang_InlinerPass": [
+              0.011032,
+              0.011641,
+              0.011104
+            ],
+            "clang_InstCombinePass": [
+              0.018232,
+              0.018588,
+              0.017959
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 0.4006463969126344,
+            "hit_api_wall": 0.0018312630709260702,
+            "auxiliary_planning": 1.0537e-05,
+            "base_ir": 7.7e-06,
+            "build": 0.39924677,
+            "cache_lookup": 2.483e-05,
+            "codegen_total": 0.001737838,
+            "compile_total": 0.400607964,
+            "cpp_emission": 0.000103789,
+            "library_copy": 0.000202616,
+            "library_load": 3.6572e-05,
+            "metadata_and_config": 3.687e-06,
+            "planning_total": 0.001617943,
+            "schedule_diagnostics": 5.633e-05,
+            "scheduling": 0.00153889,
+            "source_write": 0.00014126,
+            "ninja_build_system_check": 0.017,
+            "ninja_dependency_scan": 0,
+            "ninja_dependency_collation": 0,
+            "ninja_consumer_compile": 0.249,
+            "ninja_link": 0.105,
+            "build_residual": 0.02951359800000003,
+            "clang_ExecuteCompiler": 0.205375,
+            "clang_Frontend": 0.050548,
+            "clang_Backend": 0.149339,
+            "clang_Optimizer": 0.097954,
+            "clang_CodeGenPasses": 0.050173,
+            "clang_InlinerPass": 0.011104,
+            "clang_InstCombinePass": 0.018232
+          }
+        },
+        "cycle6_nested_costmodel": {
+          "expected_matches": 1680,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.021478746086359,
+              1.0112824530806392,
+              1.0267808439675719
+            ],
+            "hit_api_wall": [
+              0.0051905259024351835,
+              0.005860486067831516,
+              0.0054327049292624
+            ],
+            "auxiliary_planning": [
+              5.573e-06,
+              7.398e-06,
+              5.778e-06
+            ],
+            "base_ir": [
+              4.838e-06,
+              1.0302e-05,
+              7.597e-06
+            ],
+            "build": [
+              1.01742495,
+              1.005376416,
+              1.021647026
+            ],
+            "cache_lookup": [
+              1.9888e-05,
+              3.0207e-05,
+              2.3445e-05
+            ],
+            "codegen_total": [
+              0.003539274,
+              0.005304144,
+              0.004589127
+            ],
+            "compile_total": [
+              1.021437209,
+              1.011227986,
+              1.02673604
+            ],
+            "cpp_emission": [
+              0.000131946,
+              0.000201269,
+              0.000143166
+            ],
+            "library_copy": [
+              0.000273211,
+              0.000280747,
+              0.00028086
+            ],
+            "library_load": [
+              3.6639e-05,
+              4.0453e-05,
+              4.0191e-05
+            ],
+            "metadata_and_config": [
+              3.335e-06,
+              4.924e-06,
+              3.414e-06
+            ],
+            "planning_total": [
+              0.003399421,
+              0.005092357,
+              0.004437581
+            ],
+            "schedule_diagnostics": [
+              4.2356e-05,
+              6.4101e-05,
+              5.0045e-05
+            ],
+            "scheduling": [
+              0.003346159,
+              0.005009611,
+              0.004373011
+            ],
+            "source_write": [
+              0.000128947,
+              0.000178622,
+              0.00013969
+            ],
+            "ninja_build_system_check": [
+              0.017,
+              0.016,
+              0.017
+            ],
+            "ninja_dependency_scan": [
+              0,
+              0,
+              0
+            ],
+            "ninja_dependency_collation": [
+              0,
+              0,
+              0
+            ],
+            "ninja_consumer_compile": [
+              0.866,
+              0.857,
+              0.871
+            ],
+            "ninja_link": [
+              0.105,
+              0.102,
+              0.104
+            ],
+            "build_residual": [
+              0.029424950000000116,
+              0.030376416000000073,
+              0.02964702599999991
+            ],
+            "clang_ExecuteCompiler": [
+              0.811965,
+              0.813259,
+              0.830123
+            ],
+            "clang_Frontend": [
+              0.087768,
+              0.09015,
+              0.086926
+            ],
+            "clang_Backend": [
+              0.718404,
+              0.717794,
+              0.737175
+            ],
+            "clang_Optimizer": [
+              0.416098,
+              0.414173,
+              0.409476
+            ],
+            "clang_CodeGenPasses": [
+              0.300899,
+              0.302223,
+              0.326257
+            ],
+            "clang_InlinerPass": [
+              0.034888,
+              0.035042,
+              0.033051
+            ],
+            "clang_InstCombinePass": [
+              0.070126,
+              0.069157,
+              0.069426
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 1.021478746086359,
+            "hit_api_wall": 0.0054327049292624,
+            "auxiliary_planning": 5.778e-06,
+            "base_ir": 7.597e-06,
+            "build": 1.01742495,
+            "cache_lookup": 2.3445e-05,
+            "codegen_total": 0.004589127,
+            "compile_total": 1.021437209,
+            "cpp_emission": 0.000143166,
+            "library_copy": 0.000280747,
+            "library_load": 4.0191e-05,
+            "metadata_and_config": 3.414e-06,
+            "planning_total": 0.004437581,
+            "schedule_diagnostics": 5.0045e-05,
+            "scheduling": 0.004373011,
+            "source_write": 0.00013969,
+            "ninja_build_system_check": 0.017,
+            "ninja_dependency_scan": 0,
+            "ninja_dependency_collation": 0,
+            "ninja_consumer_compile": 0.866,
+            "ninja_link": 0.104,
+            "build_residual": 0.02964702599999991,
+            "clang_ExecuteCompiler": 0.813259,
+            "clang_Frontend": 0.087768,
+            "clang_Backend": 0.718404,
+            "clang_Optimizer": 0.414173,
+            "clang_CodeGenPasses": 0.302223,
+            "clang_InlinerPass": 0.034888,
+            "clang_InstCombinePass": 0.069426
+          }
+        },
+        "clique7_nested_costmodel": {
+          "expected_matches": 8,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.0549245940055698,
+              1.0433366808574647,
+              1.0522266610059887
+            ],
+            "hit_api_wall": [
+              0.05311711714603007,
+              0.0579519949387759,
+              0.05357657908461988
+            ],
+            "auxiliary_planning": [
+              8.747e-06,
+              1.0301e-05,
+              9.144e-06
+            ],
+            "base_ir": [
+              7.472e-06,
+              5.053e-06,
+              4.201e-06
+            ],
+            "build": [
+              1.002730777,
+              0.9899584,
+              0.999217212
+            ],
+            "cache_lookup": [
+              1.9e-05,
+              1.7811e-05,
+              1.7959e-05
+            ],
+            "codegen_total": [
+              0.051657582,
+              0.052796193,
+              0.052389557
+            ],
+            "compile_total": [
+              1.054884634,
+              1.043286928,
+              1.05214478
+            ],
+            "cpp_emission": [
+              0.00013537,
+              0.000124927,
+              0.000113545
+            ],
+            "library_copy": [
+              0.000284967,
+              0.000306379,
+              0.000320586
+            ],
+            "library_load": [
+              3.6867e-05,
+              6.6698e-05,
+              5.9981e-05
+            ],
+            "metadata_and_config": [
+              2.942e-06,
+              2.233e-06,
+              2.544e-06
+            ],
+            "planning_total": [
+              0.05151131,
+              0.05265903,
+              0.052265061
+            ],
+            "schedule_diagnostics": [
+              4.4408e-05,
+              4.4647e-05,
+              4.3155e-05
+            ],
+            "scheduling": [
+              0.051454015,
+              0.052603664,
+              0.052212393
+            ],
+            "source_write": [
+              0.000140766,
+              0.000123629,
+              0.000122788
+            ],
+            "ninja_build_system_check": [
+              0.018,
+              0.018,
+              0.018
+            ],
+            "ninja_dependency_scan": [
+              0,
+              0,
+              0
+            ],
+            "ninja_dependency_collation": [
+              0,
+              0,
+              0
+            ],
+            "ninja_consumer_compile": [
+              0.848,
+              0.838,
+              0.848
+            ],
+            "ninja_link": [
+              0.105,
+              0.104,
+              0.101
+            ],
+            "build_residual": [
+              0.03173077700000004,
+              0.02995840000000005,
+              0.03221721200000005
+            ],
+            "clang_ExecuteCompiler": [
+              0.815636,
+              0.789854,
+              0.799143
+            ],
+            "clang_Frontend": [
+              0.118386,
+              0.121495,
+              0.137762
+            ],
+            "clang_Backend": [
+              0.692159,
+              0.662135,
+              0.653441
+            ],
+            "clang_Optimizer": [
+              0.438408,
+              0.421553,
+              0.414454
+            ],
+            "clang_CodeGenPasses": [
+              0.252378,
+              0.239137,
+              0.237518
+            ],
+            "clang_InlinerPass": [
+              0.048109,
+              0.045772,
+              0.044535
+            ],
+            "clang_InstCombinePass": [
+              0.07687,
+              0.074429,
+              0.073215
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 1.0522266610059887,
+            "hit_api_wall": 0.05357657908461988,
+            "auxiliary_planning": 9.144e-06,
+            "base_ir": 5.053e-06,
+            "build": 0.999217212,
+            "cache_lookup": 1.7959e-05,
+            "codegen_total": 0.052389557,
+            "compile_total": 1.05214478,
+            "cpp_emission": 0.000124927,
+            "library_copy": 0.000306379,
+            "library_load": 5.9981e-05,
+            "metadata_and_config": 2.544e-06,
+            "planning_total": 0.052265061,
+            "schedule_diagnostics": 4.4408e-05,
+            "scheduling": 0.052212393,
+            "source_write": 0.000123629,
+            "ninja_build_system_check": 0.018,
+            "ninja_dependency_scan": 0,
+            "ninja_dependency_collation": 0,
+            "ninja_consumer_compile": 0.848,
+            "ninja_link": 0.104,
+            "build_residual": 0.03173077700000004,
+            "clang_ExecuteCompiler": 0.799143,
+            "clang_Frontend": 0.121495,
+            "clang_Backend": 0.662135,
+            "clang_Optimizer": 0.421553,
+            "clang_CodeGenPasses": 0.239137,
+            "clang_InlinerPass": 0.045772,
+            "clang_InstCombinePass": 0.074429
+          }
+        },
+        "star7_nested_costmodel": {
+          "expected_matches": 56,
+          "samples_seconds": {
+            "miss_api_wall": [
+              0.6804267619736493,
+              0.687124707037583,
+              0.6762561888899654
+            ],
+            "hit_api_wall": [
+              0.01058509899303317,
+              0.011676506139338017,
+              0.010877911001443863
+            ],
+            "auxiliary_planning": [
+              2.4855e-05,
+              3.1506e-05,
+              3.3214e-05
+            ],
+            "base_ir": [
+              6.178e-06,
+              7.149e-06,
+              7.562e-06
+            ],
+            "build": [
+              0.672722718,
+              0.67755981,
+              0.663613219
+            ],
+            "cache_lookup": [
+              2.0411e-05,
+              2.1858e-05,
+              2.3894e-05
+            ],
+            "codegen_total": [
+              0.007157601,
+              0.008964911,
+              0.012034504
+            ],
+            "compile_total": [
+              0.680385485,
+              0.68708372,
+              0.676206011
+            ],
+            "cpp_emission": [
+              0.000142801,
+              0.000178914,
+              0.000188214
+            ],
+            "library_copy": [
+              0.000246152,
+              0.000283604,
+              0.00025179
+            ],
+            "library_load": [
+              7.0031e-05,
+              4.7249e-05,
+              5.8419e-05
+            ],
+            "metadata_and_config": [
+              2.032e-06,
+              2.448e-06,
+              2.903e-06
+            ],
+            "planning_total": [
+              0.006983007,
+              0.008745899,
+              0.011803899
+            ],
+            "schedule_diagnostics": [
+              5.6165e-05,
+              5.4019e-05,
+              5.7927e-05
+            ],
+            "scheduling": [
+              0.00688949,
+              0.008645613,
+              0.011696418
+            ],
+            "source_write": [
+              0.000151529,
+              0.00017189,
+              0.000187644
+            ],
+            "ninja_build_system_check": [
+              0.019,
+              0.018,
+              0.017
+            ],
+            "ninja_dependency_scan": [
+              0,
+              0,
+              0
+            ],
+            "ninja_dependency_collation": [
+              0,
+              0,
+              0
+            ],
+            "ninja_consumer_compile": [
+              0.518,
+              0.523,
+              0.511
+            ],
+            "ninja_link": [
+              0.104,
+              0.105,
+              0.103
+            ],
+            "build_residual": [
+              0.03172271800000004,
+              0.031559809999999966,
+              0.03261321900000003
+            ],
+            "clang_ExecuteCompiler": [
+              0.477121,
+              0.477094,
+              0.46565
+            ],
+            "clang_Frontend": [
+              0.060891,
+              0.060935,
+              0.061
+            ],
+            "clang_Backend": [
+              0.41107,
+              0.41077,
+              0.399654
+            ],
+            "clang_Optimizer": [
+              0.227269,
+              0.225916,
+              0.220935
+            ],
+            "clang_CodeGenPasses": [
+              0.181954,
+              0.183047,
+              0.176981
+            ],
+            "clang_InlinerPass": [
+              0.019535,
+              0.018859,
+              0.019077
+            ],
+            "clang_InstCombinePass": [
+              0.050621,
+              0.049846,
+              0.048674
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 0.6804267619736493,
+            "hit_api_wall": 0.010877911001443863,
+            "auxiliary_planning": 3.1506e-05,
+            "base_ir": 7.149e-06,
+            "build": 0.672722718,
+            "cache_lookup": 2.1858e-05,
+            "codegen_total": 0.008964911,
+            "compile_total": 0.680385485,
+            "cpp_emission": 0.000178914,
+            "library_copy": 0.00025179,
+            "library_load": 5.8419e-05,
+            "metadata_and_config": 2.448e-06,
+            "planning_total": 0.008745899,
+            "schedule_diagnostics": 5.6165e-05,
+            "scheduling": 0.008645613,
+            "source_write": 0.00017189,
+            "ninja_build_system_check": 0.018,
+            "ninja_dependency_scan": 0,
+            "ninja_dependency_collation": 0,
+            "ninja_consumer_compile": 0.518,
+            "ninja_link": 0.104,
+            "build_residual": 0.03172271800000004,
+            "clang_ExecuteCompiler": 0.477094,
+            "clang_Frontend": 0.060935,
+            "clang_Backend": 0.41077,
+            "clang_Optimizer": 0.225916,
+            "clang_CodeGenPasses": 0.181954,
+            "clang_InlinerPass": 0.019077,
+            "clang_InstCombinePass": 0.049846
+          }
+        },
+        "cycle7_nested_costmodel": {
+          "expected_matches": 2880,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.5643389180768281,
+              1.5266862891148776,
+              1.5136362479534
+            ],
+            "hit_api_wall": [
+              0.028883782913908362,
+              0.029363794019445777,
+              0.02761024795472622
+            ],
+            "auxiliary_planning": [
+              3.668e-06,
+              3.633e-06,
+              3.798e-06
+            ],
+            "base_ir": [
+              4.431e-06,
+              5.083e-06,
+              4.776e-06
+            ],
+            "build": [
+              1.534623891,
+              1.496001511,
+              1.483148194
+            ],
+            "cache_lookup": [
+              1.5456e-05,
+              1.5033e-05,
+              1.5791e-05
+            ],
+            "codegen_total": [
+              0.029105617,
+              0.03012797,
+              0.029919327
+            ],
+            "compile_total": [
+              1.564294014,
+              1.526644619,
+              1.513593607
+            ],
+            "cpp_emission": [
+              0.000105584,
+              0.000116298,
+              0.000116506
+            ],
+            "library_copy": [
+              0.00032276,
+              0.000315153,
+              0.000319355
+            ],
+            "library_load": [
+              6.344e-05,
+              4.6996e-05,
+              4.717e-05
+            ],
+            "metadata_and_config": [
+              2.342e-06,
+              2.234e-06,
+              2.027e-06
+            ],
+            "planning_total": [
+              0.028994928,
+              0.030006424,
+              0.029797452
+            ],
+            "schedule_diagnostics": [
+              3.463e-05,
+              4.7742e-05,
+              3.9883e-05
+            ],
+            "scheduling": [
+              0.028951837,
+              0.029948836,
+              0.029748938
+            ],
+            "source_write": [
+              0.000147308,
+              0.00012377,
+              0.000129862
+            ],
+            "ninja_build_system_check": [
+              0.018,
+              0.019,
+              0.019
+            ],
+            "ninja_dependency_scan": [
+              0,
+              0,
+              0
+            ],
+            "ninja_dependency_collation": [
+              0,
+              0,
+              0
+            ],
+            "ninja_consumer_compile": [
+              1.378,
+              1.342,
+              1.326
+            ],
+            "ninja_link": [
+              0.108,
+              0.103,
+              0.108
+            ],
+            "build_residual": [
+              0.030623891000000292,
+              0.03200151100000004,
+              0.030148193999999906
+            ],
+            "clang_ExecuteCompiler": [
+              1.331516,
+              1.300903,
+              1.284465
+            ],
+            "clang_Frontend": [
+              0.098136,
+              0.098254,
+              0.0974
+            ],
+            "clang_Backend": [
+              1.227654,
+              1.197456,
+              1.182176
+            ],
+            "clang_Optimizer": [
+              0.64945,
+              0.64483,
+              0.633713
+            ],
+            "clang_CodeGenPasses": [
+              0.576591,
+              0.551026,
+              0.546939
+            ],
+            "clang_InlinerPass": [
+              0.044638,
+              0.044263,
+              0.043255
+            ],
+            "clang_InstCombinePass": [
+              0.108102,
+              0.107165,
+              0.105004
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 1.5266862891148776,
+            "hit_api_wall": 0.028883782913908362,
+            "auxiliary_planning": 3.668e-06,
+            "base_ir": 4.776e-06,
+            "build": 1.496001511,
+            "cache_lookup": 1.5456e-05,
+            "codegen_total": 0.029919327,
+            "compile_total": 1.526644619,
+            "cpp_emission": 0.000116298,
+            "library_copy": 0.000319355,
+            "library_load": 4.717e-05,
+            "metadata_and_config": 2.234e-06,
+            "planning_total": 0.029797452,
+            "schedule_diagnostics": 3.9883e-05,
+            "scheduling": 0.029748938,
+            "source_write": 0.000129862,
+            "ninja_build_system_check": 0.019,
+            "ninja_dependency_scan": 0,
+            "ninja_dependency_collation": 0,
+            "ninja_consumer_compile": 1.342,
+            "ninja_link": 0.108,
+            "build_residual": 0.030623891000000292,
+            "clang_ExecuteCompiler": 1.300903,
+            "clang_Frontend": 0.098136,
+            "clang_Backend": 1.197456,
+            "clang_Optimizer": 0.64483,
+            "clang_CodeGenPasses": 0.551026,
+            "clang_InlinerPass": 0.044263,
+            "clang_InstCombinePass": 0.107165
+          }
+        }
+      }
+    },
+    "backend": {
+      "profile_commit": "49e1765c6b68b0732cd193cfe738bf4f10b8746d",
+      "control_api": {
+        "case": "cycle7_nested_costmodel",
+        "repeats": 3,
+        "initial_call_seconds_cache_state_unspecified": 0.02290744916535914,
+        "expected_matches": 2880,
+        "cache_miss_seconds": [
+          1.7049770099110901,
+          1.7211986840702593,
+          1.7253386990632862
+        ],
+        "cache_hit_seconds": [
+          0.03453047201037407,
+          0.035943058086559176,
+          0.03298650705255568
+        ]
+      },
+      "cases": {
+        "clique6_nested_costmodel": {
+          "expected_matches": 28,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.0149121307767928,
+              0.9558748661074787,
+              0.9516487559303641
+            ],
+            "hit_api_wall": [
+              0.0044946130365133286,
+              0.004511851817369461,
+              0.004531834041699767
+            ],
+            "auxiliary_planning": [
+              7.242e-06,
+              1.1002e-05,
+              1.0812e-05
+            ],
+            "base_ir": [
+              5.987e-06,
+              8.928e-06,
+              8.458e-06
+            ],
+            "build": [
+              1.01067802,
+              0.950599333,
+              0.946244673
+            ],
+            "cache_lookup": [
+              2.2003e-05,
+              3.1724e-05,
+              3.2299e-05
+            ],
+            "codegen_total": [
+              0.003263227,
+              0.004564396,
+              0.004786339
+            ],
+            "compile_total": [
+              1.014863165,
+              0.955828982,
+              0.951602088
+            ],
+            "cpp_emission": [
+              0.000148791,
+              0.000213868,
+              0.000214538
+            ],
+            "library_copy": [
+              0.000284011,
+              0.000296626,
+              0.000285046
+            ],
+            "library_load": [
+              3.6908e-05,
+              3.9348e-05,
+              3.6418e-05
+            ],
+            "metadata_and_config": [
+              2.891e-06,
+              3.191e-06,
+              2.907e-06
+            ],
+            "planning_total": [
+              0.00310465,
+              0.004334863,
+              0.004556879
+            ],
+            "schedule_diagnostics": [
+              4.5834e-05,
+              7.2901e-05,
+              6.8468e-05
+            ],
+            "scheduling": [
+              0.003046148,
+              0.004242617,
+              0.004470237
+            ],
+            "source_write": [
+              0.000548026,
+              0.000266864,
+              0.000180483
+            ],
+            "ninja_build_system_check": [
+              0.017,
+              0.017,
+              0.018
+            ],
+            "ninja_dependency_scan": [
+              0.043,
+              0.038,
+              0.043
+            ],
+            "ninja_dependency_collation": [
+              0.017,
+              0.018,
+              0.018
+            ],
+            "ninja_consumer_compile": [
+              0.788,
+              0.733,
+              0.725
+            ],
+            "ninja_link": [
+              0.107,
+              0.107,
+              0.105
+            ],
+            "build_residual": [
+              0.03867802000000009,
+              0.03759933299999996,
+              0.03724467300000012
+            ],
+            "clang_ExecuteCompiler": [
+              0.739309,
+              0.692174,
+              0.678574
+            ],
+            "clang_Frontend": [
+              0.155497,
+              0.148634,
+              0.146001
+            ],
+            "clang_Backend": [
+              0.580506,
+              0.541095,
+              0.529664
+            ],
+            "clang_Optimizer": [
+              0.374343,
+              0.346153,
+              0.343519
+            ],
+            "clang_CodeGenPasses": [
+              0.20454,
+              0.19338,
+              0.184654
+            ],
+            "clang_InlinerPass": [
+              0.0423,
+              0.037457,
+              0.037668
+            ],
+            "clang_InstCombinePass": [
+              0.065837,
+              0.061238,
+              0.061305
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 0.9558748661074787,
+            "hit_api_wall": 0.004511851817369461,
+            "auxiliary_planning": 1.0812e-05,
+            "base_ir": 8.458e-06,
+            "build": 0.950599333,
+            "cache_lookup": 3.1724e-05,
+            "codegen_total": 0.004564396,
+            "compile_total": 0.955828982,
+            "cpp_emission": 0.000213868,
+            "library_copy": 0.000285046,
+            "library_load": 3.6908e-05,
+            "metadata_and_config": 2.907e-06,
+            "planning_total": 0.004334863,
+            "schedule_diagnostics": 6.8468e-05,
+            "scheduling": 0.004242617,
+            "source_write": 0.000266864,
+            "ninja_build_system_check": 0.017,
+            "ninja_dependency_scan": 0.043,
+            "ninja_dependency_collation": 0.018,
+            "ninja_consumer_compile": 0.733,
+            "ninja_link": 0.107,
+            "build_residual": 0.03759933299999996,
+            "clang_ExecuteCompiler": 0.692174,
+            "clang_Frontend": 0.148634,
+            "clang_Backend": 0.541095,
+            "clang_Optimizer": 0.346153,
+            "clang_CodeGenPasses": 0.19338,
+            "clang_InlinerPass": 0.037668,
+            "clang_InstCombinePass": 0.061305
+          }
+        },
+        "star6_nested_costmodel": {
+          "expected_matches": 168,
+          "samples_seconds": {
+            "miss_api_wall": [
+              0.5206726239994168,
+              0.49088506307452917,
+              0.5119312601163983
+            ],
+            "hit_api_wall": [
+              0.0017469339072704315,
+              0.002094021998345852,
+              0.0012146409135311842
+            ],
+            "auxiliary_planning": [
+              9.241e-06,
+              9.163e-06,
+              1.3583e-05
+            ],
+            "base_ir": [
+              7.445e-06,
+              8.11e-06,
+              1.0513e-05
+            ],
+            "build": [
+              0.518675658,
+              0.488856214,
+              0.509122856
+            ],
+            "cache_lookup": [
+              2.3084e-05,
+              2.41e-05,
+              3.3476e-05
+            ],
+            "codegen_total": [
+              0.001525251,
+              0.001571486,
+              0.002384294
+            ],
+            "compile_total": [
+              0.52062735,
+              0.490839328,
+              0.511888983
+            ],
+            "cpp_emission": [
+              8.1168e-05,
+              9.0213e-05,
+              0.000119237
+            ],
+            "library_copy": [
+              0.000214393,
+              0.000206802,
+              0.000110427
+            ],
+            "library_load": [
+              3.7576e-05,
+              3.8958e-05,
+              2.6509e-05
+            ],
+            "metadata_and_config": [
+              3.334e-06,
+              3.381e-06,
+              4.733e-06
+            ],
+            "planning_total": [
+              0.001430284,
+              0.001467166,
+              0.002244644
+            ],
+            "schedule_diagnostics": [
+              5.0469e-05,
+              5.363e-05,
+              7.488e-05
+            ],
+            "scheduling": [
+              0.001359242,
+              0.001391707,
+              0.002139642
+            ],
+            "source_write": [
+              0.000135347,
+              0.000125926,
+              0.000196058
+            ],
+            "ninja_build_system_check": [
+              0.016,
+              0.019,
+              0.017
+            ],
+            "ninja_dependency_scan": [
+              0.044,
+              0.042,
+              0.041
+            ],
+            "ninja_dependency_collation": [
+              0.018,
+              0.009,
+              0.016
+            ],
+            "ninja_consumer_compile": [
+              0.298,
+              0.279,
+              0.291
+            ],
+            "ninja_link": [
+              0.105,
+              0.103,
+              0.105
+            ],
+            "build_residual": [
+              0.037675658000000056,
+              0.036856214,
+              0.039122855999999984
+            ],
+            "clang_ExecuteCompiler": [
+              0.25237,
+              0.235581,
+              0.245089
+            ],
+            "clang_Frontend": [
+              0.086363,
+              0.082495,
+              0.083044
+            ],
+            "clang_Backend": [
+              0.163179,
+              0.150635,
+              0.15932
+            ],
+            "clang_Optimizer": [
+              0.107995,
+              0.100169,
+              0.105253
+            ],
+            "clang_CodeGenPasses": [
+              0.053624,
+              0.049151,
+              0.052572
+            ],
+            "clang_InlinerPass": [
+              0.012346,
+              0.011348,
+              0.011889
+            ],
+            "clang_InstCombinePass": [
+              0.019462,
+              0.018093,
+              0.018707
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 0.5119312601163983,
+            "hit_api_wall": 0.0017469339072704315,
+            "auxiliary_planning": 9.241e-06,
+            "base_ir": 8.11e-06,
+            "build": 0.509122856,
+            "cache_lookup": 2.41e-05,
+            "codegen_total": 0.001571486,
+            "compile_total": 0.511888983,
+            "cpp_emission": 9.0213e-05,
+            "library_copy": 0.000206802,
+            "library_load": 3.7576e-05,
+            "metadata_and_config": 3.381e-06,
+            "planning_total": 0.001467166,
+            "schedule_diagnostics": 5.363e-05,
+            "scheduling": 0.001391707,
+            "source_write": 0.000135347,
+            "ninja_build_system_check": 0.017,
+            "ninja_dependency_scan": 0.042,
+            "ninja_dependency_collation": 0.016,
+            "ninja_consumer_compile": 0.291,
+            "ninja_link": 0.105,
+            "build_residual": 0.037675658000000056,
+            "clang_ExecuteCompiler": 0.245089,
+            "clang_Frontend": 0.083044,
+            "clang_Backend": 0.15932,
+            "clang_Optimizer": 0.105253,
+            "clang_CodeGenPasses": 0.052572,
+            "clang_InlinerPass": 0.011889,
+            "clang_InstCombinePass": 0.018707
+          }
+        },
+        "cycle6_nested_costmodel": {
+          "expected_matches": 1680,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.1500898550730199,
+              1.1153398929163814,
+              1.126018573064357
+            ],
+            "hit_api_wall": [
+              0.005242020823061466,
+              0.005161287030205131,
+              0.00494671706110239
+            ],
+            "auxiliary_planning": [
+              3.925e-06,
+              4.218e-06,
+              3.789e-06
+            ],
+            "base_ir": [
+              5.861e-06,
+              7.114e-06,
+              7.069e-06
+            ],
+            "build": [
+              1.146172037,
+              1.110367422,
+              1.12135942
+            ],
+            "cache_lookup": [
+              1.8231e-05,
+              2.2275e-05,
+              2.0383e-05
+            ],
+            "codegen_total": [
+              0.003389601,
+              0.004348216,
+              0.004121811
+            ],
+            "compile_total": [
+              1.150050166,
+              1.11529119,
+              1.12597048
+            ],
+            "cpp_emission": [
+              0.000108471,
+              0.000135367,
+              0.000132552
+            ],
+            "library_copy": [
+              0.000304891,
+              0.000288367,
+              0.000269023
+            ],
+            "library_load": [
+              3.988e-05,
+              4.9676e-05,
+              4.918e-05
+            ],
+            "metadata_and_config": [
+              2.275e-06,
+              2.796e-06,
+              2.794e-06
+            ],
+            "planning_total": [
+              0.003275272,
+              0.004206191,
+              0.003983123
+            ],
+            "schedule_diagnostics": [
+              3.7612e-05,
+              4.9927e-05,
+              4.7304e-05
+            ],
+            "scheduling": [
+              0.003226894,
+              0.004142537,
+              0.003922628
+            ],
+            "source_write": [
+              0.000112098,
+              0.0001981,
+              0.000134262
+            ],
+            "ninja_build_system_check": [
+              0.017,
+              0.019,
+              0.018
+            ],
+            "ninja_dependency_scan": [
+              0.044,
+              0.038,
+              0.041
+            ],
+            "ninja_dependency_collation": [
+              0.017,
+              0.017,
+              0.017
+            ],
+            "ninja_consumer_compile": [
+              0.927,
+              0.907,
+              0.905
+            ],
+            "ninja_link": [
+              0.104,
+              0.094,
+              0.104
+            ],
+            "build_residual": [
+              0.037172036999999936,
+              0.03536742199999998,
+              0.03635942000000014
+            ],
+            "clang_ExecuteCompiler": [
+              0.880158,
+              0.864896,
+              0.858517
+            ],
+            "clang_Frontend": [
+              0.122786,
+              0.118387,
+              0.115906
+            ],
+            "clang_Backend": [
+              0.754537,
+              0.743242,
+              0.739989
+            ],
+            "clang_Optimizer": [
+              0.427221,
+              0.417365,
+              0.417836
+            ],
+            "clang_CodeGenPasses": [
+              0.325796,
+              0.324213,
+              0.320598
+            ],
+            "clang_InlinerPass": [
+              0.03433,
+              0.032743,
+              0.032833
+            ],
+            "clang_InstCombinePass": [
+              0.071334,
+              0.069848,
+              0.069846
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 1.126018573064357,
+            "hit_api_wall": 0.005161287030205131,
+            "auxiliary_planning": 3.925e-06,
+            "base_ir": 7.069e-06,
+            "build": 1.12135942,
+            "cache_lookup": 2.0383e-05,
+            "codegen_total": 0.004121811,
+            "compile_total": 1.12597048,
+            "cpp_emission": 0.000132552,
+            "library_copy": 0.000288367,
+            "library_load": 4.918e-05,
+            "metadata_and_config": 2.794e-06,
+            "planning_total": 0.003983123,
+            "schedule_diagnostics": 4.7304e-05,
+            "scheduling": 0.003922628,
+            "source_write": 0.000134262,
+            "ninja_build_system_check": 0.018,
+            "ninja_dependency_scan": 0.041,
+            "ninja_dependency_collation": 0.017,
+            "ninja_consumer_compile": 0.907,
+            "ninja_link": 0.104,
+            "build_residual": 0.03635942000000014,
+            "clang_ExecuteCompiler": 0.864896,
+            "clang_Frontend": 0.118387,
+            "clang_Backend": 0.743242,
+            "clang_Optimizer": 0.417836,
+            "clang_CodeGenPasses": 0.324213,
+            "clang_InlinerPass": 0.032833,
+            "clang_InstCombinePass": 0.069848
+          }
+        },
+        "clique7_nested_costmodel": {
+          "expected_matches": 8,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.1646403870545328,
+              1.1506448951549828,
+              1.2099846249911934
+            ],
+            "hit_api_wall": [
+              0.05165702779777348,
+              0.054085786920040846,
+              0.04876805399544537
+            ],
+            "auxiliary_planning": [
+              6.483e-06,
+              9.453e-06,
+              1.914e-05
+            ],
+            "base_ir": [
+              8.29e-06,
+              4.32e-06,
+              2.1346e-05
+            ],
+            "build": [
+              1.112156711,
+              1.098192732,
+              1.151423891
+            ],
+            "cache_lookup": [
+              1.7078e-05,
+              1.7184e-05,
+              2.4198e-05
+            ],
+            "codegen_total": [
+              0.051924255,
+              0.051833356,
+              0.057280325
+            ],
+            "compile_total": [
+              1.164594205,
+              1.150595313,
+              1.209739213
+            ],
+            "cpp_emission": [
+              0.000121911,
+              0.000116605,
+              0.000138023
+            ],
+            "library_copy": [
+              0.000305993,
+              0.000324477,
+              0.000284339
+            ],
+            "library_load": [
+              5.0249e-05,
+              5.0385e-05,
+              0.000577314
+            ],
+            "metadata_and_config": [
+              2.424e-06,
+              2.477e-06,
+              2.497e-06
+            ],
+            "planning_total": [
+              0.05179394,
+              0.051705392,
+              0.057116407
+            ],
+            "schedule_diagnostics": [
+              4.5143e-05,
+              4.6126e-05,
+              6.3539e-05
+            ],
+            "scheduling": [
+              0.051735269,
+              0.051648915,
+              0.057011442
+            ],
+            "source_write": [
+              0.000122566,
+              0.000158022,
+              0.000132725
+            ],
+            "ninja_build_system_check": [
+              0.018,
+              0.018,
+              0.019
+            ],
+            "ninja_dependency_scan": [
+              0.043,
+              0.043,
+              0.039
+            ],
+            "ninja_dependency_collation": [
+              0.018,
+              0.016,
+              0.017
+            ],
+            "ninja_consumer_compile": [
+              0.893,
+              0.878,
+              0.933
+            ],
+            "ninja_link": [
+              0.107,
+              0.104,
+              0.108
+            ],
+            "build_residual": [
+              0.03315671099999995,
+              0.03919273200000006,
+              0.035423890999999985
+            ],
+            "clang_ExecuteCompiler": [
+              0.84436,
+              0.834466,
+              0.890141
+            ],
+            "clang_Frontend": [
+              0.166744,
+              0.163728,
+              0.177517
+            ],
+            "clang_Backend": [
+              0.674342,
+              0.667846,
+              0.708232
+            ],
+            "clang_Optimizer": [
+              0.435056,
+              0.427574,
+              0.450347
+            ],
+            "clang_CodeGenPasses": [
+              0.237891,
+              0.238768,
+              0.25631
+            ],
+            "clang_InlinerPass": [
+              0.046903,
+              0.046906,
+              0.049211
+            ],
+            "clang_InstCombinePass": [
+              0.076619,
+              0.075021,
+              0.08429
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 1.1646403870545328,
+            "hit_api_wall": 0.05165702779777348,
+            "auxiliary_planning": 9.453e-06,
+            "base_ir": 8.29e-06,
+            "build": 1.112156711,
+            "cache_lookup": 1.7184e-05,
+            "codegen_total": 0.051924255,
+            "compile_total": 1.164594205,
+            "cpp_emission": 0.000121911,
+            "library_copy": 0.000305993,
+            "library_load": 5.0385e-05,
+            "metadata_and_config": 2.477e-06,
+            "planning_total": 0.05179394,
+            "schedule_diagnostics": 4.6126e-05,
+            "scheduling": 0.051735269,
+            "source_write": 0.000132725,
+            "ninja_build_system_check": 0.018,
+            "ninja_dependency_scan": 0.043,
+            "ninja_dependency_collation": 0.017,
+            "ninja_consumer_compile": 0.893,
+            "ninja_link": 0.107,
+            "build_residual": 0.035423890999999985,
+            "clang_ExecuteCompiler": 0.84436,
+            "clang_Frontend": 0.166744,
+            "clang_Backend": 0.674342,
+            "clang_Optimizer": 0.435056,
+            "clang_CodeGenPasses": 0.238768,
+            "clang_InlinerPass": 0.046906,
+            "clang_InstCombinePass": 0.076619
+          }
+        },
+        "star7_nested_costmodel": {
+          "expected_matches": 56,
+          "samples_seconds": {
+            "miss_api_wall": [
+              0.7625380598474294,
+              0.7904739489313215,
+              0.7660430478863418
+            ],
+            "hit_api_wall": [
+              0.011038516880944371,
+              0.01132483803667128,
+              0.010500085074454546
+            ],
+            "auxiliary_planning": [
+              3.4009e-05,
+              4.0846e-05,
+              2.9814e-05
+            ],
+            "base_ir": [
+              8.718e-06,
+              9.211e-06,
+              7.71e-06
+            ],
+            "build": [
+              0.754226402,
+              0.778675524,
+              0.755227221
+            ],
+            "cache_lookup": [
+              2.4737e-05,
+              2.8391e-05,
+              2.232e-05
+            ],
+            "codegen_total": [
+              0.007786731,
+              0.011105294,
+              0.010298923
+            ],
+            "compile_total": [
+              0.762499234,
+              0.790427036,
+              0.765996211
+            ],
+            "cpp_emission": [
+              0.000188705,
+              0.000225008,
+              0.000169667
+            ],
+            "library_copy": [
+              0.000240219,
+              0.000256311,
+              0.00024139
+            ],
+            "library_load": [
+              4.6049e-05,
+              4.3501e-05,
+              4.2018e-05
+            ],
+            "metadata_and_config": [
+              2.465e-06,
+              2.713e-06,
+              3.333e-06
+            ],
+            "planning_total": [
+              0.007555078,
+              0.01082903,
+              0.010091389
+            ],
+            "schedule_diagnostics": [
+              5.5429e-05,
+              6.8502e-05,
+              5.1968e-05
+            ],
+            "scheduling": [
+              0.007448086,
+              0.010700373,
+              0.009992754
+            ],
+            "source_write": [
+              0.0001604,
+              0.000301688,
+              0.00014823
+            ],
+            "ninja_build_system_check": [
+              0.017,
+              0.017,
+              0.018
+            ],
+            "ninja_dependency_scan": [
+              0.045,
+              0.043,
+              0.044
+            ],
+            "ninja_dependency_collation": [
+              0.016,
+              0.018,
+              0.011
+            ],
+            "ninja_consumer_compile": [
+              0.535,
+              0.558,
+              0.541
+            ],
+            "ninja_link": [
+              0.103,
+              0.105,
+              0.106
+            ],
+            "build_residual": [
+              0.03822640200000005,
+              0.03767552399999996,
+              0.035227220999999975
+            ],
+            "clang_ExecuteCompiler": [
+              0.492397,
+              0.515558,
+              0.494898
+            ],
+            "clang_Frontend": [
+              0.087979,
+              0.093307,
+              0.089749
+            ],
+            "clang_Backend": [
+              0.402103,
+              0.419807,
+              0.402647
+            ],
+            "clang_Optimizer": [
+              0.225236,
+              0.235528,
+              0.226032
+            ],
+            "clang_CodeGenPasses": [
+              0.175059,
+              0.182616,
+              0.174713
+            ],
+            "clang_InlinerPass": [
+              0.019467,
+              0.020079,
+              0.019447
+            ],
+            "clang_InstCombinePass": [
+              0.048447,
+              0.052117,
+              0.049114
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 0.7660430478863418,
+            "hit_api_wall": 0.011038516880944371,
+            "auxiliary_planning": 3.4009e-05,
+            "base_ir": 8.718e-06,
+            "build": 0.755227221,
+            "cache_lookup": 2.4737e-05,
+            "codegen_total": 0.010298923,
+            "compile_total": 0.765996211,
+            "cpp_emission": 0.000188705,
+            "library_copy": 0.00024139,
+            "library_load": 4.3501e-05,
+            "metadata_and_config": 2.713e-06,
+            "planning_total": 0.010091389,
+            "schedule_diagnostics": 5.5429e-05,
+            "scheduling": 0.009992754,
+            "source_write": 0.0001604,
+            "ninja_build_system_check": 0.017,
+            "ninja_dependency_scan": 0.044,
+            "ninja_dependency_collation": 0.016,
+            "ninja_consumer_compile": 0.541,
+            "ninja_link": 0.105,
+            "build_residual": 0.03767552399999996,
+            "clang_ExecuteCompiler": 0.494898,
+            "clang_Frontend": 0.089749,
+            "clang_Backend": 0.402647,
+            "clang_Optimizer": 0.226032,
+            "clang_CodeGenPasses": 0.175059,
+            "clang_InlinerPass": 0.019467,
+            "clang_InstCombinePass": 0.049114
+          }
+        },
+        "cycle7_nested_costmodel": {
+          "expected_matches": 2880,
+          "samples_seconds": {
+            "miss_api_wall": [
+              1.7847694910597056,
+              1.9009958759415895,
+              1.7831021300517023
+            ],
+            "hit_api_wall": [
+              0.03009023005142808,
+              0.027046652045100927,
+              0.029801392927765846
+            ],
+            "auxiliary_planning": [
+              3.593e-06,
+              3.268e-06,
+              3.368e-06
+            ],
+            "base_ir": [
+              6.143e-06,
+              5.452e-06,
+              5.922e-06
+            ],
+            "build": [
+              1.753569799,
+              1.870782259,
+              1.75170413
+            ],
+            "cache_lookup": [
+              1.766e-05,
+              1.7075e-05,
+              1.6818e-05
+            ],
+            "codegen_total": [
+              0.030599727,
+              0.029599007,
+              0.030805747
+            ],
+            "compile_total": [
+              1.784721966,
+              1.900950396,
+              1.783057293
+            ],
+            "cpp_emission": [
+              0.000113866,
+              0.000106702,
+              0.000115154
+            ],
+            "library_copy": [
+              0.000336244,
+              0.000338661,
+              0.000320979
+            ],
+            "library_load": [
+              4.6654e-05,
+              4.9219e-05,
+              4.7606e-05
+            ],
+            "metadata_and_config": [
+              2.691e-06,
+              2.787e-06,
+              2.765e-06
+            ],
+            "planning_total": [
+              0.030480799,
+              0.029487435,
+              0.030685548
+            ],
+            "schedule_diagnostics": [
+              4.0891e-05,
+              3.9869e-05,
+              4.1319e-05
+            ],
+            "scheduling": [
+              0.030428154,
+              0.029437478,
+              0.030633161
+            ],
+            "source_write": [
+              0.000135713,
+              0.000149527,
+              0.000146298
+            ],
+            "ninja_build_system_check": [
+              0.019,
+              0.017,
+              0.017
+            ],
+            "ninja_dependency_scan": [
+              0.041,
+              0.042,
+              0.043
+            ],
+            "ninja_dependency_collation": [
+              0.018,
+              0.018,
+              0.017
+            ],
+            "ninja_consumer_compile": [
+              1.532,
+              1.646,
+              1.532
+            ],
+            "ninja_link": [
+              0.107,
+              0.109,
+              0.105
+            ],
+            "build_residual": [
+              0.036569799000000014,
+              0.03878225900000021,
+              0.03770413000000006
+            ],
+            "clang_ExecuteCompiler": [
+              1.484584,
+              1.596586,
+              1.484473
+            ],
+            "clang_Frontend": [
+              0.141338,
+              0.137581,
+              0.136505
+            ],
+            "clang_Backend": [
+              1.340149,
+              1.456138,
+              1.344866
+            ],
+            "clang_Optimizer": [
+              0.710011,
+              0.804709,
+              0.702445
+            ],
+            "clang_CodeGenPasses": [
+              0.628638,
+              0.649621,
+              0.640939
+            ],
+            "clang_InlinerPass": [
+              0.047727,
+              0.056778,
+              0.045845
+            ],
+            "clang_InstCombinePass": [
+              0.116405,
+              0.132005,
+              0.114779
+            ]
+          },
+          "median_seconds": {
+            "miss_api_wall": 1.7847694910597056,
+            "hit_api_wall": 0.029801392927765846,
+            "auxiliary_planning": 3.368e-06,
+            "base_ir": 5.922e-06,
+            "build": 1.753569799,
+            "cache_lookup": 1.7075e-05,
+            "codegen_total": 0.030599727,
+            "compile_total": 1.784721966,
+            "cpp_emission": 0.000113866,
+            "library_copy": 0.000336244,
+            "library_load": 4.7606e-05,
+            "metadata_and_config": 2.765e-06,
+            "planning_total": 0.030480799,
+            "schedule_diagnostics": 4.0891e-05,
+            "scheduling": 0.030428154,
+            "source_write": 0.000146298,
+            "ninja_build_system_check": 0.017,
+            "ninja_dependency_scan": 0.042,
+            "ninja_dependency_collation": 0.018,
+            "ninja_consumer_compile": 1.532,
+            "ninja_link": 0.107,
+            "build_residual": 0.03770413000000006,
+            "clang_ExecuteCompiler": 1.484584,
+            "clang_Frontend": 0.137581,
+            "clang_Backend": 1.344866,
+            "clang_Optimizer": 0.710011,
+            "clang_CodeGenPasses": 0.640939,
+            "clang_InlinerPass": 0.047727,
+            "clang_InstCombinePass": 0.116405
+          }
+        }
+      }
+    }
+  }
+}
