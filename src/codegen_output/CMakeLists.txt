@@ -51,6 +51,9 @@ else()
     target_precompile_headers(plan_module PUBLIC ../backend/backend.h)
 endif()
 target_link_libraries(plan_module PUBLIC OpenMP::OpenMP_CXX TBB::tbb TBB::tbbmalloc)
+if(GRAPHMINI_PROFILE_QUERY_COMPILATION)
+    target_compile_options(plan_module PRIVATE -ftime-trace)
+endif()
 
 add_library(plan_profile STATIC
         plan_profile.cpp plan_profile.h)

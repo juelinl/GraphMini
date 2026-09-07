@@ -1,9 +1,12 @@
 #include "compiler/codegen/cpp.h"
 #include "compiler/planning.h"
+#include "compilation_profile.h"
 #include <stdexcept>
 namespace minigraph {
 std::string gen_code(const std::string &query, CodeGenConfig config, MetaData meta) {
     PlanIR plan;
+    {
+    CompilationStage stage("planning_total");
     switch (config.adjMatType) {
     case AdjMatType::VertexInduced:
         plan = compile_vertex_induced(query, config, meta);
@@ -17,8 +20,12 @@ std::string gen_code(const std::string &query, CodeGenConfig config, MetaData me
     default:
         throw std::invalid_argument("Unsupported query type");
     }
-    if (config.pruningType != PruningType::None)
+    }
+    if (config.pruningType != PruningType::None) {
+        CompilationStage stage("auxiliary_planning");
         plan = create_plan_mg(plan, config);
+    }
+    CompilationStage stage("cpp_emission");
     CppCodegen writer(config);
     switch (config.parType) {
     case ParallelType::OpenMP:

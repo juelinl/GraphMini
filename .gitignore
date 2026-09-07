@@ -8,6 +8,8 @@ build-conda-py311
 build-header-units
 build-tbb-module
 build-backend-module
+build-profile-pch
+build-profile-backend
 cmake-build-debug
 cmake-build-release
 

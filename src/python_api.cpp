@@ -1,4 +1,5 @@
 #include "codegen.h"
+#include "compilation_profile.h"
 #include "backend/backend.h"
 #include "common.h"
 #include "configure.h"
@@ -220,6 +221,7 @@ public:
     uint64_t pattern_size() const { return module_.pattern_size(); }
     const std::filesystem::path &module_path() const { return module_copy_path_; }
     const std::string &generated_code() const { return generated_code_; }
+    const CompilationProfile &compilation_profile() const { return compilation_profile_; }
 
     RunResult run(const std::shared_ptr<Graph> &graph, int num_threads) const {
         if (num_threads <= 0) {
@@ -275,26 +277,49 @@ public:
 
 private:
     void compile() {
+        CompilationCapture capture(compilation_profile_);
+        CompilationStage total("compile_total");
         CodeGenConfig config;
+        MetaData meta;
+        {
+        CompilationStage stage("metadata_and_config");
         config.adjMatType = parse_adjmat_type(query_type_);
         config.pruningType = parse_pruning_type(pruning_type_);
         config.parType = parse_parallel_type(parallel_type_);
         config.schedulerType = parse_scheduler_type(scheduler_);
         config.runnerType = RunnerType::Benchmark;
 
-        const MetaData meta = metadata_from_graph(*graph_);
+        meta = metadata_from_graph(*graph_);
+        }
+        {
+        CompilationStage stage("codegen_total");
         generated_code_ = gen_code(query_adjmat_, config, meta);
+        }
+        {
+        CompilationStage stage("cache_lookup");
         const std::string cache_key = hash_code_string(generated_code_);
         module_copy_path_ = cached_module_copy_path(cache_key);
-        if (!std::filesystem::exists(module_copy_path_)) {
+        compilation_profile_.cache_hit = std::filesystem::exists(module_copy_path_);
+        }
+        if (!compilation_profile_.cache_hit) {
+            {
+            CompilationStage stage("source_write");
             std::ofstream out(generated_plan_source_path());
             out << generated_code_;
             out.close();
+            }
+            {
+            CompilationStage stage("build");
             build_generated_plan_module(PROJECT_BINARY_DIR);
+            }
+            {
+            CompilationStage stage("library_copy");
             std::filesystem::copy_file(generated_plan_module_path(),
                                        module_copy_path_,
                                        std::filesystem::copy_options::overwrite_existing);
+            }
         }
+        CompilationStage load("library_load");
         module_ = LoadedPlanModule(module_copy_path_);
     }
 
@@ -307,6 +332,7 @@ private:
     std::string generated_code_;
     std::filesystem::path module_copy_path_;
     LoadedPlanModule module_;
+    CompilationProfile compilation_profile_;
 };
 
 } // namespace
@@ -381,7 +407,13 @@ PYBIND11_MODULE(pygraphmini, m) {
             .def_property_readonly("module_path", [](const CompiledPlan &self) {
                 return self.module_path().string();
             })
-            .def_property_readonly("generated_code", &CompiledPlan::generated_code);
+            .def_property_readonly("generated_code", &CompiledPlan::generated_code)
+            .def_property_readonly("compilation_profile", [](const CompiledPlan &self) {
+                py::dict out;
+                out["seconds"] = self.compilation_profile().seconds;
+                out["cache_hit"] = self.compilation_profile().cache_hit;
+                return out;
+            });
 
     m.def("compile_plan",
           [](const PyGraph &graph,

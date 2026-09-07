@@ -4,6 +4,7 @@
 #include "timer.h"
 
 #include "compiler/planning.h"
+#include "compilation_profile.h"
 #include "graphmini_scheduler.hpp"
 #include "graphpi_scheduler.hpp"
 #include "typedef.h"
@@ -188,14 +189,22 @@ EdgeRestrictIR ToRestrictIR(const std::string &res_mat, int vid) { return ToEdge
 ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, MetaData meta) {
     Timer t;
     int p_size = get_pattern_size(_adj_mat);
-    ScheduleResult schedule = schedule_pattern(_adj_mat, p_size, config, meta);
+    ScheduleResult schedule;
+    {
+        CompilationStage stage("scheduling");
+        schedule = schedule_pattern(_adj_mat, p_size, config, meta);
+    }
     std::string adj_mat = schedule.adj_mat;
     std::string res_mat = restricts_to_str(schedule.restrict_pair, p_size);
+    {
+    CompilationStage stage("schedule_diagnostics");
     LOG(MSG) << format_generated_schedule(schedule.matching_order);
     LOG(MSG) << format_scheduled_adjacency_lists(adj_mat, p_size);
     LOG(MSG) << format_canonicality_constraints(schedule.restrict_pair, p_size);
     LOG(MSG) << "Scheduling Time: " << ToReadableDuration(t.Passed());
+    }
     t.Reset();
+    CompilationStage stage("base_ir");
     PlanIR out;
     out.config = config;
     int max_dep = p_size - 1;
