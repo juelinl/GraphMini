@@ -10,6 +10,8 @@ build-tbb-module
 build-backend-module
 build-profile-pch
 build-profile-backend
+build-inline-*
+build-noinline-*
 cmake-build-debug
 cmake-build-release
 
