@@ -1,4 +1,5 @@
 # build directory
+.deps/
 build
 build-ninja
 build-conda

@@ -51,7 +51,12 @@ if(NOT Python3_EXECUTABLE)
 endif()
 find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 find_package(cxxopts CONFIG REQUIRED)
-find_package(TBB CONFIG REQUIRED COMPONENTS tbb tbbmalloc)
+# Prefer the project-local source build when package channels lag upstream.
+if(EXISTS "${PROJECT_SOURCE_DIR}/.deps/oneTBB-2023.1.0/lib/cmake/TBB/TBBConfig.cmake")
+    list(PREPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/.deps/oneTBB-2023.1.0")
+endif()
+find_package(TBB 2023.1 CONFIG REQUIRED COMPONENTS tbb tbbmalloc)
+message(STATUS "oneTBB ${TBB_VERSION}: ${TBB_DIR}")
 find_package(fmt CONFIG REQUIRED)
 find_package(pybind11 CONFIG REQUIRED)
 

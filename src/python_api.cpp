@@ -129,6 +129,7 @@ std::filesystem::path plan_cache_dir() {
     std::filesystem::path cache_dir(PROJECT_BINARY_DIR);
     cache_dir /= GRAPHMINI_EXPERIMENTAL_HEADER_UNITS
                          ? "python_plan_cache_header_units" : "python_plan_cache";
+    cache_dir /= "tbb-" GRAPHMINI_TBB_VERSION;
     std::filesystem::create_directories(cache_dir);
     return cache_dir;
 }

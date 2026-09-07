@@ -1,5 +1,8 @@
 # Runtime compilation baseline
 
+These recorded timing baselines used oneTBB 2023.0.0. The project has since
+upgraded to 2023.1.0; the older results do not benchmark its official `tbb.cppm`.
+
 The [C++20 header-unit experiment](header-units.md) compares imports with PCH
 under matched flags and documents correctness checks and current limitations.
 

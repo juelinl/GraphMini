@@ -1,5 +1,8 @@
 # Experimental C++20 header units
 
+The recorded experiment below used oneTBB 2023.0.0. The later dependency upgrade
+to 2023.1.0 supplies an official `tbb.cppm`, but these results do not measure it.
+
 The opt-in build imports the existing `src/backend/backend.h` dependency tree
 as a C++20 **header unit**. It is not a named-module rewrite and does not use
 `import std`. The default remains C++17 with PCH.

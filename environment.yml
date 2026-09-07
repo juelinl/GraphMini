@@ -17,3 +17,5 @@ dependencies:
   - pybind11-global
 # Resolve current compatible releases from conda-forge; Python stays on 3.14.
 # On macOS, Xcode Command Line Tools provide the platform SDK.
+# GraphMini requires oneTBB >=2023.1. If the channel supplies an older package,
+# run python scripts/install_onetbb.py; CMake prefers that project-local install.

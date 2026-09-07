@@ -31,6 +31,7 @@ CMake discovers the installed packages; it does not fetch pinned dependency copi
 ```bash
 conda env create -f environment.yml
 conda activate graphmini
+python scripts/install_onetbb.py
 cmake -S . -B build-conda -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DPython3_EXECUTABLE="$CONDA_PREFIX/bin/python" -DOpenMP_ROOT="$CONDA_PREFIX" \
   -DGRAPHMINI_BUILD_TESTS=ON
@@ -43,6 +44,21 @@ Micromamba users can create the same environment with
 `micromamba create -f environment.yml` and activate it with
 `micromamba activate graphmini`. Use this setup instead of the virtual-environment
 steps below. `build-conda` keeps its Python-specific build separate from `build`.
+
+GraphMini requires **oneTBB 2023.1 or newer**. The installer above builds the
+2023.1.0 tag into `.deps/oneTBB-2023.1.0`, including its preview `oneapi/tbb.cppm`
+module interface. This is needed when Conda's platform packages are older; it
+does not overwrite them. CMake prefers this local install. If your package
+manager already provides a suitable version, the installer can be skipped.
+The default still uses headers/PCH: installing the release does not itself
+enable the official named module. Finished query-library caches are separated
+by oneTBB version so an upgrade does not reuse old query binaries.
+
+On the tested Clang 21/libc++ setup, upstream 2023.1.0's unmodified `tbb.cppm`
+currently fails to compile: it unconditionally exports `cache_aligned_resource`
+and `scalable_memory_resource`, while oneTBB's feature check disables those
+declarations for libc++. Header/PCH builds work; named-module integration needs
+a compatibility fix. The upstream source is left unmodified.
 
 ### 1. Create a Python environment
 
