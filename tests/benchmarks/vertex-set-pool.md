@@ -1,7 +1,7 @@
 # Fixed-capacity VertexSetPool refactor
 
 The shared header `src/backend/vertex_set_pool.h` defines
-`minigraph::detail::VertexSetPool`, used by both normal and profiling VertexSet
+`minigraph::internal::VertexSetPool`, used by both normal and profiling VertexSet
 implementations. No generated-code or compiler-codegen changes are required.
 
 ## Fixed-size allocation API
@@ -10,7 +10,7 @@ A dedicated pool is configured at construction:
 
 ```cpp
 std::atomic_uint64_t allocated{0};
-minigraph::detail::VertexSetPool pool(4096, allocated);
+minigraph::internal::VertexSetPool pool(4096, allocated);
 auto* buffer = pool.acquire();
 // Use up to 4096 uint32_t values.
 pool.release(buffer);

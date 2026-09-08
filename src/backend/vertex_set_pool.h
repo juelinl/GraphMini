@@ -10,7 +10,7 @@
 #include <thread>
 #include <vector>
 
-namespace minigraph::detail {
+namespace minigraph::internal {
 
 // Fixed-size, thread-confined storage. Pools and owning sets must remain on
 // their originating worker; borrowed views may be read by other workers while

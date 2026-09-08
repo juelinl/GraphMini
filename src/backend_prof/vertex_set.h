@@ -23,7 +23,7 @@ namespace minigraph {
         IdType *m_data{nullptr};
         IdType m_vid{INVALID_ID};
         uint64_t m_size{0};
-        detail::VertexSetPool* m_pool{nullptr};
+        internal::VertexSetPool* m_pool{nullptr};
 
 
     public:
@@ -44,7 +44,7 @@ namespace minigraph {
             if (MAX_DEGREE >= max_capacity || capacity > max_capacity)
                 throw std::length_error("VertexSet capacity overflow");
             const size_t required = std::max(capacity, static_cast<size_t>(MAX_DEGREE + 1));
-            m_pool = &detail::VertexSetPool::for_capacity(required, TOTAL_ALLOCATED);
+            m_pool = &internal::VertexSetPool::for_capacity(required, TOTAL_ALLOCATED);
             m_data = m_pool->acquire();
         };
 

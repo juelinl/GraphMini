@@ -15,7 +15,7 @@ void fill(VertexSet& set, size_t n, uint32_t offset = 0) {
 int main() {
     std::atomic_uint64_t allocated{0};
     {
-        detail::VertexSetPool pool(17, allocated);
+        internal::VertexSetPool pool(17, allocated);
         auto* p = pool.acquire();
         require(pool.capacity() == 17 && pool.checked_out() == 1);
         for (size_t i = 0; i < 17; ++i) p[i] = i;
@@ -26,7 +26,7 @@ int main() {
         require(pool.buffer_count() == 1 && pool.checked_out() == 0);
     }
     bool rejected = false;
-    try { detail::VertexSetPool invalid(0, allocated); }
+    try { internal::VertexSetPool invalid(0, allocated); }
     catch (const std::length_error&) { rejected = true; }
     require(rejected);
 
