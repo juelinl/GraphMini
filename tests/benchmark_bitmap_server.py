@@ -89,6 +89,8 @@ def main():
     parser.add_argument("--graphs", default="er-sparse,er-medium,er-dense,clustered,ca-GrQc,wiki-Vote")
     parser.add_argument("--sizes", default="4,5,6,7")
     parser.add_argument("--families", default="clique,minus1,minus2")
+    parser.add_argument("--backends", default="array,bitmap", choices=["array,bitmap", "array", "bitmap"],
+                        help="Single-backend runs isolate process RSS; compare counts with paired runs")
     parser.add_argument("--threads", default="1")
     parser.add_argument("--trials", type=int, default=7)
     parser.add_argument("--round", type=int, default=0)
@@ -103,6 +105,7 @@ def main():
                     affinity=sorted(os.sched_getaffinity(0)),
                     omp={k: os.environ.get(k) for k in ("OMP_PLACES", "OMP_PROC_BIND", "OMP_DYNAMIC")},
                     load_average=os.getloadavg(), exclusions=args.exclude,
+                    backends=args.backends,
                     rss_scope="cumulative process, including graphs and Python")
     path = Path(args.output)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -110,10 +113,17 @@ def main():
         output.write(json.dumps({"metadata": metadata}) + "\n")
         for size in map(int, args.sizes.split(",")):
             for family in args.families.split(","):
+                if family not in ("clique", "minus1", "minus2", "wheel", "cycle"):
+                    raise ValueError(f"Unknown pattern family: {family}")
                 omitted = [] if family == "clique" else [(0, 1)]
                 if family == "minus2":
                     omitted.append((2, 3))
-                query = matrix(size, [e for e in itertools.combinations(range(size), 2) if e not in omitted])
+                edges = [e for e in itertools.combinations(range(size), 2) if e not in omitted]
+                if family == "cycle":
+                    edges = [(i, (i + 1) % size) for i in range(size)]
+                elif family == "wheel":
+                    edges = [(0, i) for i in range(1, size)] + [(i, i + 1) for i in range(1, size - 1)] + [(1, size - 1)]
+                query = matrix(size, edges)
                 pattern = "".join(str(v) for row in query for v in row)
                 rng = random.Random(20260909)
                 calibration = matrix(10, [e for e in itertools.combinations(range(10), 2)
@@ -123,7 +133,7 @@ def main():
                         calibration[i][j] = query[i][j]
                 calibration_graph = make_graph([{j for j, bit in enumerate(row) if bit} for row in calibration])
                 expected = count_induced_subsets(calibration, query)
-                keys = [("outgoing", False), ("outgoing", True)] if args.phase == "runtime" else [
+                keys = [("outgoing", flag == "bitmap") for flag in args.backends.split(",")] if args.phase == "runtime" else [
                     (scheduler, True) for scheduler in ("graphmini", "outgoing", "bitmap_balanced")]
                 plans = [gm.compile_plan(calibration_graph, pattern, "vertex", scheduler=scheduler,
                                          pruning_type="none", parallel_type="openmp", bitmap=bitmap)
@@ -167,6 +177,8 @@ def main():
                             measurements.append(dict(scheduler=scheduler, bitmap=bitmap,
                                 selected="// bitmap-region build once" in plan.generated_code,
                                 local_iterator="// bitmap local-index loop" in plan.generated_code,
+                                full_region="// full bitmap region" in plan.generated_code,
+                                fixed_words="count_local<bitmap_words>" in plan.generated_code,
                                 code_sha256=hashlib.sha256(plan.generated_code.encode()).hexdigest(),
                                 median_seconds=median,
                                 mad_seconds=statistics.median(abs(t - median) for t in times),
