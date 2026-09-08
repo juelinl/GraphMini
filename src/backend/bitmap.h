@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "bit_ops/bit_ops.h"
+#include "bit_ops/from_sorted.h"
 #include "neighborhood_universe.h"
 
 namespace minigraph {
@@ -191,21 +192,8 @@ class Bitmap {
     }
     void assign_neighbors(const uint32_t *ids, size_t size) {
         internal::require_sorted_ids(ids, size);
-        reset();
         const auto &domain = universe_.ids();
-        size_t i = 0, j = 0;
-        while (i < domain.size() && j < size) {
-            if (domain[i] < ids[j])
-                ++i;
-            else if (ids[j] < domain[i])
-                ++j;
-            else {
-                words_[i / 64] |= bit_ops::Word{1} << (i % 64);
-                ++cardinality_;
-                ++i;
-                ++j;
-            }
-        }
+        cardinality_ = bit_ops::from_sorted(domain.data(), domain.size(), ids, size, words_.data());
     }
 };
 inline Bitmap BitmapView::intersect(const BitmapView &other, std::optional<uint32_t> upper) const {

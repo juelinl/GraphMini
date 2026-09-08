@@ -10,6 +10,13 @@ add_test(NAME python_import
             $<TARGET_FILE:graphmini>)
 
 add_executable(bitmap_reuse_regression bitmap_reuse.cpp)
+add_executable(bit_mark_regression bit_mark.cpp)
+target_link_libraries(bit_mark_regression PRIVATE graphmini_headers)
+add_test(NAME bit_mark_regression COMMAND bit_mark_regression)
+add_executable(bit_mark_scalar_regression bit_mark.cpp)
+target_link_libraries(bit_mark_scalar_regression PRIVATE graphmini_headers)
+target_compile_definitions(bit_mark_scalar_regression PRIVATE GRAPHMINI_BIT_OPS_SCALAR)
+add_test(NAME bit_mark_scalar_regression COMMAND bit_mark_scalar_regression)
 target_link_libraries(bitmap_reuse_regression PRIVATE graphmini_headers)
 add_test(NAME bitmap_reuse_regression COMMAND bitmap_reuse_regression)
 add_executable(bit_decode_regression bit_decode.cpp)
@@ -138,6 +145,7 @@ endif()
 
 # Each translation unit includes exactly one project header, without a PCH.
 set(standalone_headers
+    backend/bit_ops/from_sorted.h
     common/types.h common/counter.h common/timer.h common/logging.h
     common/meta.h common/constant.h common/logitem.h
     compiler/config.h compiler/compilation_profile.h compiler/codegen.h
