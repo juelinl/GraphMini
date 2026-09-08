@@ -16,70 +16,11 @@
 
 namespace minigraph {
     
-    inline const IdType *advance(const IdType* begin, const IdType* end, const IdType val) {
-        while (*begin < val && begin < end) begin++;
-        return begin;
-    } 
-
-    inline const IdType *binary_search(const IdType *begin, const IdType *end, const IdType val) {
-        assert(begin <= end);
-        IdType count = end - begin;
-        const IdType *itr = begin;
-        while (count > 0) {
-            itr = begin;
-            IdType step = count / 2;
-            itr += step;
-            if (*itr < val) {
-                begin = ++itr;
-                count -= step + 1;
-            } else {
-                count = step;
-            }
-        }
-        return itr;
-    }
-
     inline ManagedContainer get_indices(const VertexSet &_vertices, const VertexSet &_to_iter) {
         ManagedContainer out(_to_iter.size());
-        if (_vertices.begin() == _to_iter.begin()) {
-            IdType out_size = std::min(_vertices.size(), _to_iter.size());
-            for (IdType i = 0; i < out_size; i++) {
-                out[i] = i;
-            }
-            out.set_size(out_size);
-            return out;
-        } else if (_to_iter.size() * 50 < _vertices.size()) {
-            // binary search
-            size_t idx_l = 0, idx_r = 0, idx_out = 0;
-            const IdType *begin = _vertices.begin();
-            const IdType *itr = begin;
-            const IdType *end = _vertices.end();
-            IdType idx = 0;
-            while (idx < _to_iter.size() && itr < end) {
-                IdType id = _to_iter[idx++];
-                itr = binary_search(itr, end, id);
-                if (itr != end && id == *itr) {
-                    out[idx_out++] = itr - begin;
-                    itr++;
-                }
-            }
-            out.set_size(idx_out);
-            return out;
-        } else {
-            // linear scan
-            size_t idx_l = 0, idx_r = 0, idx_out = 0;
-            size_t _v_size = _vertices.size();
-            size_t _iter_size = _to_iter.size();
-            while (idx_l < _v_size && idx_r < _iter_size) {
-                const IdType left = _vertices[idx_l];
-                const IdType right = _to_iter[idx_r];
-                if (left == right) out[idx_out++] = idx_l;
-                if (left <= right) idx_l++;
-                if (right <= left) idx_r++;
-            }
-            out.set_size(idx_out);
-            return out;
-        }
+        out.set_size(set_ops::indices_write(_vertices.begin(), _vertices.size(),
+                                            _to_iter.begin(), _to_iter.size(), out.begin()));
+        return out;
     };
 
 

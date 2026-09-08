@@ -2,6 +2,7 @@
 #include "scalar.h"
 #include "neon.h"
 #include "avx2.h"
+#include "sorted.h"
 
 namespace minigraph::set_ops {
 // Conservative initial cutoff, not a universal crossover. Keep short candidate
@@ -53,13 +54,7 @@ inline size_t difference_write(const uint32_t* a, size_t na, const uint32_t* b, 
 // Prefix length with IDs strictly below upper. Avoid pointer arithmetic on null
 // empty views, and preserve unsigned ordering across the full uint32_t range.
 inline size_t prefix_size(const uint32_t* a, size_t n, uint32_t upper) {
-    size_t lo = 0, hi = n;
-    while (lo < hi) {
-        const size_t mid = lo + (hi - lo) / 2;
-        if (a[mid] < upper) lo = mid + 1;
-        else hi = mid;
-    }
-    return lo;
+    return lower_bound_binary(a, n, upper);
 }
 template<bool Write>
 inline size_t intersection_bounded(const uint32_t* a, size_t na,

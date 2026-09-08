@@ -284,69 +284,22 @@ namespace minigraph {
     };
 
     VertexSet VertexSet::bounded(IdType upper) const & {
-        size_t idx_l = 0;
-        if (size() > 64) {
-            size_t count = size();
-            while (count > 0) {
-                size_t it = idx_l;
-                size_t step = count / 2;
-                it += step;
-                if (m_data[it] < upper) {
-                    idx_l = ++it;
-                    count -= step + 1;
-                } else count = step;
-            }
-        } else {
-            while (idx_l < size() && m_data[idx_l] < upper) idx_l++;
-        }
+        const size_t idx_l = set_ops::lower_bound_index(m_data, m_size, upper);
         return VertexSet(m_vid, m_data, idx_l);
     }
 
     size_t VertexSet::bounded_cnt(IdType upper) const {
-        size_t idx_l = 0;
-        if (size() > 64) {
-            size_t count = size();
-            while (count > 0) {
-                size_t it = idx_l;
-                size_t step = count / 2;
-                it += step;
-                if (m_data[it] < upper) {
-                    idx_l = ++it;
-                    count -= step + 1;
-                } else count = step;
-            }
-        } else {
-            while (idx_l < size() && m_data[idx_l] < upper) idx_l++;
-        }
+        const size_t idx_l = set_ops::lower_bound_index(m_data, m_size, upper);
         return idx_l;
     }
 
     VertexSet VertexSet::remove(IdType upper) const & {
-        size_t idx_l = 0;
-        if (size() > 64) {
-            size_t count = size();
-            while (count > 0) {
-                size_t it = idx_l;
-                size_t step = count / 2;
-                it += step;
-                if (m_data[it] < upper) {
-                    idx_l = ++it;
-                    count -= step + 1;
-                } else count = step;
-            }
-        } else {
-            while (idx_l < size() && m_data[idx_l] < upper) idx_l++;
-        }
+        const size_t idx_l = set_ops::lower_bound_index(m_data, m_size, upper);
 
         if (idx_l < m_size && m_data[idx_l] == upper) {
             VertexSet out(size());
             out.m_size = m_size - 1;
-            for (size_t i = 0; i < idx_l; i++) {
-                out[i] = m_data[i];
-            }
-            for (size_t i = idx_l; i < m_size - 1; i++) {
-                out[i] = m_data[i + 1];
-            }
+            set_ops::remove_at(m_data, m_size, idx_l, out.m_data);
             return out;
         };
 
@@ -372,39 +325,12 @@ namespace minigraph {
     }
 
     size_t VertexSet::remove_cnt(IdType upper) const {
-        size_t idx_l = 0;
-        if (size() > 64) {
-            size_t count = size();
-            while (count > 0) {
-                size_t it = idx_l;
-                size_t step = count / 2;
-                it += step;
-                if (m_data[it] < upper) {
-                    idx_l = ++it;
-                    count -= step + 1;
-                } else count = step;
-            }
-        } else {
-            while (idx_l < size() && m_data[idx_l] < upper) idx_l++;
-        }
-
-        if (idx_l < m_size && m_data[idx_l] == upper) {
-            return m_size - 1;
-        } else {
-            return m_size;
-        }
+        return set_ops::remove_count(m_data, m_size, upper);
     }
 
     VertexSet VertexSet::indices(const VertexSet &other) const {
         VertexSet out(size());
-        IdType idx_l = 0, idx_r = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left == right) out[out.m_size++] = idx_l;
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-        }
+        out.m_size = set_ops::indices_write(m_data, m_size, other.begin(), other.size(), out.m_data);
         return out;
     }
 
