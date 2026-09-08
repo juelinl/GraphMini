@@ -233,6 +233,8 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                            fmt::arg("loop", loop));
     }
     out << " { // loop-" << loop << "begin\n";
+    if (loop == 0 && !profiling_)
+        out << "BenchmarkRootProgress root_progress(benchmark_progress->root(i0_id));\n";
     int max_dep = plan.logical.p_size - 1;
     const auto &set_ops = plan.logical.set_ops;
     switch (config.pruningType) {
@@ -421,9 +423,11 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "#include \"plan_profile.h\"\n";
     else
         out << "#include \"plan.h\"\n";
+    if (!profiling_) out << "#include \"backend/benchmark_progress.h\"\n";
     if (execution_.bitmap_region) out << "#include \"backend/bitmap_tasks.h\"\n";
     // out << "#include \"oneapi/tbb/parallel_for.h\"\n";
     out << "namespace minigraph {\n";
+    if (!profiling_) out << "static BenchmarkProgress* benchmark_progress = nullptr;\n";
     if (execution_.bitmap_region)
         out << "static const auto bitmap_task_policy = BitmapTaskPolicy::from_environment();\n";
     if (config.bitmapDiagnostics) out << "static std::atomic<uint64_t> bitmap_counters[7]{};\n";
@@ -462,6 +466,8 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "for (auto& value : bitmap_counters) value.store(0, std::memory_order_relaxed);\n"
                "bitmap_counters[4].store(ctx.num_threads, std::memory_order_relaxed);\n";
     out << "\t\tctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
+    if (!profiling_)
+        out << "BenchmarkProgress progress(ctx, _graph->get_vnum()); benchmark_progress = &progress;\n";
     out << "\t\tgraph = _graph;\n";
     if (config.pruningType != PruningType::None)
         out << "\t\tMiniGraphIF::DATA_GRAPH = graph;\n";

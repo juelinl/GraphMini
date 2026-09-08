@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 import signal
 import statistics
+import struct
 import subprocess
 import sys
 import time
@@ -24,6 +25,25 @@ def save(path, value):
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(value, indent=2) + "\n")
     temporary.replace(path)
+
+
+def read_progress(path):
+    """Read only after native return or worker exit, never concurrently."""
+    raw = Path(path).read_bytes()
+    if len(raw) < 64:
+        return dict(available=False, reason="incomplete progress header")
+    version, threads, vertices, redundancy = struct.unpack_from("=4Q", raw)
+    if version != 1 or threads < 1 or len(raw) != 64 + 64 * threads + vertices:
+        return dict(available=False, reason="invalid progress snapshot")
+    counts = [struct.unpack_from("=q", raw, 64 + 64*i)[0] for i in range(threads)]
+    flags = raw[64 + 64*threads:]
+    completed = [i for i, flag in enumerate(flags) if flag == 2]
+    return dict(available=True, total_root_vertices=vertices,
+                started_root_vertices=sum(flag != 0 for flag in flags),
+                completed_root_vertices=len(completed), completed_root_vertex_ids=completed,
+                accumulated_matches=sum(counts) // max(1, redundancy),
+                semantics="Match-count lower bound from completed counting operations, including bitmap leaves before reduction. "
+                          "Vertex IDs are internal outer-loop graph IDs, not distinct vertices in matches.")
 
 
 def worker(args):
@@ -70,12 +90,34 @@ def worker(args):
                   wall_samples_seconds=[], status="running",
                   execution_started=time.monotonic())
     save(state, record)
-    warm = plan.run(graph, num_threads=job["threads"])
+    def measured_run(label):
+        progress = state.with_name(f"progress-{label}-{os.getpid()}-{time.time_ns()}.bin")
+        record.update(active_run=label, active_run_started=time.monotonic(), progress_file=str(progress))
+        save(state, record)
+        old = os.environ.get("GRAPHMINI_PROGRESS_FILE")
+        os.environ["GRAPHMINI_PROGRESS_FILE"] = str(progress)
+        try:
+            result = plan.run(graph, num_threads=job["threads"])
+        finally:
+            if old is None:
+                os.environ.pop("GRAPHMINI_PROGRESS_FILE", None)
+            else:
+                os.environ["GRAPHMINI_PROGRESS_FILE"] = old
+        snapshot = read_progress(progress) if progress.exists() else dict(available=False)
+        if job['parallel'] != 'openmp':
+            assert snapshot.get('available'), 'TBB progress snapshot missing'
+        if snapshot.get("available"):
+            assert snapshot["completed_root_vertices"] == snapshot["total_root_vertices"]
+            assert snapshot["accumulated_matches"] == result.number_of_matches
+        record.setdefault("completed_run_progress", {})[label] = snapshot
+        return result
+
+    warm = measured_run("warmup")
     record.update(count=warm.number_of_matches, warmup_seconds=warm.execution_time_seconds)
     save(state, record)
-    for _ in range(job["trials"]):
+    for trial in range(job["trials"]):
         start = time.perf_counter()
-        result = plan.run(graph, num_threads=job["threads"])
+        result = measured_run(f"trial-{trial}")
         wall = time.perf_counter() - start
         assert result.number_of_matches == record["count"], "Repeated count mismatch"
         record["samples_seconds"].append(result.execution_time_seconds)
@@ -125,6 +167,14 @@ def run_job(command, directory, execution_budget, preparation_budget):
     elif process.returncode != 0 or record.get("status") != "complete":
         record["status"] = "error"
     record.update(returncode=process.returncode, job_wall_seconds=time.monotonic() - started)
+    if record.get("execution_started") is not None:
+        record["execution_wall_seconds"] = time.monotonic() - record["execution_started"]
+    if record.get("progress_file") and Path(record["progress_file"]).exists():
+        record["partial_progress"] = read_progress(record["progress_file"])
+        record["partial_progress"]["run"] = record.get("active_run")
+        record["partial_progress"]["is_final_count"] = record.get("status") == "complete"
+        if record.get("active_run_started") is not None:
+            record["partial_progress"]["run_wall_seconds"] = time.monotonic() - record["active_run_started"]
     save(state, record)
     return record
 
@@ -140,7 +190,7 @@ def main():
     parser.add_argument("--parallel", choices=["openmp", "tbb_top", "nested", "nested_rt"], default="nested_rt")
     parser.add_argument("--backends", choices=["array,bitmap", "array", "bitmap"], default="array,bitmap")
     parser.add_argument("--trials", type=int, default=3)
-    parser.add_argument("--execution-budget", type=float, default=60)
+    parser.add_argument("--execution-budget", type=float, default=300)
     parser.add_argument("--preparation-budget", type=float, default=300)
     parser.add_argument("--atlas-ids", help="Optional comma-separated pilot subset")
     args = parser.parse_args()
@@ -178,6 +228,8 @@ def main():
                     affinity=sorted(os.sched_getaffinity(0)),
                     driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                     real_dir=str(Path(args.real_dir).resolve()),
+                    hostname=os.uname().nodename,
+                    slurm={k: os.environ.get(k) for k in ("SLURM_JOB_ID", "SLURM_ARRAY_TASK_ID", "SLURM_CPUS_PER_TASK")},
                     omp={k: os.environ.get(k) for k in ("OMP_PLACES", "OMP_PROC_BIND", "OMP_DYNAMIC")})
     meta_path = output / "metadata.json"
     if meta_path.exists():
@@ -207,6 +259,13 @@ def main():
                 results.write(json.dumps(record) + "\n")
                 results.flush()
                 print(f'{pattern["atlas_id"]} {backend}: {record["status"]}', flush=True)
+                progress = record.get("partial_progress", {})
+                if record['status'] == 'execution_timeout' and args.parallel != 'openmp':
+                    assert progress.get('available'), f'Missing timeout progress: {directory}'
+                if progress.get("available"):
+                    print(f'  {progress["completed_root_vertices"]}/{progress["total_root_vertices"]} '
+                          f'outer vertices completed; {progress["accumulated_matches"]} committed matches '
+                          f'({progress.get("run")})', flush=True)
                 pair.append(record)
                 if record["status"] in ("error", "preparation_timeout"):
                     raise RuntimeError(f"Investigate {directory / 'worker.log'}")

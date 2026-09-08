@@ -150,13 +150,15 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
         }
         if (depth < plan.logical.p_size - 2)
             out += fmt::format("counter += bitmap_level{}(task_state);\n", depth+1);
+        else
+            out += "benchmark_progress->add_bitmap_matches(counter);\n";
         out += fmt::format("return counter;\n}}, bitmap_task_policy, {});\n}};\n", depth-dep-1);
     }
     out += fmt::format("return bitmap_level{}(*bitmap_region);\n", dep+1);
     out += "};\n"
-           "if (bitmap_region->universe_size() <= 64) counter += bitmap_execute(std::integral_constant<size_t, 1>{});\n"
-           "else if (bitmap_region->universe_size() <= 128) counter += bitmap_execute(std::integral_constant<size_t, 2>{});\n"
-           "else counter += bitmap_execute(std::integral_constant<size_t, 0>{});\n"
+           "if (bitmap_region->universe_size() <= 64) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 1>{}));\n"
+           "else if (bitmap_region->universe_size() <= 128) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 2>{}));\n"
+           "else counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 0>{}));\n"
            "} else {\n";
     out += emit_tbb_call(plan, plan.context.config, dep+1, dep);
     return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n",

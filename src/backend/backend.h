@@ -18,10 +18,15 @@ import tbb;
 namespace minigraph {
     struct cc {
         alignas(64) long long count{0};
+        // Optional benchmark-only snapshot, read after the worker stops.
+        volatile long long* progress_count{nullptr};
         cc& operator +=(long long c) {
             count += c;
+            if (progress_count) *progress_count = *progress_count + c;
             return *this;
         }
+        // Bitmap leaves already publish their counts before nested reductions.
+        void add_without_progress(long long c) { count += c; }
     };
 
     struct Context
