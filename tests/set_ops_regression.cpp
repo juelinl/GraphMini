@@ -15,6 +15,75 @@ using namespace minigraph;
 using Kernel = size_t (*)(const uint32_t*, size_t, const uint32_t*, size_t, uint32_t*);
 void require(bool b) { if (!b) throw std::runtime_error("set operation mismatch"); }
 
+using DifferenceKernel = size_t (*)(const uint32_t*, size_t, const uint32_t*, size_t,
+                                    uint32_t, uint32_t*);
+void check_difference(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b,
+                      uint32_t* ap, uint32_t* bp) {
+    std::vector<uint32_t> base;
+    std::set_difference(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(base));
+    std::vector<uint32_t> excluded_ids{0u, 1u, 31u, 64u, 0x80000000u, 0xffffffffu};
+    if (!a.empty()) excluded_ids.push_back(a[a.size() / 2]);
+    for (uint32_t excluded : excluded_ids) {
+        std::vector<uint32_t> expected;
+        std::copy_if(base.begin(), base.end(), std::back_inserter(expected),
+                     [=](uint32_t x) { return x != excluded; });
+        std::vector<DifferenceKernel> writes{
+            [](const uint32_t* a, size_t na, const uint32_t* b, size_t nb,
+               uint32_t e, uint32_t* out) { return set_ops::difference_scalar<true>(a, na, b, nb, e, out); },
+            set_ops::difference<true>};
+        std::vector<DifferenceKernel> counts{
+            [](const uint32_t* a, size_t na, const uint32_t* b, size_t nb,
+               uint32_t e, uint32_t* out) { return set_ops::difference_scalar<false>(a, na, b, nb, e, out); },
+            set_ops::difference<false>};
+#if defined(__aarch64__)
+        writes.push_back(set_ops::difference_neon<true>);
+        counts.push_back(set_ops::difference_neon<false>);
+#elif defined(__x86_64__) && (defined(__GNUC__) || defined(__clang__))
+        if (set_ops::has_avx2()) {
+            writes.push_back(set_ops::difference_avx2<true>);
+            counts.push_back(set_ops::difference_avx2<false>);
+        }
+#endif
+        for (auto fn : writes) {
+            std::unique_ptr<uint32_t[]> out(expected.empty() ? nullptr : new uint32_t[expected.size()]);
+            require(fn(ap, a.size(), bp, b.size(), excluded, out.get()) == expected.size());
+            for (size_t i = 0; i < expected.size(); ++i) require(out[i] == expected[i]);
+        }
+        for (auto fn : counts)
+            require(fn(ap, a.size(), bp, b.size(), excluded, nullptr) == expected.size());
+        VertexSet va(0, ap, a.size()), vb(excluded, bp, b.size());
+        // The profiling counters index actual graph vertex IDs in a two-vertex
+        // fixture. Direct kernels still test the entire uint32_t ID range.
+        const bool check_wrapper =
+#ifdef GRAPHMINI_PROFILE_RUNTIME
+            excluded < 2;
+#else
+            true;
+#endif
+        if (check_wrapper) {
+            require(va.subtract_cnt(vb) == expected.size());
+            auto out = va.subtract(vb);
+            require(out.size() == expected.size());
+            for (size_t i = 0; i < expected.size(); ++i) require(out[i] == expected[i]);
+        }
+        for (uint32_t upper : {0u, 1u, 31u, 64u, 0x80000000u, 0xffffffffu}) {
+            const size_t n = std::lower_bound(expected.begin(), expected.end(), upper) - expected.begin();
+            std::unique_ptr<uint32_t[]> out(n ? new uint32_t[n] : nullptr);
+            require(set_ops::difference_bounded<true>(
+                ap, a.size(), bp, b.size(), excluded, upper, out.get()) == n);
+            for (size_t i = 0; i < n; ++i) require(out[i] == expected[i]);
+            require(set_ops::difference_bounded<false>(
+                ap, a.size(), bp, b.size(), excluded, upper) == n);
+            if (check_wrapper) {
+                require(va.subtract_cnt(vb, upper) == n);
+                auto bounded = va.subtract(vb, upper);
+                require(bounded.size() == n);
+                for (size_t i = 0; i < n; ++i) require(bounded[i] == expected[i]);
+            }
+        }
+    }
+}
+
 void check(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
     std::vector<uint32_t> expected;
     std::set_intersection(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(expected));
@@ -25,6 +94,7 @@ void check(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
     std::copy(b.begin(), b.end(), bb.get() + 1);
     const auto ap = a.empty() ? nullptr : aa.get() + 1;
     const auto bp = b.empty() ? nullptr : bb.get() + 1;
+    check_difference(a, b, ap, bp);
     std::vector<Kernel> kernels{[](const uint32_t* a, size_t na, const uint32_t* b, size_t nb, uint32_t* out) { return set_ops::scalar<true>(a, na, b, nb, out); }, set_ops::intersection<true>};
 #if defined(__aarch64__)
     kernels.push_back(set_ops::neon<true>);
@@ -82,6 +152,14 @@ int main() {
     VertexSet::profiler = std::make_shared<Profiler>(2, 2);
 #endif
     size_t cases = 0;
+    // A left block survives several right blocks and then a short scalar tail.
+    for (size_t nb : {4, 5, 8, 9, 16, 17, 32, 33}) {
+        std::vector<uint32_t> a{0, 3, 7, 1000, 2000, 3000, 4000, 5000};
+        std::vector<uint32_t> b(nb);
+        for (size_t i = 0; i < nb; ++i) b[i] = i;
+        check(a, b); ++cases;
+        check(b, a); ++cases;
+    }
     // Exhaust all pairs of subsets of a small universe.
     for (unsigned x = 0; x < 64; ++x) for (unsigned y = 0; y < 64; ++y) {
         std::vector<uint32_t> a, b;

@@ -27,6 +27,40 @@ inline size_t scalar(const uint32_t* a, size_t na, const uint32_t* b, size_t nb,
     return count;
 }
 
+// pending marks leading left-hand elements already matched by earlier SIMD
+// right-hand blocks. It must survive the transition to the scalar tail.
+template<bool Write, bool Bounded = false>
+inline size_t difference_scalar(const uint32_t* a, size_t na,
+                                const uint32_t* b, size_t nb, uint32_t excluded,
+                                uint32_t* out = nullptr, unsigned pending = 0,
+                                uint32_t upper = 0) {
+    size_t i = 0, j = 0, count = 0;
+    while (i < na && j < nb) {
+        const auto x = a[i], y = b[j];
+        if constexpr (Bounded) {
+            if (x >= upper || y >= upper) break;
+        }
+        if (x < y && x != excluded && !(pending & 1u)) {
+            if constexpr (Write) out[count] = x;
+            ++count;
+        }
+        if (x <= y) { ++i; pending >>= 1; }
+        if (y <= x) ++j;
+    }
+    while (i < na) {
+        const auto x = a[i++];
+        if constexpr (Bounded) {
+            if (x >= upper) break;
+        }
+        if (x != excluded && !(pending & 1u)) {
+            if constexpr (Write) out[count] = x;
+            ++count;
+        }
+        pending >>= 1;
+    }
+    return count;
+}
+
 template<bool Write>
 inline size_t emit_mask(const uint32_t* a, unsigned mask, uint32_t* out) {
     if constexpr (Write) {

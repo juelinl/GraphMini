@@ -178,72 +178,25 @@ namespace minigraph {
 
     VertexSet VertexSet::subtract(const VertexSet &other) const {
         VertexSet out(size());
-        size_t idx_l = 0, idx_r = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left < right && left != other.m_vid) out[out.m_size++] = left;
-        }
-        while (idx_l < size()) {
-            const IdType left = m_data[idx_l++];
-            if (left != other.m_vid) out[out.m_size++] = left;
-        }
+        out.m_size = set_ops::difference_write(
+            m_data, size(), other.m_data, other.size(), other.m_vid, out.m_data);
         return out;
     };
 
     VertexSet VertexSet::subtract(const VertexSet &other, IdType upper) const {
         VertexSet out(size());
-        size_t idx_l = 0, idx_r = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left >= upper || right >= upper) break;
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left < right && left != other.m_vid) out[out.m_size++] = left;
-        }
-        while (idx_l < size()) {
-            const IdType left = m_data[idx_l++];
-            if (left >= upper) break;
-            if (left != other.m_vid) out[out.m_size++] = left;
-        }
+        out.m_size = set_ops::difference_bounded<true>(
+            m_data, size(), other.m_data, other.size(), other.m_vid, upper, out.m_data);
         return out;
     };
 
     size_t VertexSet::subtract_cnt(const VertexSet &other) const {
-        size_t idx_l = 0, idx_r = 0, out_size = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left < right && left != other.m_vid) out_size++;
-        }
-        while (idx_l < size()) {
-            const IdType left = m_data[idx_l++];
-            if (left != other.m_vid) out_size++;
-        }
-        return out_size;
+        return set_ops::difference_count(m_data, size(), other.m_data, other.size(), other.m_vid);
     };
 
     size_t VertexSet::subtract_cnt(const VertexSet &other, IdType upper) const {
-        size_t idx_l = 0, idx_r = 0, out_size = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left >= upper || right >= upper) break;
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left < right && left != other.m_vid) out_size++;
-        }
-        while (idx_l < size()) {
-            const IdType left = m_data[idx_l++];
-            if (left >= upper) break;
-            if (left != other.m_vid) out_size++;
-        }
-        return out_size;
+        return set_ops::difference_bounded<false>(
+            m_data, size(), other.m_data, other.size(), other.m_vid, upper);
     };
 
     VertexSet VertexSet::bounded(IdType upper) const & {
