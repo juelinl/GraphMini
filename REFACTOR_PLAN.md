@@ -102,3 +102,11 @@ comparison helpers as intersection. Masks accumulate until the left block can
 be finalized and survive scalar-tail handling. Upper bounds, other.m_vid
 exclusion, exact-size stores, and the profiling backend's scalar counters are
 preserved. See `tests/benchmarks/simd-subtraction.md` for validation and measurements.
+
+## Dedicated VertexSetPool
+
+Extracted a shared fixed-capacity thread-local pool implementation. Owning sets
+retain the originating pool pointer; constructor capacity requests are honored,
+and larger graphs select compatible storage without invalidating older owners.
+No codegen changes. MiniGraph already has a separate variable-capacity pool
+and remains unchanged. See `tests/benchmarks/vertex-set-pool.md`.

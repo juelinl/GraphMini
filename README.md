@@ -547,6 +547,15 @@ for memory contracts, tests, and benchmark limitations.
 The [subtraction follow-up](tests/benchmarks/simd-subtraction.md) covers the
 accumulated match masks, upper bounds, and extra vertex exclusion.
 
+### Vertex-set workspace pools
+
+Normal and profiling VertexSet share a dedicated header-only, fixed-capacity
+worker pool. Compatible requests reuse buffers; larger requests cannot reuse
+undersized buffers from earlier graphs. Owning sets retain their originating
+pool through moves and temporary views. Codegen is unchanged.
+See [pool design and verification](tests/benchmarks/vertex-set-pool.md), including
+thread-confinement and cache-retention limitations.
+
 ### Tooling
 
 1. CMake >= 3.20
