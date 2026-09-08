@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include "neon.h"
 #include "avx2.h"
 #include <algorithm>

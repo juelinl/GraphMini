@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <cstddef>
+#include <string>
 #include <iosfwd>
 #include <sstream>
 namespace minigraph {

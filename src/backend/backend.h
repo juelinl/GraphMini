@@ -4,6 +4,7 @@
 
 #ifndef MINIGRAPH_BACKEND_H
 #define MINIGRAPH_BACKEND_H
+#include <cstddef>
 #include "vertex_set.h"
 #include "graph.h"
 #include "minigraph.h"

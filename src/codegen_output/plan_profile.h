@@ -4,6 +4,7 @@
 
 #ifndef MINIGRAPH_PLAN_PROFILE_H
 #define MINIGRAPH_PLAN_PROFILE_H
+#include <cstdint>
 #include "../backend_prof/backend.h"
 namespace minigraph
 {

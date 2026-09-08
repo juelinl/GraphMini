@@ -4,6 +4,9 @@
 
 #ifndef MINIGRAPH_GRAPH_H
 #define MINIGRAPH_GRAPH_H
+#include <cstddef>
+#include <cstdint>
+#include "common/types.h"
 #include "vertex_set.h"
 #include <math.h>
 #ifdef _WIN32

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <cstdint>
 #include <chrono>
 namespace minigraph {
     class Timer {

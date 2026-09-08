@@ -1,3 +1,4 @@
+#include "common/types.h"
 #include "plan.h"
 namespace minigraph {
 uint64_t pattern_size() { return 4; }

@@ -1,3 +1,4 @@
+#include "common/types.h"
 #include "plan_profile.h"
 #include "oneapi/tbb/parallel_for.h"
 namespace minigraph {

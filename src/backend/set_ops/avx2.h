@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include "scalar.h"
 #if (defined(__x86_64__) || defined(__i386__)) && (defined(__clang__) || defined(__GNUC__))
 #include <immintrin.h>

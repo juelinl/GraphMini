@@ -1,0 +1,5 @@
+add_library(graphpi_scheduler STATIC graphpi_scheduler.cpp)
+target_link_libraries(graphpi_scheduler PUBLIC graphmini_headers)
+
+add_library(graphmini_scheduler STATIC graphmini_scheduler.cpp schedule_heuristics.cpp)
+target_link_libraries(graphmini_scheduler PUBLIC graphmini_headers PRIVATE TBB::tbb)

@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <string>
 #include "compiler/codegen.h"
 #include "compiler/execution_ir.h"
 #include "compiler/ir.h"

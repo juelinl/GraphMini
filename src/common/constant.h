@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <cstddef>
 #include <string>
 #include <limits>
 namespace minigraph

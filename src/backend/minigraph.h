@@ -5,6 +5,9 @@
 #ifndef MINIGRAPH_MINIGRAPH_H
 #define MINIGRAPH_MINIGRAPH_H
 
+#include <cstddef>
+#include <cstdint>
+#include "common/types.h"
 #include "vertex_set.h"
 #include "graph.h"
 #include "managed_container.h"

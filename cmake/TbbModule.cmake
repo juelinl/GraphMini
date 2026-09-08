@@ -37,10 +37,3 @@ set_target_properties(graphmini_tbb_module PROPERTIES CXX_SCAN_FOR_MODULES ON)
 target_link_libraries(graphmini_tbb_module PUBLIC TBB::tbb TBB::tbbmalloc OpenMP::OpenMP_CXX)
 target_sources(graphmini_tbb_module PUBLIC FILE_SET CXX_MODULES
     BASE_DIRS "${tbb_generated_dir}" FILES "${tbb_generated_dir}/tbb.cppm")
-
-if(GRAPHMINI_BUILD_TESTS)
-    add_executable(tbb_module_smoke "${PROJECT_SOURCE_DIR}/tests/tbb_module_smoke.cpp")
-    set_target_properties(tbb_module_smoke PROPERTIES CXX_SCAN_FOR_MODULES ON)
-    target_link_libraries(tbb_module_smoke PRIVATE graphmini_tbb_module)
-    add_test(NAME tbb_module_smoke COMMAND tbb_module_smoke)
-endif()

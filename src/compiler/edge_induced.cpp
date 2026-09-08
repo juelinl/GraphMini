@@ -1,3 +1,4 @@
+#include "common/meta.h"
 #include "compiler/planning.h"
 namespace minigraph {
 PlanIR compile_edge_induced(const std::string &query, CodeGenConfig config, MetaData meta) {

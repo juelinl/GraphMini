@@ -1,3 +1,4 @@
+#include "common/types.h"
 #include "compiler/codegen.h"
 #include "compiler/ir.h"
 #include "common/logging.h"

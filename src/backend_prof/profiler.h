@@ -3,6 +3,7 @@
 //
 #ifndef MINIGRAPH_PROFILER_H
 #define MINIGRAPH_PROFILER_H
+#include <cstddef>
 #include <atomic>
 #include <cstdint>
 #include <vector>

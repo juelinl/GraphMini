@@ -1,7 +1,7 @@
+#include "common/logging.h"
 #include "runtime/plan_module.h"
 
 #include "backend/backend.h"
-#include "common/common.h"
 #include "configure.h"
 
 #include <cstdlib>

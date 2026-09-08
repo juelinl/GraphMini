@@ -4,6 +4,7 @@
 
 #ifndef MINIGRAPH_GRAPH_CONVERTER_H
 #define MINIGRAPH_GRAPH_CONVERTER_H
+#include <cstdint>
 #include <stdint.h>
 #include <filesystem>
 #include <vector>

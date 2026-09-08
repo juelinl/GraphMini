@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include "avx2_decode.h"
 #include "bit_ops.h"
 #include <stdexcept>

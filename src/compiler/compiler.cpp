@@ -1,3 +1,4 @@
+#include "common/meta.h"
 #include "compiler/compilation_profile.h"
 #include "compiler/codegen/cpp.h"
 #include "compiler/planning.h"

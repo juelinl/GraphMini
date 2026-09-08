@@ -4,6 +4,7 @@ import graphmini.backend;
 #elif defined(GRAPHMINI_USE_HEADER_UNIT)
 import "../backend/backend.h";
 #else
+#include <cstdint>
 #include "../backend/backend.h"
 #endif
 namespace minigraph

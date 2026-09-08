@@ -1,6 +1,7 @@
+#include "common/types.h"
+#include "common/meta.h"
 #include "runtime/graph_builder.h"
 
-#include "common/common.h"
 #include "runtime/graph_loader.h"
 
 #include <algorithm>

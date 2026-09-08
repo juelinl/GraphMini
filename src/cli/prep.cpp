@@ -2,7 +2,6 @@
 // Created by ubuntu on 1/2/23.
 //
 
-#include "common/common.h"
 #include "preprocess/graph_converter.h"
 #include <cxxopts.hpp>
 #include <iostream>

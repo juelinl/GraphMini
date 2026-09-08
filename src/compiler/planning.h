@@ -1,4 +1,6 @@
 #pragma once
+#include <string>
+#include "common/meta.h"
 #include "compiler/codegen.h"
 #include "compiler/ir.h"
 #include <utility>

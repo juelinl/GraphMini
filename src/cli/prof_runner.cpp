@@ -1,6 +1,8 @@
+#include "common/types.h"
+#include "common/logging.h"
+#include "common/timer.h"
 #include "codegen_output/plan_profile.h"
 #include "configure.h"
-#include "common/common.h"
 #include "common/logitem.h"
 #include "runtime/graph_loader.h"
 #include <algorithm>

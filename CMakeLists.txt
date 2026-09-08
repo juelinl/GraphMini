@@ -112,6 +112,11 @@ message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
 message("PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 message("CMAKE_CXX_FLAGS_DEBUG: " ${CMAKE_CXX_FLAGS_DEBUG})
 message("CMAKE_CXX_FLAGS_RELEASE: " ${CMAKE_CXX_FLAGS_RELEASE})
-include_directories(${PROJECT_BINARY_DIR}/configure)
-include_directories(src)
+add_library(graphmini_headers INTERFACE)
+target_include_directories(graphmini_headers INTERFACE
+    "${PROJECT_SOURCE_DIR}/src"
+    "${PROJECT_BINARY_DIR}/configure")
 add_subdirectory(src)
+if(GRAPHMINI_BUILD_TESTS)
+    add_subdirectory(tests)
+endif()

@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include "bit_ops/bit_ops.h"
 #include "neighborhood_universe.h"
 

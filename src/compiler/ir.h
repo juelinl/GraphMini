@@ -4,7 +4,9 @@
 
 #pragma once
 
-#include "common/common.h"
+#include <cstddef>
+#include <string>
+#include "common/meta.h"
 #include "compiler/config.h"
 #include <bitset>
 #include <optional>

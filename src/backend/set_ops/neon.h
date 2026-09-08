@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include "scalar.h"
 #if defined(__aarch64__) || defined(_M_ARM64)
 #include <arm_neon.h>
