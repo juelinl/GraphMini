@@ -253,14 +253,25 @@ int main() {
     } graph;
     const auto &neighbors = graph.N(0);
     std::vector<const std::vector<uint32_t> *> inputs{&neighbors};
-    auto region = BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs);
+    auto region = BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs.size());
+    region->bind_inputs(inputs);
     require(region && region->row_count() == 3, "Terminal region construction");
     require(region->count(0, 1, false) == 1, "Terminal intersection");
     require(region->count(0, 1, true) == 1, "Terminal induced subtraction excludes owner");
     require(region->count(0, 1, true, 3) == 0, "Terminal strict global bound");
-    require(!BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs, 0), "Budget fallback");
+    require(!BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs.size(), 0), "Budget fallback");
     const std::vector<uint32_t> empty;
-    require(!BitmapCountRegion::build(graph, 0, neighbors, empty, inputs), "Empty row fallback");
+    require(!BitmapCountRegion::build(graph, 0, neighbors, empty, inputs.size()), "Empty row fallback");
+    const std::vector<uint32_t> smaller{1};
+    region->bind_inputs(std::vector<const std::vector<uint32_t>*>{&smaller});
+    require(region->count(0, 2, false) == 1, "Rows survive prefix rebinding");
+    rejects([&] { region->bind_inputs(std::vector<const std::vector<uint32_t>*>{}); });
+    rejects([&] { region->bind_inputs(std::vector<const std::vector<uint32_t>*>{nullptr}); });
+    struct OversizedSet {
+        size_t size() const { return size_t{1} << 30; }
+        const uint32_t *data() const { throw std::logic_error("Budget guard read oversized data"); }
+    } oversized;
+    require(!BitmapCountRegion::build(graph, 0, oversized, oversized, 1), "Preallocation budget guard");
     std::cout << "Validated bitmap kernels, universe/ownership contracts, array parity, and BitGraph "
                  "graph oracles\n";
 }

@@ -73,7 +73,8 @@ struct LoopExecution {
 // Array live-ins remain available for memory-budget fallback. Bitmap copies and
 // restricted rows are owned by this region, outside the terminal matching loop.
 struct BitmapRegionExecution {
-    int entry_depth, anchor_depth, row_set;
+    int entry_depth, conversion_depth, anchor_depth;
+    // Rows cover the full universe, so every later selected vertex has a row.
     std::vector<int> live_ins, count_ops;
 };
 struct ExecutionIR {

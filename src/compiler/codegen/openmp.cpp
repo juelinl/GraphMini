@@ -27,7 +27,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     }
     out << "namespace minigraph {\n";
     if (config.bitmapDiagnostics)
-        out << "static std::atomic<uint64_t> bitmap_counters[4]{};\n";
+        out << "static std::atomic<uint64_t> bitmap_counters[5]{};\n";
     out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tvoid plan(const GraphType* graph, Context& ctx){\n";
     if (profiling_)
@@ -55,12 +55,15 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     if (config.bitmapDiagnostics)
         out << "for (auto& value : bitmap_counters) value.store(0, std::memory_order_relaxed);\n";
     out << "#pragma omp parallel num_threads(ctx.num_threads) default(none) "
-           "shared(ctx, graph)\n\t\t{ // pragma parallel \n";
+           "shared(ctx, graph" << (config.bitmapDiagnostics ? ", bitmap_counters" : "")
+        << ")\n\t\t{ // pragma parallel \n";
     out << "\t\t\tcc &counter = "
            "ctx.per_thread_result.at(omp_get_thread_num());\n";
     out << "\t\t\tcc &handled = "
            "ctx.per_thread_handled.at(omp_get_thread_num());\n";
     out << "\t\t\tdouble start = omp_get_wtime();\n";
+    if (config.bitmapDiagnostics)
+        out << "bitmap_counters[4].store(omp_get_num_threads(), std::memory_order_relaxed);\n";
     out << "\t\t\tctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
     out << "#pragma omp for schedule(dynamic, 1) nowait\n";
     out << "\t\t\tfor (IdType i0_id = 0; i0_id < graph->get_vnum(); i0_id++) { "
@@ -215,7 +218,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     out << "} // namespace minigraph \n";
     if (config.bitmapDiagnostics)
         out << "extern \"C\" uint64_t graphmini_bitmap_counter(unsigned index) { "
-               "return index < 4 ? minigraph::bitmap_counters[index].load(std::memory_order_relaxed) : 0; }\n";
+               "return index < 5 ? minigraph::bitmap_counters[index].load(std::memory_order_relaxed) : 0; }\n";
 
     out << "extern \"C\" uint64_t graphmini_pattern_size(){return "
            "minigraph::pattern_size();}\n";

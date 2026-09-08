@@ -120,23 +120,33 @@ std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
 }
 
 std::string CppCodegen::emit_bitmap_build(int dep) {
-    if (!execution_.bitmap_region || execution_.bitmap_region->entry_depth != dep)
+    if (!execution_.bitmap_region)
         return "";
     const auto &region = *execution_.bitmap_region;
+    if (dep != region.entry_depth && dep != region.conversion_depth)
+        return "";
     std::string inputs;
     for (int id : region.live_ins) {
         if (!inputs.empty()) inputs += ", ";
         inputs += fmt::format("&s{}", id);
     }
+    if (dep == region.conversion_depth) {
+        std::string out = gen_indent(dep) + fmt::format(
+            "if (bitmap_region) bitmap_region->bind_inputs(std::vector<const VertexSet*>{{{}}});\n", inputs);
+        if (bitmap_diagnostics_)
+            out += gen_indent(dep) + fmt::format(
+                "if (bitmap_region) bitmap_counters[2].fetch_add({}, std::memory_order_relaxed);\n",
+                region.live_ins.size());
+        return out;
+    }
     std::string out = gen_indent(dep) + fmt::format(
-        "auto bitmap_region = BitmapCountRegion::build(*graph, i{0}_id, graph->N(i{0}_id), "
-        "s{1}, std::vector<const VertexSet*>{{{2}}}); // bitmap-region build once\n",
-        region.anchor_depth, region.row_set, inputs);
+        "auto bitmap_neighbors = graph->N(i{0}_id);\n"
+        "auto bitmap_region = BitmapCountRegion::build(*graph, i{0}_id, bitmap_neighbors, "
+        "bitmap_neighbors, {1}); // bitmap-region build once\n", region.anchor_depth, region.live_ins.size());
     if (bitmap_diagnostics_)
         out += gen_indent(dep) + fmt::format(
             "if (bitmap_region) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "
-            "bitmap_counters[1].fetch_add(bitmap_region->row_count(), std::memory_order_relaxed); "
-            "bitmap_counters[2].fetch_add({}, std::memory_order_relaxed); }}\n", region.live_ins.size());
+            "bitmap_counters[1].fetch_add(bitmap_region->row_count(), std::memory_order_relaxed); }}\n");
     return out;
 }
 
