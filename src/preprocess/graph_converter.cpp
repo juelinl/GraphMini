@@ -3,11 +3,11 @@
 //
 
 #include "graph_converter.h"
-#include "typedef.h"
-#include "timer.h"
-#include "meta.h"
-#include "constant.h"
-#include "logging.h"
+#include "common/typedef.h"
+#include "common/timer.h"
+#include "common/meta.h"
+#include "common/constant.h"
+#include "common/logging.h"
 #include <fstream>
 #include <algorithm>
 #include <oneapi/tbb/parallel_sort.h>

@@ -3,7 +3,7 @@
 //
 #ifndef MINIGRAPH_PROFILER_H
 #define MINIGRAPH_PROFILER_H
-#include "typedef.h"
+#include "common/typedef.h"
 #include <atomic>
 #include <cstdint>
 #include <vector>

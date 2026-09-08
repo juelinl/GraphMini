@@ -1,7 +1,7 @@
-#include "codegen.h"
+#include "compiler/codegen.h"
 #ifdef GRAPHMINI_REFACTORED
 #include "compiler/planning.h"
-#include "iep_redundancy.hpp"
+#include "compiler/scheduling/iep_redundancy.hpp"
 #endif
 #include <filesystem>
 #include <fstream>

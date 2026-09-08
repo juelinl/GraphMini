@@ -1,6 +1,6 @@
 #pragma once
-#include "codegen.h"
-#include "ir.h"
+#include "compiler/codegen.h"
+#include "compiler/ir.h"
 #include <utility>
 namespace minigraph {
 struct ScheduleResult {

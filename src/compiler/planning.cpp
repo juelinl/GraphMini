@@ -1,13 +1,13 @@
-#include "codegen.h"
-#include "ir.h"
-#include "logging.h"
-#include "timer.h"
+#include "compiler/codegen.h"
+#include "compiler/ir.h"
+#include "common/logging.h"
+#include "common/timer.h"
 
 #include "compiler/planning.h"
-#include "compilation_profile.h"
-#include "graphmini_scheduler.hpp"
-#include "graphpi_scheduler.hpp"
-#include "typedef.h"
+#include "runtime/compilation_profile.h"
+#include "compiler/scheduling/graphmini_scheduler.hpp"
+#include "compiler/scheduling/graphpi_scheduler.hpp"
+#include "common/typedef.h"
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>

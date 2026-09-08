@@ -1,6 +1,6 @@
-#include "graphmini_scheduler.hpp"
-#include "iep_redundancy.hpp"
-#include "logging.h"
+#include "compiler/scheduling/graphmini_scheduler.hpp"
+#include "compiler/scheduling/iep_redundancy.hpp"
+#include "common/logging.h"
 
 #include <algorithm>
 #include <cassert>

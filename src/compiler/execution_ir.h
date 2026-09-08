@@ -1,5 +1,5 @@
 #pragma once
-#include "ir.h"
+#include "compiler/ir.h"
 #include "compiler/representation.h"
 #include <map>
 #include <optional>

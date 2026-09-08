@@ -1,4 +1,4 @@
-#include "schedule_heuristics.hpp"
+#include "compiler/scheduling/schedule_heuristics.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <map>

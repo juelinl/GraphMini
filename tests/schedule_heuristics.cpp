@@ -1,4 +1,4 @@
-#include "graphmini_scheduler.hpp"
+#include "compiler/scheduling/graphmini_scheduler.hpp"
 #include <algorithm>
 #include <iostream>
 #include <numeric>

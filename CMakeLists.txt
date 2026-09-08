@@ -90,7 +90,8 @@ set(PROJECT_PLAN_DIR "${PROJECT_SOURCE_DIR}/plan/")
 # Generated text alone does not identify a usable query library: runtime headers
 # and compiler/build settings also affect its ABI and behavior.
 file(GLOB plan_runtime_inputs CONFIGURE_DEPENDS
-    "${PROJECT_SOURCE_DIR}/src/backend/*.h" "${PROJECT_SOURCE_DIR}/include/*.h"
+    "${PROJECT_SOURCE_DIR}/src/backend/*.h" "${PROJECT_SOURCE_DIR}/src/common/*.h"
+    "${PROJECT_SOURCE_DIR}/src/runtime/*.h"
     "${PROJECT_SOURCE_DIR}/src/backend/set_ops/*.h"
     "${PROJECT_SOURCE_DIR}/src/backend/bit_ops/*.h"
     "${PROJECT_SOURCE_DIR}/src/codegen_output/plan.h")
@@ -106,12 +107,11 @@ foreach(input IN LISTS plan_runtime_inputs)
 endforeach()
 string(SHA256 GRAPHMINI_PLAN_BUILD_ID "${plan_build_fingerprint}")
 
-configure_file(include/configure.h.in ${PROJECT_BINARY_DIR}/configure/configure.h)
+configure_file(src/common/configure.h.in ${PROJECT_BINARY_DIR}/configure/configure.h)
 message("PROJECT_BINARY_DIR: " ${PROJECT_BINARY_DIR})
 message("PROJECT_SOURCE_DIR: " ${PROJECT_SOURCE_DIR})
 message("CMAKE_CXX_FLAGS_DEBUG: " ${CMAKE_CXX_FLAGS_DEBUG})
 message("CMAKE_CXX_FLAGS_RELEASE: " ${CMAKE_CXX_FLAGS_RELEASE})
 include_directories(${PROJECT_BINARY_DIR}/configure)
-include_directories(include)
 include_directories(src)
 add_subdirectory(src)

@@ -1,7 +1,7 @@
 #pragma once
-#include "codegen.h"
+#include "compiler/codegen.h"
 #include "compiler/execution_ir.h"
-#include "ir.h"
+#include "compiler/ir.h"
 #include <set>
 namespace minigraph {
 class CppCodegen {

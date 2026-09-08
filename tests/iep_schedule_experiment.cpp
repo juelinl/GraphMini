@@ -1,6 +1,6 @@
 #include "compiler/execution_ir.h"
 #include "compiler/planning.h"
-#include "schedule_heuristics.hpp"
+#include "compiler/scheduling/schedule_heuristics.hpp"
 #include <iostream>
 #include <stdexcept>
 

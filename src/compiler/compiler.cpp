@@ -1,4 +1,4 @@
-#include "compilation_profile.h"
+#include "runtime/compilation_profile.h"
 #include "compiler/codegen/cpp.h"
 #include "compiler/planning.h"
 #include <stdexcept>

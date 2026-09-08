@@ -1,9 +1,9 @@
 //
 // Created by ubuntu on 1/1/23.
 //
-#include "codegen.h"
+#include "compiler/codegen.h"
 #include "configure.h"
-#include "common.h"
+#include "common/common.h"
 #include <vector>
 #include <iostream>
 #include <fmt/format.h>

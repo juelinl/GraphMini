@@ -1,10 +1,10 @@
-#include "codegen.h"
-#include "ir.h"
-#include "logging.h"
-#include "timer.h"
+#include "compiler/codegen.h"
+#include "compiler/ir.h"
+#include "common/logging.h"
+#include "common/timer.h"
 
 #include "compiler/codegen/cpp.h"
-#include "typedef.h"
+#include "common/typedef.h"
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>

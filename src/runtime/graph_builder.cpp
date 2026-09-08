@@ -1,7 +1,7 @@
-#include "graph_builder.h"
+#include "runtime/graph_builder.h"
 
-#include "common.h"
-#include "graph_loader.h"
+#include "common/common.h"
+#include "runtime/graph_loader.h"
 
 #include <algorithm>
 #include <cmath>

@@ -3,24 +3,24 @@ add_subdirectory(preprocess)
 add_subdirectory(codegen_output)
 
 add_library(graphpi_scheduler STATIC
-        graphpi_scheduler.cpp)
+        compiler/scheduling/graphpi_scheduler.cpp)
 
 add_library(graphmini_scheduler STATIC
-        graphmini_scheduler.cpp schedule_heuristics.cpp)
+        compiler/scheduling/graphmini_scheduler.cpp compiler/scheduling/schedule_heuristics.cpp)
 target_link_libraries(graphmini_scheduler PRIVATE TBB::tbb)
 
 add_library(common STATIC
-        logging.cpp
-        logitem.cpp
-        meta.cpp)
+        common/logging.cpp
+        common/logitem.cpp
+        common/meta.cpp)
 
 add_library(graph_runtime STATIC
-        plan_module.cpp
-        graph_builder.cpp)
+        runtime/plan_module.cpp
+        runtime/graph_builder.cpp)
 target_link_libraries(graph_runtime PUBLIC common OpenMP::OpenMP_CXX TBB::tbb TBB::tbbmalloc ${CMAKE_DL_LIBS})
 
 pybind11_add_module(graphmini MODULE
-        python_api.cpp)
+        bindings/python_api.cpp)
 target_link_libraries(graphmini PRIVATE graphmini_codegen graph_runtime)
 if(WIN32)
     set_target_properties(graphmini PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
@@ -35,21 +35,21 @@ if(GRAPHMINI_BUILD_TESTS)
 endif()
 
 # graph converter
-add_executable(prep prep.cpp)
+add_executable(prep cli/prep.cpp)
 target_link_libraries(prep PRIVATE preprocess common cxxopts::cxxopts)
 
 # benchmark executable
-add_executable(runner runner.cpp)
+add_executable(runner cli/runner.cpp)
 target_link_libraries(runner PRIVATE common plan)
 
 # profiling executable
-add_executable(prof_runner prof_runner.cpp)
+add_executable(prof_runner cli/prof_runner.cpp)
 target_link_libraries(prof_runner PRIVATE common plan_profile)
 
 # benchmark executable frontend
-add_executable(run run.cpp)
+add_executable(run cli/run.cpp)
 target_link_libraries(run PRIVATE graphmini_codegen cxxopts::cxxopts fmt::fmt TBB::tbb)
 
 # profile executable frontend
-add_executable(profile profile.cpp)
+add_executable(profile cli/profile.cpp)
 target_link_libraries(profile PRIVATE common graphmini_codegen cxxopts::cxxopts fmt::fmt TBB::tbb TBB::tbbmalloc ${CMAKE_DL_LIBS})

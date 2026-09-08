@@ -3,8 +3,8 @@
 //
 
 #pragma once
-#include "constant.h"
-#include "typedef.h"
+#include "common/constant.h"
+#include "common/typedef.h"
 #include <string>
 namespace minigraph {
     struct CompilerLog

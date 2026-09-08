@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include "schedule_heuristics.hpp"
+#include "compiler/scheduling/schedule_heuristics.hpp"
 
 namespace minigraph {
 

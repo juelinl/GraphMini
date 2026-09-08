@@ -2,7 +2,7 @@
 // Created by ubuntu on 1/1/23.
 //
 
-#include "ir.h"
+#include "compiler/ir.h"
 #include <iostream>
 
 namespace minigraph {

@@ -1,7 +1,7 @@
 #include "codegen_output/plan_profile.h"
 #include "configure.h"
-#include "common.h"
-#include "graph_loader.h"
+#include "common/common.h"
+#include "runtime/graph_loader.h"
 #include <algorithm>
 #include <cctype>
 #include <filesystem>

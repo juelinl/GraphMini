@@ -1,5 +1,5 @@
-#include "graphpi_scheduler.hpp"
-#include "iep_redundancy.hpp"
+#include "compiler/scheduling/graphpi_scheduler.hpp"
+#include "compiler/scheduling/iep_redundancy.hpp"
 
 #include <algorithm>
 #include <cassert>

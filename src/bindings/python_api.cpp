@@ -1,11 +1,11 @@
-#include "codegen.h"
-#include "compilation_profile.h"
+#include "compiler/codegen.h"
+#include "runtime/compilation_profile.h"
 #include "backend/backend.h"
-#include "common.h"
+#include "common/common.h"
 #include "configure.h"
-#include "graph_builder.h"
-#include "plan_module.h"
-#include "timer.h"
+#include "runtime/graph_builder.h"
+#include "runtime/plan_module.h"
+#include "common/timer.h"
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
