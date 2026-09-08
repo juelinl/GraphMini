@@ -3,7 +3,7 @@
 //
 
 #include "graph_converter.h"
-#include "common/typedef.h"
+#include "common/counter.h"
 #include "common/timer.h"
 #include "common/meta.h"
 #include "common/constant.h"

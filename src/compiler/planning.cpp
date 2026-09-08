@@ -4,10 +4,10 @@
 #include "common/timer.h"
 
 #include "compiler/planning.h"
-#include "runtime/compilation_profile.h"
+#include "compiler/compilation_profile.h"
 #include "compiler/scheduling/graphmini_scheduler.hpp"
 #include "compiler/scheduling/graphpi_scheduler.hpp"
-#include "common/typedef.h"
+#include "compiler/config.h"
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>

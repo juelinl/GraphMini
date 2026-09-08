@@ -4,7 +4,7 @@
 #include "common/timer.h"
 
 #include "compiler/codegen/cpp.h"
-#include "common/typedef.h"
+#include "compiler/config.h"
 #include <algorithm>
 #include <cmath>
 #include <fmt/format.h>

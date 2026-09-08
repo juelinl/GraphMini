@@ -4,7 +4,7 @@
 
 #pragma once
 #include "common/constant.h"
-#include "common/typedef.h"
+#include "compiler/config.h"
 #include <string>
 namespace minigraph {
     struct CompilerLog

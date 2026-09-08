@@ -1,6 +1,7 @@
 #include "codegen_output/plan_profile.h"
 #include "configure.h"
 #include "common/common.h"
+#include "common/logitem.h"
 #include "runtime/graph_loader.h"
 #include <algorithm>
 #include <cctype>
@@ -17,7 +18,7 @@
 using namespace std::chrono_literals;
 namespace minigraph {
     std::ostream &operator<<(std::ostream &os, const VertexSetType &dt) {
-        if (dt.vid() == Constant::EmptyID<IdType>()) {
+        if (dt.vid() == INVALID_ID) {
             os << "VertexSet(-1)\t=\t[";
         } else {
             os << "VertexSet(" << dt.vid() << ")\t=\t[";

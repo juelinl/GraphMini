@@ -4,6 +4,7 @@
 
 #ifndef MINIGRAPH_VERTEX_SET_H
 #define MINIGRAPH_VERTEX_SET_H
+#include "common/types.h"
 #include <cstdint>
 #include <vector>
 #include <cassert>
@@ -14,8 +15,6 @@
 #include "../backend/set_ops/set_ops.h"
 // These counters model scalar merge work, not hardware SIMD instructions.
 namespace minigraph {
-    using IdType = uint32_t;    // support up to 4-billion number of vertexes (2^64-1 edges)
-    constexpr IdType INVALID_ID = static_cast<IdType>(-1);
 
     class VertexSet {
     private:

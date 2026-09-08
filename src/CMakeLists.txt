@@ -27,6 +27,8 @@ if(WIN32)
 endif()
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_executable(common_types_regression ../tests/common_types.cpp)
+    add_test(NAME common_types_regression COMMAND common_types_regression)
     add_test(NAME install_toolchain COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/install_toolchain.py)
     add_test(NAME python_import
         COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:graphmini>"

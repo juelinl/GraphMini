@@ -4,8 +4,7 @@
 
 #pragma once
 #include "common/timer.h"
-#include "common/typedef.h"
 #include "common/logging.h"
 #include "common/meta.h"
 #include "common/constant.h"
-#include "common/logitem.h"
+#include "common/types.h"

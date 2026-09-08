@@ -5,6 +5,7 @@
 #pragma once
 
 #include "common/common.h"
+#include "compiler/config.h"
 namespace minigraph
 {
 

@@ -5,6 +5,7 @@
 #include "common/logging.h"
 #include "configure.h"
 #include "common/common.h"
+#include "common/logitem.h"
 #include <cxxopts.hpp>
 #include <vector>
 #include <iostream>

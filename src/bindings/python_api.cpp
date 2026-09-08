@@ -1,5 +1,5 @@
 #include "compiler/codegen.h"
-#include "runtime/compilation_profile.h"
+#include "compiler/compilation_profile.h"
 #include "backend/backend.h"
 #include "common/common.h"
 #include "configure.h"
