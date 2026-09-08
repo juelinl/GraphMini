@@ -41,6 +41,8 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
         const auto &iter_set = plan.logical.iter_set.at(dep);
         if (execution_.bitmap_region && execution_.bitmap_region->full_region &&
             dep == execution_.bitmap_region->entry_depth) {
+            if (plan.context.config.parType != ParallelType::OpenMP)
+                return emit_bitmap_tasks(plan, dep);
             const auto &region = *execution_.bitmap_region;
             auto slot = [&](int id) { return std::find(region.full_sets.begin(), region.full_sets.end(), id) - region.full_sets.begin(); };
             std::string out = "if (bitmap_region) { // full bitmap region\n";
@@ -109,6 +111,58 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
     }
 }
 
+std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
+    const auto &region = *execution_.bitmap_region;
+    auto slot = [&](int id) { return std::find(region.full_sets.begin(), region.full_sets.end(), id) - region.full_sets.begin(); };
+    std::string out = "if (bitmap_region) { // full bitmap region\n"
+                      "auto bitmap_execute = [&](auto bitmap_tag) {\n"
+                      "constexpr size_t bitmap_words = decltype(bitmap_tag)::value;\n";
+    for (int depth = plan.logical.p_size - 2; depth > dep; --depth) {
+        const auto &loop = execution_.loops.at(depth);
+        const auto input = slot(plan.logical.iter_set.at(depth-1).id);
+        std::string parallel = "false";
+        if (loop.spawn_nested) {
+            parallel = "true";
+            if (loop.runtime_threshold) {
+                int threshold = loop.threshold_factor * loop.average_degree;
+                if (loop.cap_threshold) threshold = std::min(threshold, 100);
+                parallel = fmt::format("state.input_size({}) > {}", input, threshold);
+            }
+        }
+        out += fmt::format("auto bitmap_level{0} = [&](BitmapCountRegion& state) -> uint64_t {{\n"
+                           "return bitmap_for_each(state, {1}, {2}, [&](BitmapCountRegion& task_state, uint32_t bp{0}) -> uint64_t {{ // bitmap local-index loop\n"
+                           "auto* bitmap_region = &task_state;\nuint64_t counter = 0;\n", depth, input, parallel);
+        for (const auto &logical : plan.logical.set_ops.at(depth)) {
+            const auto &op = execution_.sets.at(logical.id);
+            const auto &step = op.steps.front();
+            const bool subtract = step.opcode == SetOpcode::DifferenceExcludingOwner;
+            const bool bound = step.opcode == SetOpcode::Bound;
+            const bool bounded = bound || step.upper_bound.has_value();
+            if (op.result == SetResult::Count) {
+                out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {});\n", slot(op.input.id), depth, subtract, bounded);
+                if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
+            } else {
+                out += fmt::format("const auto bn{} = bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {});\n",
+                    op.id, slot(op.id), slot(op.input.id), depth, subtract, bounded, bound);
+                if (op.guard_empty) out += fmt::format("if (!bn{}) return counter;\n", op.id);
+                if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
+            }
+        }
+        if (depth < plan.logical.p_size - 2)
+            out += fmt::format("counter += bitmap_level{}(task_state);\n", depth+1);
+        out += "return counter;\n});\n};\n";
+    }
+    out += fmt::format("return bitmap_level{}(*bitmap_region);\n", dep+1);
+    out += "};\n"
+           "if (bitmap_region->universe_size() <= 64) counter += bitmap_execute(std::integral_constant<size_t, 1>{});\n"
+           "else if (bitmap_region->universe_size() <= 128) counter += bitmap_execute(std::integral_constant<size_t, 2>{});\n"
+           "else counter += bitmap_execute(std::integral_constant<size_t, 0>{});\n"
+           "} else {\n";
+    out += emit_tbb_call(plan, plan.context.config, dep+1, dep);
+    return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n",
+                            dep+1, plan.logical.iter_set.at(dep).id);
+}
+
 namespace {
 std::string set_name(SetReference ref) {
     switch (ref.source) {
@@ -157,18 +211,12 @@ std::string set_expression(const SetExecution &op) {
 
 std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
     const auto &op = execution_.sets.at(logical.id);
-    if (execution_.bitmap_region) {
-        const auto &region = *execution_.bitmap_region;
-        if (std::find(region.count_ops.begin(), region.count_ops.end(), op.id) != region.count_ops.end()) {
-            const auto expression = set_expression(op);
-            if (bitmap_diagnostics_)
-                return "{ const auto bitmap_result = " + expression + ";\n"
-                       "bitmap_counters[5].fetch_add(1, std::memory_order_relaxed); "
-                       "bitmap_counters[6].fetch_add(bitmap_result, std::memory_order_relaxed);\n"
-                       "counter += bitmap_result; }\n";
-            return "counter += " + expression + ";\n";
-        }
-    }
+    // Includes independently emitted array fallback task bodies.
+    if (bitmap_diagnostics_ && op.result == SetResult::Count)
+        return "{ const auto bitmap_result = " + set_expression(op) + ";\n"
+               "bitmap_counters[5].fetch_add(1, std::memory_order_relaxed); "
+               "bitmap_counters[6].fetch_add(bitmap_result, std::memory_order_relaxed);\n"
+               "counter += bitmap_result; }\n";
     std::string out =
         op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
     out += set_expression(op) + ";\n";

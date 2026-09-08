@@ -51,8 +51,10 @@ def worker(args):
     expected = count_induced_subsets(calibration, query)
     assert expected > 0
     small = make_graph([{j for j, bit in enumerate(row) if bit} for row in calibration])
-    plan = gm.compile_plan(small, bits, "vertex", scheduler="outgoing",
-                           pruning_type="none", parallel_type="openmp",
+    # Outgoing ordering is graph-independent, but nested_rt task thresholds use
+    # graph statistics: compile for the measured host, then validate on the oracle.
+    plan = gm.compile_plan(graph, bits, "vertex", scheduler="outgoing",
+                           pruning_type="none", parallel_type=job["parallel"],
                            bitmap=job["backend"] == "bitmap")
     assert plan.run(small, num_threads=1).number_of_matches == expected
     source = plan.generated_code
@@ -135,6 +137,7 @@ def main():
     parser.add_argument("--real-dir")
     parser.add_argument("--worker")
     parser.add_argument("--threads", type=int, default=12)
+    parser.add_argument("--parallel", choices=["openmp", "tbb_top", "nested", "nested_rt"], default="nested_rt")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--execution-budget", type=float, default=60)
     parser.add_argument("--preparation-budget", type=float, default=300)
@@ -167,7 +170,7 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     metadata = dict(commit=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                     corpus_sha256=hashlib.sha256(corpus).hexdigest(), threads=args.threads,
-                    trials=args.trials, execution_budget=args.execution_budget,
+                    trials=args.trials, parallel=args.parallel, execution_budget=args.execution_budget,
                     preparation_budget=args.preparation_budget, atlas_ids=args.atlas_ids,
                     affinity=sorted(os.sched_getaffinity(0)),
                     driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -185,7 +188,7 @@ def main():
             for backend in order:
                 directory = output / f'{pattern["atlas_id"]}-{backend}'
                 directory.mkdir(exist_ok=True)
-                job = dict(pattern, backend=backend, threads=args.threads, trials=args.trials)
+                job = dict(pattern, backend=backend, threads=args.threads, trials=args.trials, parallel=args.parallel)
                 save(directory / "job.json", job)
                 state = directory / "state.json"
                 record = json.loads(state.read_text()) if state.exists() else {}

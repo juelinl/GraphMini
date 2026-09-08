@@ -24,6 +24,7 @@ class CppCodegen {
     std::string emit_iter(const PlanIR &plan, int dep);
     std::string emit_op(const PlanIR &plan, const VertexSetIR &op);
     std::string emit_bitmap_build(int dep);
+    std::string emit_bitmap_tasks(const PlanIR &plan, int dep);
     std::string gen_mg_type(const PlanIR &plan, const MiniGraphIR &mg);
     std::string emit_mg_init(const PlanIR &plan, const MiniGraphIR &mg);
     std::string emit_mg_adj(const PlanIR &plan, int dep, int indent_dep = -1);

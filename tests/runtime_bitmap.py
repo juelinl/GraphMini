@@ -14,9 +14,12 @@ from runtime_test_support import restore_generated_plan_at_exit
 restore_generated_plan_at_exit()
 parser = argparse.ArgumentParser()
 parser.add_argument("--bitmap", action="store_true")
+parser.add_argument("--parallel", default="openmp", choices=["openmp", "tbb_top", "nested", "nested_rt"])
+parser.add_argument("--threads", default="1,2")
 parser.add_argument("--scheduler", default="graphpi", choices=["graphpi", "graphmini", "graphzero", "outgoing", "bitmap_balanced"])
 parser.add_argument("--relabel-pattern", action="store_true")
 args = parser.parse_args()
+thread_counts = list(map(int, args.threads.split(",")))
 rng = random.Random(917)
 cases = 0
 bitmap_calls = 0
@@ -58,15 +61,15 @@ for size in range(4, 8):
         graphs = [graph(data) for data in hosts]
         pattern = "".join(str(x) for row in query for x in row)
         plans = [gm.compile_plan(graphs[0], pattern, "vertex", pruning_type="none",
-                                 parallel_type="openmp", scheduler=args.scheduler)]
+                                 parallel_type=args.parallel, scheduler=args.scheduler)]
         if args.bitmap:
             plans.append(gm.compile_plan(graphs[0], pattern, "vertex", pruning_type="none",
-                                         parallel_type="openmp", scheduler=args.scheduler,
+                                         parallel_type=args.parallel, scheduler=args.scheduler,
                                          bitmap=True, bitmap_diagnostics=True))
         for data, host in zip(hosts, graphs):
             expected = count_induced_subsets(data, query)
             for plan in plans:
-                for threads in [1, 2]:
+                for threads in thread_counts:
                     result = plan.run(host, num_threads=threads)
                     actual = result.number_of_matches
                     assert actual == expected, (size, missing, threads, actual, expected, data)
@@ -109,11 +112,11 @@ for missing_edge in [False, True]:
         host = graph(matrix(degree + 1, edges))
         if boundary_plans is None:
             boundary_plans = [gm.compile_plan(host, pattern, "vertex", pruning_type="none",
-                                               parallel_type="openmp", scheduler=args.scheduler,
+                                               parallel_type=args.parallel, scheduler=args.scheduler,
                                                bitmap=bitmap, bitmap_diagnostics=bitmap)
                               for bitmap in ([False, True] if args.bitmap else [False])]
         for plan in boundary_plans:
-            for threads in [1, 2]:
+            for threads in thread_counts:
                 assert plan.run(host, num_threads=threads).number_of_matches == 1
                 cases += 1
                 if args.bitmap and plan is boundary_plans[-1]:

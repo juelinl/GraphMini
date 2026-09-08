@@ -9,23 +9,32 @@ namespace minigraph {
 // Own rows and reusable candidate slots for terminal-only or full-region bitmap
 // execution. Boundary arrays remain available if the budget rejects the region.
 class BitmapCountRegion {
-    BitGraph graph_;
+    std::shared_ptr<const BitGraph> graph_;
     std::vector<Bitmap> inputs_;
     size_t input_count_;
 
     template <class Graph, class Set>
     BitmapCountRegion(const Graph &graph, uint32_t anchor, const Set &neighbors, const Set &rows,
                       size_t input_count)
-        : graph_(NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
+        : graph_(std::make_shared<BitGraph>(NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
                  std::vector<uint32_t>(rows.data(), rows.data() + rows.size()),
-                 [&](uint32_t vertex) { return graph.N(vertex); }),
+                 [&](uint32_t vertex) { return graph.N(vertex); })),
           input_count_(input_count) {
         inputs_.reserve(input_count);
         for (size_t i = 0; i < input_count; ++i)
-            inputs_.emplace_back(graph_.universe());
+            inputs_.emplace_back(graph_->universe());
     }
 
   public:
+    // Copy candidate words/cardinalities; retain exactly the same immutable rows
+    // and universe identity. A synchronous nested task owns its copy exclusively.
+    BitmapCountRegion fork() const { return *this; }
+    size_t input_size(size_t input) const { return inputs_.at(input).count(); }
+    BitmapLocalCursor local_cursor(size_t input, size_t begin, size_t end) const & {
+        if (!graph_->has_universe_rows()) throw std::logic_error("Requires universe rows");
+        return {inputs_.at(input).words().data(), graph_->universe().size(), begin, end};
+    }
+    BitmapLocalCursor local_cursor(size_t, size_t, size_t) const && = delete;
     // Borrowed until region destruction/rebinding. Construct after binding and
     // consume within that prefix's loop; never cache across bindings.
     class CountingView {
@@ -47,24 +56,24 @@ class BitmapCountRegion {
         }
     };
     CountingView counting_view(size_t input) const & {
-        if (!graph_.has_universe_rows())
+        if (!graph_->has_universe_rows())
             throw std::logic_error("Local counting requires universe-indexed rows");
-        return {inputs_.at(input).words().data(), graph_.row_data_at(0), graph_.universe().size()};
+        return {inputs_.at(input).words().data(), graph_->row_data_at(0), graph_->universe().size()};
     }
     CountingView counting_view(size_t) const && = delete;
     template<class Set> void bind_input(size_t index, const Set &input) {
         inputs_.at(index).assign_sorted(input.data(), input.size());
     }
-    size_t universe_size() const { return graph_.universe().size(); }
+    size_t universe_size() const { return graph_->universe().size(); }
     // Fixed Words must match this region; generated code dispatches once.
     template<size_t Words = 0>
     size_t materialize_local(size_t destination, size_t source, uint32_t position,
                              bool subtract, bool bounded, bool bound_only = false) {
-        if (!graph_.has_universe_rows()) throw std::logic_error("Requires universe rows");
-        const auto *row = graph_.row_data_at(position);
+        if (!graph_->has_universe_rows()) throw std::logic_error("Requires universe rows");
+        const auto *row = graph_->row_data_at(position);
         const auto &input = inputs_.at(source);
         inputs_.at(destination).assign_local<Words>(input, bound_only ? input.words().data() : row,
-            subtract, bounded ? position : graph_.universe().size(),
+            subtract, bounded ? position : graph_->universe().size(),
             subtract ? std::optional<uint32_t>(position) : std::nullopt);
         return inputs_[destination].count();
     }
@@ -84,7 +93,8 @@ class BitmapCountRegion {
             return true;
         };
         const size_t stride = bit_ops::word_count(neighbors.size()) * sizeof(bit_ops::Word);
-        if (!charge(1, sizeof(BitmapCountRegion)) || !charge(neighbors.size(), sizeof(uint32_t)) ||
+        if (!charge(1, sizeof(BitmapCountRegion)) || !charge(1, sizeof(BitGraph)) ||
+            !charge(neighbors.size(), sizeof(uint32_t)) ||
             !charge(rows.size(), sizeof(uint32_t)) || !charge(rows.size(), stride) ||
             !charge(input_count, stride) || !charge(input_count, sizeof(Bitmap)) || !charge(1, stride))
             return {};
@@ -108,20 +118,20 @@ class BitmapCountRegion {
     BitmapView input_view(size_t input) const & { return inputs_.at(input).view(); }
     BitmapView input_view(size_t) const && = delete;
     BitmapLocalCursor local_cursor(size_t input) const & {
-        if (!graph_.has_universe_rows())
+        if (!graph_->has_universe_rows())
             throw std::logic_error("Local iteration requires universe-indexed rows");
-        return {inputs_.at(input).words().data(), graph_.universe().size()};
+        return {inputs_.at(input).words().data(), graph_->universe().size()};
     }
     BitmapLocalCursor local_cursor(size_t) const && = delete;
     // Canonicality against the selected local vertex is order-preserving because
     // universe IDs are sorted. Exclusion also stays entirely in local coordinates.
     template<size_t Words = 0>
     size_t count_local(size_t input, uint32_t position, bool subtract, bool bounded = false) const {
-        if (!graph_.has_universe_rows())
+        if (!graph_->has_universe_rows())
             throw std::logic_error("Local counting requires universe-indexed rows");
         const auto *source = inputs_.at(input).words().data();
-        const auto *row = graph_.row_data_at(position);
-        const auto bits = graph_.universe().size();
+        const auto *row = graph_->row_data_at(position);
+        const auto bits = graph_->universe().size();
         const size_t limit = bounded ? position : bits;
         if (!subtract)
             return bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, false>(source, row, bits, nullptr, limit);
@@ -134,9 +144,9 @@ class BitmapCountRegion {
     size_t count(size_t input, uint32_t vertex, bool subtract,
                  std::optional<uint32_t> upper = {}) const {
         const auto source = inputs_.at(input).view();
-        const auto row = graph_.row(vertex);
+        const auto row = graph_->row(vertex);
         return subtract ? source.subtract_count(row, vertex, upper) : source.intersect_count(row, upper);
     }
-    size_t row_count() const { return graph_.row_count(); }
+    size_t row_count() const { return graph_->row_count(); }
 };
 } // namespace minigraph

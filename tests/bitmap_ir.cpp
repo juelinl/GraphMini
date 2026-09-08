@@ -98,12 +98,19 @@ int main() {
                 arrays.context.config.bitmap = false;
                 require(!lower_execution(arrays).bitmap_region, "Default selected bitmap");
                 auto unsupported = plan;
-                unsupported.context.config.parType = ParallelType::NestedRt;
+                unsupported.context.config.runnerType = RunnerType::Profiling;
                 require(!lower_execution(unsupported).bitmap_region,
-                        "Unsupported task capture accepted");
-                if (n == 4 && missing == 0 && scheduler == SchedulerType::GraphPi)
-                    require(gen_code(query, unsupported.context.config, meta).find("// bitmap: requires") == 0,
-                            "Missing generated-code fallback explanation");
+                        "Unsupported profiling accepted");
+                auto nested = plan;
+                nested.context.config.parType = ParallelType::NestedRt;
+                const auto nested_ir = lower_execution(nested);
+                if (ir.bitmap_region && ir.bitmap_region->full_region) {
+                    require(nested_ir.bitmap_region.has_value(), "Missing TBB full region");
+                    const auto code = gen_code(query, nested.context.config, meta);
+                    require(code.find("bitmap_for_each") != std::string::npos &&
+                            code.find("} // array fallback") != std::string::npos,
+                            "Missing task-local bitmap execution");
+                }
             }
         }
     }

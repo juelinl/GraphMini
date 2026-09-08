@@ -49,9 +49,9 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
         return {};
     }
     if (plan.query.mode != VertexInduced || config.pruningType != PruningType::None ||
-        config.parType != ParallelType::OpenMP || config.runnerType != RunnerType::Benchmark ||
+        config.runnerType != RunnerType::Benchmark ||
         plan.logical.p_size < 4) {
-        reason = "requires vertex-induced, no MiniGraph, OpenMP, benchmark, and at least four vertices";
+        reason = "requires vertex-induced, no MiniGraph, benchmark, and at least four vertices";
         return {};
     }
     const int latest_entry = plan.logical.p_size - 4;
@@ -98,6 +98,8 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             if (!contains(out.live_ins, out.iterator_set))
                 out.live_ins.push_back(out.iterator_set);
             extend_full_region(plan, ir, out);
+            if (config.parType != ParallelType::OpenMP && !out.full_region)
+                continue; // Task capture currently requires a fully local region.
             reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
             return out;
         }

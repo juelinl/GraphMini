@@ -1,0 +1,51 @@
+#include "backend/bitmap_tasks.h"
+#include <oneapi/tbb/global_control.h>
+#include <atomic>
+#include <numeric>
+#include <stdexcept>
+
+int main() {
+    using namespace minigraph;
+    auto require = [](bool value) { if (!value) throw std::logic_error("Bitmap task isolation/range failure"); };
+    tbb::global_control limit(tbb::global_control::max_allowed_parallelism, 4);
+    for (size_t n : {1, 63, 64, 65, 127, 128, 129, 257}) {
+        struct Graph {
+            std::vector<uint32_t> ids;
+            mutable std::atomic<size_t> reads{0};
+            const auto &N(uint32_t) const { ++reads; return ids; }
+        } graph;
+        graph.ids.resize(n);
+        std::iota(graph.ids.begin(), graph.ids.end(), 10);
+        auto region = BitmapCountRegion::build(graph, 9, graph.ids, graph.ids, 2);
+        region->bind_input(0, graph.ids);
+        region->bind_input(1, graph.ids);
+        auto copy = region->fork();
+        require(copy.input_view(0).universe().compatible(region->input_view(0).universe()));
+        require(copy.input_view(0).data() != region->input_view(0).data());
+        copy.bind_input(0, std::vector<uint32_t>{});
+        require(region->input_size(0) == n && copy.input_size(0) == 0);
+        for (size_t begin = 0; begin <= n; ++begin) {
+            for (size_t end = begin; end <= n; ++end) {
+                size_t seen = begin;
+                for (auto cursor = region->local_cursor(0, begin, end); cursor.valid(); cursor.advance())
+                    require(cursor.position() == seen++);
+                require(seen == end);
+            }
+        }
+        for (int repeat = 0; repeat < 4; ++repeat) {
+            const auto result = bitmap_for_each(*region, 0, true,
+                [&](BitmapCountRegion &local, uint32_t position) {
+                    // Produce [0,position), then recursively split its iteration.
+                    local.materialize_local(1, 0, position, false, true);
+                    return bitmap_for_each(local, 1, true,
+                        [&](BitmapCountRegion &child, uint32_t inner) -> uint64_t {
+                            require(child.input_size(1) == position);
+                            return inner + 1;
+                        });
+                });
+            require(result == n * (n-1) * (n+1) / 6);
+            require(region->input_size(0) == n && region->input_size(1) == (n == 1 ? 0 : n));
+            require(graph.reads == n); // No row rebuild in any nested task.
+        }
+    }
+}

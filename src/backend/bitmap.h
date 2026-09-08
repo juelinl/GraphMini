@@ -29,6 +29,17 @@ class BitmapLocalCursor {
             throw std::invalid_argument("Invalid local bitmap cursor buffer");
         seek();
     }
+    BitmapLocalCursor(const bit_ops::Word *words, size_t bits, size_t begin, size_t end)
+        : words_(words), bits_(std::min(bits, end)), word_(begin / 64) {
+        if (begin > end || end > bits || bits > std::numeric_limits<uint32_t>::max() || (bits && !words))
+            throw std::invalid_argument("Invalid local bitmap cursor range");
+        if (begin == end) return;
+        seek();
+        if (word_ == begin / 64) {
+            remaining_ &= (~bit_ops::Word{0}) << (begin % 64);
+            if (!remaining_) { ++word_; seek(); }
+        }
+    }
     bool valid() const { return remaining_ != 0; }
     uint32_t position() const {
         if (!valid())

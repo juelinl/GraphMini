@@ -253,7 +253,9 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                     continue;
 
                 // code for calling parallel nested loop
-                out << emit_tbb_call(plan, config, dep + 1, indent_dep);
+                out << emit_bitmap_build(dep);
+                if (!execution_.bitmap_region || dep > execution_.bitmap_region->entry_depth)
+                    out << emit_tbb_call(plan, config, dep + 1, indent_dep);
 
                 // code for serial executing next loop
                 out << gen_indent_tbb(indent_dep) << emit_iter(plan, dep);
@@ -393,6 +395,8 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
             //                if (dep == 0 && loop == 0) out << gen_indent(dep) <<
             //                "handled += 1;\n";
             out << gen_indent_tbb(indent_dep) << "} // loop-" << std::to_string(dep) << " end\n";
+            if (execution_.bitmap_region && dep == execution_.bitmap_region->entry_depth + 1)
+                out << "} // array fallback\n";
         }
     } else {
         for (int dep = plan.counting.iep_depth; dep >= loop; dep--) {
@@ -417,8 +421,10 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "#include \"plan_profile.h\"\n";
     else
         out << "#include \"plan.h\"\n";
+    if (execution_.bitmap_region) out << "#include \"backend/bitmap_tasks.h\"\n";
     // out << "#include \"oneapi/tbb/parallel_for.h\"\n";
     out << "namespace minigraph {\n";
+    if (config.bitmapDiagnostics) out << "static std::atomic<uint64_t> bitmap_counters[7]{};\n";
     out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tstatic const Graph * graph;\n";
 
@@ -439,13 +445,20 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         break;
     }
     for (int loop = execution_.serial_loop_boundary - 1; loop >= 0; loop--) {
-        out << emit_tbb_loop(plan, config, loop);
+        if (loop > 0 && execution_.bitmap_region) {
+            auto arrays = execution_;
+            arrays.bitmap_region.reset();
+            out << CppCodegen(config, arrays).emit_tbb_loop(plan, config, loop);
+        } else out << emit_tbb_loop(plan, config, loop);
     }
     out << "\tvoid plan(const GraphType* _graph, Context& ctx){ // plan \n";
     if (profiling_) {
         out << "\t\tVertexSet::profiler = ctx.profiler;\n";
     }
     out << "\t\tctx.tick_begin = tbb::tick_count::now();\n";
+    if (config.bitmapDiagnostics)
+        out << "for (auto& value : bitmap_counters) value.store(0, std::memory_order_relaxed);\n"
+               "bitmap_counters[4].store(ctx.num_threads, std::memory_order_relaxed);\n";
     out << "\t\tctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
     out << "\t\tgraph = _graph;\n";
     if (config.pruningType != PruningType::None)
@@ -456,6 +469,8 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
            "graph->get_vnum()), Loop0(ctx), tbb::simple_partitioner());\n";
     out << "\t} // plan\n";
     out << "} // minigraph\n";
+    if (config.bitmapDiagnostics)
+        out << "extern \"C\" uint64_t graphmini_bitmap_counter(unsigned index) { return index < 7 ? minigraph::bitmap_counters[index].load(std::memory_order_relaxed) : 0; }\n";
     out << "extern \"C\" uint64_t graphmini_pattern_size(){return "
            "minigraph::pattern_size();}\n";
     out << "extern \"C\" void graphmini_plan(const minigraph::GraphType* graph, "
