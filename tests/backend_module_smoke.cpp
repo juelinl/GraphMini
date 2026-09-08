@@ -1,12 +1,17 @@
 import graphmini.backend;
 
 bool backend_host_check(const minigraph::Graph&, const minigraph::Context&);
+bool backend_host_check_set(const minigraph::VertexSet&);
 
 int main() {
     minigraph::Graph graph;
     graph.num_vertex = 7;
     minigraph::Context context(2);
     context.per_thread_result.at(0) += 42;
+    minigraph::VertexSet set(8);
+    set.set_size(8);
+    for (size_t i = 0; i < 8; ++i) set[i] = i;
     // Linking checks type identity; this checks layout and live host access.
-    return backend_host_check(graph, context) && context.get_result() == 42 ? 0 : 1;
+    return backend_host_check(graph, context) && context.get_result() == 42 &&
+           backend_host_check_set(set) ? 0 : 1;
 }
