@@ -14,7 +14,7 @@ from runtime_test_support import restore_generated_plan_at_exit
 restore_generated_plan_at_exit()
 parser = argparse.ArgumentParser()
 parser.add_argument("--bitmap", action="store_true")
-parser.add_argument("--scheduler", default="graphpi", choices=["graphpi", "graphmini", "graphzero"])
+parser.add_argument("--scheduler", default="graphpi", choices=["graphpi", "graphmini", "graphzero", "outgoing", "bitmap_balanced"])
 parser.add_argument("--relabel-pattern", action="store_true")
 args = parser.parse_args()
 rng = random.Random(917)

@@ -14,6 +14,8 @@ namespace minigraph {
         GraphPi = 0,
         GraphMini = 1,
         GraphZero = 2,
+        Outgoing = 3, // Experimental: outgoing profile, then canonicality weights.
+        BitmapBalanced = 4, // Experimental: bitmap opportunity within a top-eight shortlist.
     };
 
     enum class PruningType {

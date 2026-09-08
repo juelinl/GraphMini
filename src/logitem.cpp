@@ -19,6 +19,10 @@ namespace minigraph
                     return "GraphMini";
                 case SchedulerType::GraphZero:
                     return "GraphZero";
+                case SchedulerType::Outgoing:
+                    return "Outgoing";
+                case SchedulerType::BitmapBalanced:
+                    return "BitmapBalanced";
             }
             return "Unknown";
         }

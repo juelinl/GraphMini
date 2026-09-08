@@ -68,6 +68,10 @@ const char *scheduler_type_name(SchedulerType scheduler_type) {
             return "graphmini";
         case SchedulerType::GraphZero:
             return "graphzero";
+        case SchedulerType::Outgoing:
+            return "outgoing";
+        case SchedulerType::BitmapBalanced:
+            return "bitmap_balanced";
     }
     return "graphmini";
 }

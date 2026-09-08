@@ -878,7 +878,8 @@ void GraphMiniScheduler::get_schedule(const char *input_adj_mat,
                                       int input_size,
                                       uint64_t v_cnt,
                                       uint64_t e_cnt,
-                                      uint64_t tri_cnt) {
+                                      uint64_t tri_cnt,
+                                      ScheduleHeuristic policy) {
     (void) v_cnt;
     (void) e_cnt;
     (void) tri_cnt;
@@ -903,7 +904,39 @@ void GraphMiniScheduler::get_schedule(const char *input_adj_mat,
             << "Invalid query pattern: isolated vertices remain after removing diagonal self-loops: "
             << format_vertex_ids(isolated_vertices);
 
-    const RankedOrderCandidate best_order = find_best_order_parallel(original_adj_mat, size_);
+    RankedOrderCandidate best_order;
+    if (policy == ScheduleHeuristic::Current) {
+        best_order = find_best_order_parallel(original_adj_mat, size_);
+    } else {
+        const auto candidates = heuristic_candidates(adj_mat_to_string(original_adj_mat, size_), size_, policy);
+        RankedRestrictCandidate best_constraints;
+        for (const auto &candidate : candidates) {
+            std::vector<int> matrix;
+            for (char bit : candidate.adjacency)
+                matrix.push_back(bit == '1');
+            std::vector<std::vector<std::pair<int, int>>> restrictions;
+            restricts_generate(matrix, restrictions);
+            if (restrictions.empty())
+                restrictions.emplace_back();
+            RankedRestrictCandidate constraints;
+            for (auto pairs : restrictions) {
+                pairs = normalize_restricts(std::move(pairs));
+                RankedRestrictCandidate ranked{true, pairs,
+                    build_score_vector(build_restrict_adj_mat(pairs, size_), size_)};
+                if (better_ranked_restricts(ranked, constraints))
+                    constraints = std::move(ranked);
+            }
+            // Only the positional weights, not arbitrary pair IDs, rank orders.
+            // Stable structural and labeling tie-breakers follow canonicality.
+            if (!best_order.valid || constraints.scores > best_constraints.scores ||
+                (constraints.scores == best_constraints.scores &&
+                 (candidate.adjacency > best_order.adj_key ||
+                  (candidate.adjacency == best_order.adj_key && candidate.order < best_order.order)))) {
+                best_order = {true, candidate.order, matrix, {}, candidate.adjacency};
+                best_constraints = std::move(constraints);
+            }
+        }
+    }
     CHECK(best_order.valid) << "Invalid schedule: no valid matching order exists for the input query pattern.";
 
     matching_order_ = best_order.order;

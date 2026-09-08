@@ -125,9 +125,14 @@ ScheduleResult schedule_pattern(const std::string &adj_mat, int p_size, const Co
                                meta.scheduler_avg_degree, PerfModelType::graphzero);
         return capture_schedule_result(scheduler);
     }
-    case SchedulerType::GraphMini: {
+    case SchedulerType::GraphMini:
+    case SchedulerType::Outgoing:
+    case SchedulerType::BitmapBalanced: {
         GraphMiniScheduler scheduler{};
-        scheduler.get_schedule(adj_mat.c_str(), p_size, meta.num_vertex, meta.num_edge, meta.num_triangle);
+        const auto policy = config.schedulerType == SchedulerType::Outgoing ? ScheduleHeuristic::Outgoing :
+            config.schedulerType == SchedulerType::BitmapBalanced ? ScheduleHeuristic::BitmapBalanced :
+            ScheduleHeuristic::Current;
+        scheduler.get_schedule(adj_mat.c_str(), p_size, meta.num_vertex, meta.num_edge, meta.num_triangle, policy);
         return capture_schedule_result(scheduler);
     }
     }

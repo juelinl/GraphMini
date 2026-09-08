@@ -9,6 +9,11 @@ add_library(graphmini_codegen STATIC
 target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_executable(schedule_heuristics_regression ../../tests/schedule_heuristics.cpp)
+    target_link_libraries(schedule_heuristics_regression PRIVATE graphmini_scheduler common)
+    add_test(NAME schedule_heuristics_regression COMMAND schedule_heuristics_regression)
+    add_executable(schedule_experiment ../../tests/schedule_experiment.cpp)
+    target_link_libraries(schedule_experiment PRIVATE graphmini_codegen)
     add_executable(bitmap_ir_regression ../../tests/bitmap_ir.cpp)
     target_link_libraries(bitmap_ir_regression PRIVATE graphmini_codegen)
     add_test(NAME bitmap_ir_regression COMMAND bitmap_ir_regression)

@@ -98,6 +98,12 @@ SchedulerType parse_scheduler_type(const std::string &value) {
     if (lowered == "graphzero") {
         return SchedulerType::GraphZero;
     }
+    if (lowered == "outgoing") {
+        return SchedulerType::Outgoing;
+    }
+    if (lowered == "bitmap_balanced") {
+        return SchedulerType::BitmapBalanced;
+    }
     throw std::invalid_argument("Invalid scheduler: " + value);
 }
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include "schedule_heuristics.hpp"
 
 namespace minigraph {
 
@@ -19,7 +20,8 @@ public:
                       int size,
                       uint64_t v_cnt = 0,
                       uint64_t e_cnt = 0,
-                      uint64_t tri_cnt = 0);
+                      uint64_t tri_cnt = 0,
+                      ScheduleHeuristic policy = ScheduleHeuristic::Current);
 
     int get_size() const { return size_; }
     int get_in_exclusion_optimize_num() const { return in_exclusion_optimize_num_; }

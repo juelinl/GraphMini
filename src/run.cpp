@@ -166,6 +166,10 @@ const char *scheduler_type_name(SchedulerType scheduler_type) {
             return "graphmini";
         case SchedulerType::GraphZero:
             return "graphzero";
+        case SchedulerType::Outgoing:
+            return "outgoing";
+        case SchedulerType::BitmapBalanced:
+            return "bitmap_balanced";
     }
     return "graphmini";
 }
@@ -182,6 +186,14 @@ bool try_parse_scheduler_type(const std::string &value, SchedulerType &scheduler
     }
     if (lowered == "graphzero") {
         scheduler_type = SchedulerType::GraphZero;
+        return true;
+    }
+    if (lowered == "outgoing") {
+        scheduler_type = SchedulerType::Outgoing;
+        return true;
+    }
+    if (lowered == "bitmap_balanced") {
+        scheduler_type = SchedulerType::BitmapBalanced;
         return true;
     }
     return false;
@@ -258,7 +270,7 @@ std::string build_run_help(const cxxopts::Options &) {
            "--query_adjmat=<adjmat> --query_type=<vertex|edge|edge_iep> "
            "--pruning_type=<none|static|eager|online|costmodel> "
            "--parallel_type=<openmp|tbb_top|nested|nested_rt> "
-           "[--scheduler=<graphpi|graphmini|graphzero>] [--num_threads=<count>] "
+           "[--scheduler=<graphpi|graphmini|graphzero|outgoing|bitmap_balanced>] [--num_threads=<count>] "
            "[--graph_reordering[=<true|false>]] [--exp_id=<id>]\n\n";
     out << "Required Options:\n";
     out << "  --graph_name      Graph nickname.\n";
@@ -269,7 +281,7 @@ std::string build_run_help(const cxxopts::Options &) {
     out << "  --pruning_type    One of: none, static, eager, online, costmodel.\n";
     out << "  --parallel_type   One of: openmp, tbb_top, nested, nested_rt.\n\n";
     out << "Optional Options:\n";
-    out << "  --scheduler       One of: graphpi, graphmini, graphzero. Default: graphmini.\n";
+    out << "  --scheduler       graphpi, graphmini, graphzero; experimental: outgoing, bitmap_balanced. Default: graphmini.\n";
     out << "  --num_threads     Positive thread count. Default: all available threads.\n";
     out << "  --graph_reordering Enable degree-based graph reordering. Higher-degree vertices get\n";
     out << "                    smaller ids. Default: false. Disable with --graph_reordering=false.\n";
@@ -475,7 +487,7 @@ int main(int argc, char *argv[]) {
             ("query_type", "Query type: vertex|edge|edge_iep", cxxopts::value<std::string>())
             ("pruning_type", "Pruning type: none|static|eager|online|costmodel", cxxopts::value<std::string>())
             ("parallel_type", "Parallel type: openmp|tbb_top|nested|nested_rt", cxxopts::value<std::string>())
-            ("scheduler", "Scheduler: graphpi|graphmini|graphzero",
+            ("scheduler", "Scheduler: graphpi|graphmini|graphzero|outgoing|bitmap_balanced",
              cxxopts::value<std::string>()->default_value("graphmini"))
             ("num_threads", "Positive thread count. Default: all available threads",
              cxxopts::value<int>())

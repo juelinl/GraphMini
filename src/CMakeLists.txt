@@ -6,7 +6,7 @@ add_library(graphpi_scheduler STATIC
         graphpi_scheduler.cpp)
 
 add_library(graphmini_scheduler STATIC
-        graphmini_scheduler.cpp)
+        graphmini_scheduler.cpp schedule_heuristics.cpp)
 target_link_libraries(graphmini_scheduler PRIVATE TBB::tbb)
 
 add_library(common STATIC
