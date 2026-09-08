@@ -163,8 +163,8 @@ namespace minigraph {
     };
 
     size_t VertexSet::intersect(const VertexSet &other, IdType upper, IdType *buffer) const {
-        return set_ops::intersection_write(m_data, set_ops::prefix_size(m_data, size(), upper),
-            other.m_data, set_ops::prefix_size(other.m_data, other.size(), upper), buffer);
+        return set_ops::intersection_bounded<true>(
+            m_data, size(), other.m_data, other.size(), upper, buffer);
     };
 
     size_t VertexSet::intersect_cnt(const VertexSet &other) const {
@@ -172,8 +172,8 @@ namespace minigraph {
     };
 
     size_t VertexSet::intersect_cnt(const VertexSet &other, IdType upper) const {
-        return set_ops::intersection_count(m_data, set_ops::prefix_size(m_data, size(), upper),
-            other.m_data, set_ops::prefix_size(other.m_data, other.size(), upper));
+        return set_ops::intersection_bounded<false>(
+            m_data, size(), other.m_data, other.size(), upper);
     };
 
     VertexSet VertexSet::subtract(const VertexSet &other) const {

@@ -39,4 +39,13 @@ inline size_t prefix_size(const uint32_t* a, size_t n, uint32_t upper) {
     }
     return lo;
 }
+template<bool Write>
+inline size_t intersection_bounded(const uint32_t* a, size_t na,
+                                  const uint32_t* b, size_t nb,
+                                  uint32_t upper, uint32_t* out = nullptr) {
+    if (na < simd_min_size || nb < simd_min_size)
+        return scalar<Write, true>(a, na, b, nb, out, nullptr, nullptr, upper);
+    return intersection<Write>(a, prefix_size(a, na, upper),
+                               b, prefix_size(b, nb, upper), out);
+}
 }

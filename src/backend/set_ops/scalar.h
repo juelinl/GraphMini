@@ -5,13 +5,16 @@
 namespace minigraph::set_ops {
 // Inputs are sorted, unique uint32_t arrays. Output must not alias either input.
 // No padding or alignment is required; write kernels store exactly count values.
-template<bool Write>
+template<bool Write, bool Bounded = false>
 inline size_t scalar(const uint32_t* a, size_t na, const uint32_t* b, size_t nb,
                      uint32_t* out = nullptr, size_t* consumed_a = nullptr,
-                     size_t* consumed_b = nullptr) {
+                     size_t* consumed_b = nullptr, uint32_t upper = 0) {
     size_t i = 0, j = 0, count = 0;
     while (i < na && j < nb) {
         const auto x = a[i], y = b[j];
+        if constexpr (Bounded) {
+            if (x >= upper || y >= upper) break;
+        }
         i += x <= y;
         j += y <= x;
         if (x == y) {

@@ -51,7 +51,23 @@ void check(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
     for (size_t i = 0; i < expected.size(); ++i) require(result[i] == expected[i]);
     for (uint32_t upper : {0u, 1u, 31u, 64u, 0x80000000u, 0xffffffffu}) {
         const size_t n = std::lower_bound(expected.begin(), expected.end(), upper) - expected.begin();
+#ifdef GRAPHMINI_PROFILE_RUNTIME
+        size_t li = 0, ri = 0, comparisons = 0;
+        while (li < a.size() && ri < b.size()) {
+            const auto x = a[li], y = b[ri];
+            if (x >= upper || y >= upper) break;
+            ++comparisons;
+            li += x <= y;
+            ri += y <= x;
+        }
+        const auto before_set = VertexSet::profiler->total_set_comp();
+        const auto before_neb = VertexSet::profiler->total_neb_comp();
+#endif
         require(va.intersect_cnt(vb, upper) == n);
+#ifdef GRAPHMINI_PROFILE_RUNTIME
+        require(VertexSet::profiler->total_set_comp() - before_set == comparisons);
+        require(VertexSet::profiler->total_neb_comp() - before_neb == ri);
+#endif
         auto bounded = va.intersect(vb, upper);
         require(bounded.size() == n);
         for (size_t i = 0; i < n; ++i) require(bounded[i] == expected[i]);
