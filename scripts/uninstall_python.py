@@ -29,7 +29,7 @@ def resolve_python_executable(python_bin: str) -> pathlib.Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Remove the source-tree pygraphmini install from a Python environment.")
+    parser = argparse.ArgumentParser(description="Remove the source-tree graphmini install from a Python environment.")
     parser.add_argument("--python", dest="python_bin", default=sys.executable,
                         help="Python interpreter to uninstall from. Default: current interpreter")
     args = parser.parse_args()

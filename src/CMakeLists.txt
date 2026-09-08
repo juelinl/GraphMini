@@ -19,9 +19,16 @@ add_library(graph_runtime STATIC
         graph_builder.cpp)
 target_link_libraries(graph_runtime PUBLIC common OpenMP::OpenMP_CXX TBB::tbb TBB::tbbmalloc ${CMAKE_DL_LIBS})
 
-pybind11_add_module(pygraphmini MODULE
+pybind11_add_module(graphmini MODULE
         python_api.cpp)
-target_link_libraries(pygraphmini PRIVATE graphmini_codegen graph_runtime)
+target_link_libraries(graphmini PRIVATE graphmini_codegen graph_runtime)
+
+if(GRAPHMINI_BUILD_TESTS)
+    add_test(NAME python_import
+        COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:graphmini>"
+                ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/python_import.py
+                $<TARGET_FILE:graphmini>)
+endif()
 
 # graph converter
 add_executable(prep prep.cpp)

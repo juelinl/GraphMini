@@ -14,7 +14,7 @@ import tempfile
 import time
 
 import numpy as np
-import pygraphmini as gm
+import graphmini as gm
 from profile_compilation import ninja_edges, count_matches, matrix, restore_generated_plan_at_exit
 
 

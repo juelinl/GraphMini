@@ -13,7 +13,7 @@ import tempfile
 import time
 
 import numpy as np
-import pygraphmini as gm
+import graphmini as gm
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tests"))
 from matching_oracle import count_matches, matrix

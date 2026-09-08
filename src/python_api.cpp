@@ -338,7 +338,7 @@ private:
 } // namespace
 } // namespace minigraph
 
-PYBIND11_MODULE(pygraphmini, m) {
+PYBIND11_MODULE(graphmini, m) {
     using namespace minigraph;
 
     py::class_<RunResult>(m, "RunResult")

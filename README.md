@@ -9,7 +9,7 @@ triangles with the Python API:
 
 ```python
 import numpy as np
-import pygraphmini as gm
+import graphmini as gm
 
 # Undirected triangle, stored as CSR adjacency lists.
 graph = gm.Graph.from_csr(

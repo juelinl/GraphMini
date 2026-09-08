@@ -7,7 +7,7 @@ import itertools
 import argparse
 import json
 import numpy as np
-import pygraphmini as gm
+import graphmini as gm
 from matching_oracle import count_matches, matrix
 from runtime_test_support import restore_generated_plan_at_exit
 

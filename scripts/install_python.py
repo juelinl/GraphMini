@@ -80,7 +80,7 @@ def write_pth(site_packages: pathlib.Path, module_dirs: list[pathlib.Path]) -> p
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build and install pygraphmini into a Python environment.")
+    parser = argparse.ArgumentParser(description="Build and install graphmini into a Python environment.")
     parser.add_argument("--python", dest="python_bin", default=sys.executable,
                         help="Python interpreter to install into. Default: current interpreter")
     parser.add_argument("--build-dir", default=None,
@@ -107,7 +107,7 @@ def main() -> int:
         *generator_args,
         f"-DPython3_EXECUTABLE={python_exe}",
     ]
-    build_cmd = ["cmake", "--build", str(build_dir), "--target", "pygraphmini", "plan_module"]
+    build_cmd = ["cmake", "--build", str(build_dir), "--target", "graphmini", "plan_module"]
 
     subprocess.run(configure_cmd, check=True)
     subprocess.run(build_cmd, check=True)
@@ -124,10 +124,10 @@ def main() -> int:
     bootstrap_path = write_bootstrap(site_packages, module_dirs)
     pth_path = write_pth(site_packages, module_dirs)
 
-    print(f"Installed pygraphmini into {python_exe}")
+    print(f"Installed graphmini into {python_exe}")
     print(f"Wrote {pth_path}")
     print(f"Wrote {bootstrap_path}")
-    subprocess.run([str(python_exe), "-c", "import pygraphmini; print(pygraphmini.__file__)"], check=True)
+    subprocess.run([str(python_exe), "-c", "import graphmini; print(graphmini.__file__)"], check=True)
     return 0
 
 

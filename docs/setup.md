@@ -58,7 +58,7 @@ guard around just those two exports for 2023.1.0. Installed and vendor sources
 remain untouched. The `graphmini_tbb_module` target exposes the named `tbb`
 module; its smoke test imports it and exercises parallel execution and both
 allocator types. With this option enabled, dynamic query plans also use
-`import tbb` through the backend header. Build `pygraphmini` and `plan_module`
+`import tbb` through the backend header. Build `graphmini` and `plan_module`
 in this directory and set `PYTHONPATH=build-tbb-module/lib` to test that path.
 The default, static plans, and profiling plans retain PCH. The named-module
 and header-unit options are mutually exclusive.
@@ -115,7 +115,13 @@ source venv/bin/activate
 pip install numpy cmake ninja clang-format
 ```
 
-### 2. Install `pygraphmini` into the environment
+### 2. Install `graphmini` into the environment
+
+The Python extension and CMake target were renamed from `pygraphmini` to
+`graphmini`. Rebuild/reinstall and update imports to `import graphmini as gm`.
+No compatibility alias is provided for the old name. Existing build directories
+may still contain an old `pygraphmini` binary; do not import both extensions in
+the same interpreter.
 
 From the repository root:
 
@@ -126,8 +132,8 @@ python scripts/install_python.py
 This is a source-tree install. The script:
 
 1. configures CMake for the active Python interpreter
-2. builds `pygraphmini` and the generated plan-module target
-3. writes a `.pth` file into the environment so `import pygraphmini` resolves to this repository's build output
+2. builds `graphmini` and the generated plan-module target
+3. writes a `.pth` file into the environment so `import graphmini` resolves to this repository's build output
 
 To remove that installation later:
 

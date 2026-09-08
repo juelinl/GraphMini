@@ -24,7 +24,7 @@ In the GraphMini Conda environment, use a separate build directory:
 ```sh
 cmake -S . -B build-header-units -G Ninja -DCMAKE_BUILD_TYPE=Release \
   -DGRAPHMINI_BUILD_TESTS=ON -DGRAPHMINI_EXPERIMENTAL_HEADER_UNITS=ON
-cmake --build build-header-units --target pygraphmini plan_module compiler_regression
+cmake --build build-header-units --target graphmini plan_module compiler_regression
 ctest --test-dir build-header-units --output-on-failure
 PYTHONPATH=build-header-units/lib python tests/runtime_smoke.py
 PYTHONPATH=build-header-units/lib python tests/runtime_large.py

@@ -7,17 +7,17 @@ directory; substitute `build-conda` if you followed the recommended installation
 
 ## Python API Overview
 
-The extension module is named `pygraphmini`.
+The extension module is named `graphmini`.
 
 ### Core objects
 
-- `pygraphmini.Graph`
+- `graphmini.Graph`
   - `Graph.from_preprocessed(graph_dir, reorder_by_degree=False)`
   - `Graph.from_csr(indptr, indices, offsets=None, triangles=None, reorder_by_degree=False)`
-- `pygraphmini.CompiledPlan`
-  - returned by `pygraphmini.compile_plan(...)`
+- `graphmini.CompiledPlan`
+  - returned by `graphmini.compile_plan(...)`
   - executes a compiled shared module in-process
-- `pygraphmini.RunResult`
+- `graphmini.RunResult`
   - structured result object returned by `CompiledPlan.run(...)`
 
 ### Python API Input Reference
@@ -80,7 +80,7 @@ The extension module is named `pygraphmini`.
 #### `compile_plan(graph, query_adjmat, query_type, pruning_type="eager", parallel_type="nested_rt", scheduler="graphpi")`
 
 - `graph`
-  - type: `pygraphmini.Graph`
+  - type: `graphmini.Graph`
   - the loaded graph object to compile against
 - `query_adjmat`
   - type: `str`
@@ -123,7 +123,7 @@ The extension module is named `pygraphmini`.
 #### `CompiledPlan.run(graph, num_threads=0)`
 
 - `graph`
-  - type: `pygraphmini.Graph`
+  - type: `graphmini.Graph`
   - graph to execute the compiled plan on
   - in normal usage this should be the same graph that was used during compilation
 - `num_threads`
@@ -172,7 +172,7 @@ Preprocess the graph once:
 Then use it from Python:
 
 ```python
-import pygraphmini as gm
+import graphmini as gm
 
 graph = gm.Graph.from_preprocessed(
     "./dataset/GraphMini/wiki",
@@ -230,7 +230,7 @@ Example:
 
 ```python
 import numpy as np
-import pygraphmini as gm
+import graphmini as gm
 
 indptr = np.array([0, 2, 4, 6], dtype=np.uint64)
 indices = np.array([1, 2, 0, 2, 0, 1], dtype=np.uint32)
@@ -258,7 +258,7 @@ print(result.result)
 If you want to compile once and run multiple times:
 
 ```python
-import pygraphmini as gm
+import graphmini as gm
 
 graph = gm.Graph.from_preprocessed("./dataset/GraphMini/wiki")
 plan = gm.CompiledPlan(
