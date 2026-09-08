@@ -536,6 +536,15 @@ both backend suites; on Ubuntu with upstream Clang installed, add
 `--compiler clang++`. Run serially per source checkout because runtime code
 generation shares `src/codegen_output/plan.cpp`.
 
+### SIMD intersections
+
+The normal runtime uses header-only NEON (ARM64) or CPU-checked AVX2 (GCC/Clang
+x86) intersection kernels for sufficiently large sorted candidate sets, with
+scalar fallback. Count-only and output-producing operations share the comparison
+logic. Subtraction is unchanged; profiling retains scalar-work counters.
+See [implementation and validation](tests/benchmarks/simd-set-operations.md)
+for memory contracts, tests, and benchmark limitations.
+
 ### Tooling
 
 1. CMake >= 3.20

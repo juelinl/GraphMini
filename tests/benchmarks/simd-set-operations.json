@@ -1,0 +1,881 @@
+{
+  "date": "2026-09-07",
+  "source_commit": "084587f5",
+  "scope": "Synthetic hot-cache kernel microbenchmarks, median of five batch timings; not end-to-end query performance. Recorded after verification jobs completed on both hosts.",
+  "records": [
+    {
+      "platform": "macos",
+      "rows": [
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 19.819,
+          "dispatch_ns": 18.934,
+          "speedup": 1.0467413119256364
+        },
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 18.152,
+          "dispatch_ns": 17.475,
+          "speedup": 1.0387410586552217
+        },
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 7.67934,
+          "dispatch_ns": 7.81434,
+          "speedup": 0.9827240688273098
+        },
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 7.74866,
+          "dispatch_ns": 6.99966,
+          "speedup": 1.107005197395302
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 225.887,
+          "dispatch_ns": 220.517,
+          "speedup": 1.0243518640286238
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 208.809,
+          "dispatch_ns": 208.832,
+          "speedup": 0.9998898636224334
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 196.022,
+          "dispatch_ns": 197.438,
+          "speedup": 0.9928281283238283
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 196.152,
+          "dispatch_ns": 197.113,
+          "speedup": 0.9951246239466701
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 45.7207,
+          "dispatch_ns": 46.162,
+          "speedup": 0.990440188899961
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 45.1773,
+          "dispatch_ns": 45.6187,
+          "speedup": 0.9903241433885667
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 18.3627,
+          "dispatch_ns": 18.408,
+          "speedup": 0.9975391134289439
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 18.2193,
+          "dispatch_ns": 19.8307,
+          "speedup": 0.9187421523193836
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 455.398,
+          "dispatch_ns": 459.354,
+          "speedup": 0.991387905623985
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 456.622,
+          "dispatch_ns": 462.629,
+          "speedup": 0.9870155135108262
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 435.579,
+          "dispatch_ns": 433.249,
+          "speedup": 1.005377969712567
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 434.321,
+          "dispatch_ns": 431.005,
+          "speedup": 1.0076936462454034
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 118.268,
+          "dispatch_ns": 40.7093,
+          "speedup": 2.905183827773998
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 113.905,
+          "dispatch_ns": 45.2933,
+          "speedup": 2.5148311118863056
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 48.9387,
+          "dispatch_ns": 14.8427,
+          "speedup": 3.297156177784365
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 47.9373,
+          "dispatch_ns": 39.0453,
+          "speedup": 1.227735476485006
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 1004.14,
+          "dispatch_ns": 548.15,
+          "speedup": 1.831870838274195
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 1041.09,
+          "dispatch_ns": 576.419,
+          "speedup": 1.8061340795497718
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 904.788,
+          "dispatch_ns": 523.44,
+          "speedup": 1.728541953232462
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 905.434,
+          "dispatch_ns": 481.286,
+          "speedup": 1.8812805691418408
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 231.563,
+          "dispatch_ns": 94.12,
+          "speedup": 2.4602953676158092
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 229.995,
+          "dispatch_ns": 92.4107,
+          "speedup": 2.488835167356161
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 106.555,
+          "dispatch_ns": 38.2774,
+          "speedup": 2.7837575174907387
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 106.619,
+          "dispatch_ns": 87.7306,
+          "speedup": 1.2153000207453273
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 2034.75,
+          "dispatch_ns": 1070.96,
+          "speedup": 1.8999309031149623
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 2038.54,
+          "dispatch_ns": 1072.04,
+          "speedup": 1.9015521808887728
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 1861.56,
+          "dispatch_ns": 1064.56,
+          "speedup": 1.748666115578267
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 1871.37,
+          "dispatch_ns": 981.819,
+          "speedup": 1.9060234116471568
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 1119.2,
+          "dispatch_ns": 515.766,
+          "speedup": 2.1699763070849962
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 1082.34,
+          "dispatch_ns": 506.027,
+          "speedup": 2.138897726801139
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 625.918,
+          "dispatch_ns": 230.116,
+          "speedup": 2.720010777173252
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 639.849,
+          "dispatch_ns": 289.437,
+          "speedup": 2.210667606422123
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 9230.08,
+          "dispatch_ns": 4538.04,
+          "speedup": 2.0339353553516495
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 8301.5,
+          "dispatch_ns": 4527.04,
+          "speedup": 1.8337589241535308
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 8099.04,
+          "dispatch_ns": 4615.58,
+          "speedup": 1.7547177169499826
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 8291.54,
+          "dispatch_ns": 4395.21,
+          "speedup": 1.8864946157293965
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 4213.08,
+          "dispatch_ns": 2778.33,
+          "speedup": 1.5164073382211616
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 5452.25,
+          "dispatch_ns": 3036.92,
+          "speedup": 1.7953222343690318
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 3267.88,
+          "dispatch_ns": 1092.71,
+          "speedup": 2.990619652057728
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 2382.75,
+          "dispatch_ns": 1947.92,
+          "speedup": 1.2232278532999301
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 48732.7,
+          "dispatch_ns": 25379.7,
+          "speedup": 1.9201448401675354
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 49710.3,
+          "dispatch_ns": 25999,
+          "speedup": 1.9120081541597755
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 34034.8,
+          "dispatch_ns": 19025.4,
+          "speedup": 1.7889137679102673
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 50050.6,
+          "dispatch_ns": 35519.5,
+          "speedup": 1.4091020425400131
+        }
+      ]
+    },
+    {
+      "platform": "ubuntu",
+      "rows": [
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 47.5487,
+          "dispatch_ns": 39.6859,
+          "speedup": 1.1981257827087202
+        },
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 35.7444,
+          "dispatch_ns": 38.0985,
+          "speedup": 0.9382101657545572
+        },
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 16.1548,
+          "dispatch_ns": 18.9283,
+          "speedup": 0.8534733705615402
+        },
+        {
+          "size": 8,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 16.3414,
+          "dispatch_ns": 16.8535,
+          "speedup": 0.9696146201085828
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 353.326,
+          "dispatch_ns": 357.498,
+          "speedup": 0.9883300046433827
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 364.795,
+          "dispatch_ns": 492.896,
+          "speedup": 0.740105417775758
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 326.106,
+          "dispatch_ns": 337.866,
+          "speedup": 0.9651933014863882
+        },
+        {
+          "size": 8,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 340.633,
+          "dispatch_ns": 341.372,
+          "speedup": 0.9978352061680512
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 79.8764,
+          "dispatch_ns": 83.449,
+          "speedup": 0.9571882227468275
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 80.4706,
+          "dispatch_ns": 87.0846,
+          "speedup": 0.9240508654802343
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 40.2005,
+          "dispatch_ns": 44.5436,
+          "speedup": 0.9024977774584901
+        },
+        {
+          "size": 16,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 41.288,
+          "dispatch_ns": 42.7283,
+          "speedup": 0.9662916614983512
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 773.438,
+          "dispatch_ns": 791.631,
+          "speedup": 0.9770183330364779
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 805.598,
+          "dispatch_ns": 769.311,
+          "speedup": 1.0471681803587884
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 708.518,
+          "dispatch_ns": 726.948,
+          "speedup": 0.9746474300775296
+        },
+        {
+          "size": 16,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 737.124,
+          "dispatch_ns": 727.664,
+          "speedup": 1.0130005057279183
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 185.016,
+          "dispatch_ns": 40.1943,
+          "speedup": 4.603040729655698
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 197.182,
+          "dispatch_ns": 35.8101,
+          "speedup": 5.5063236349521505
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 103.8,
+          "dispatch_ns": 23.3292,
+          "speedup": 4.449359600843578
+        },
+        {
+          "size": 32,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 105.266,
+          "dispatch_ns": 51.6392,
+          "speedup": 2.0384901392740398
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 1527.15,
+          "dispatch_ns": 324.13,
+          "speedup": 4.711535495017432
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 1602.78,
+          "dispatch_ns": 327.53,
+          "speedup": 4.893536469941685
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 1441.78,
+          "dispatch_ns": 336.249,
+          "speedup": 4.2878343132618975
+        },
+        {
+          "size": 32,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 1504.49,
+          "dispatch_ns": 350.553,
+          "speedup": 4.291761873382912
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 374.535,
+          "dispatch_ns": 77.2672,
+          "speedup": 4.8472702518015405
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 397.47,
+          "dispatch_ns": 75.7052,
+          "speedup": 5.2502338016411025
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 188.114,
+          "dispatch_ns": 42.4323,
+          "speedup": 4.433273708943423
+        },
+        {
+          "size": 64,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 189.036,
+          "dispatch_ns": 100.052,
+          "speedup": 1.8893775236876822
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 3097.67,
+          "dispatch_ns": 657.661,
+          "speedup": 4.710131815631458
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 3184.22,
+          "dispatch_ns": 599.837,
+          "speedup": 5.308475469169124
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 2829.63,
+          "dispatch_ns": 641.318,
+          "speedup": 4.412210479044718
+        },
+        {
+          "size": 64,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 2965.17,
+          "dispatch_ns": 723.837,
+          "speedup": 4.0964609435549715
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 1556,
+          "dispatch_ns": 314.945,
+          "speedup": 4.940545174554288
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 1558.84,
+          "dispatch_ns": 297.542,
+          "speedup": 5.239058687513023
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 749.081,
+          "dispatch_ns": 154.696,
+          "speedup": 4.84227775766665
+        },
+        {
+          "size": 256,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 757.116,
+          "dispatch_ns": 378.686,
+          "speedup": 1.9993239781771706
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 12166.2,
+          "dispatch_ns": 2561.91,
+          "speedup": 4.748878766233006
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 12905.1,
+          "dispatch_ns": 2593.53,
+          "speedup": 4.975882291702814
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 12099.4,
+          "dispatch_ns": 2840.46,
+          "speedup": 4.259662167395422
+        },
+        {
+          "size": 256,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 12074.3,
+          "dispatch_ns": 2743.71,
+          "speedup": 4.400720192731739
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 5776.73,
+          "dispatch_ns": 1287.79,
+          "speedup": 4.4857701954511215
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 6137.95,
+          "dispatch_ns": 1170.05,
+          "speedup": 5.245886927909064
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 2996.55,
+          "dispatch_ns": 632.594,
+          "speedup": 4.736924472884662
+        },
+        {
+          "size": 1024,
+          "ratio": 1,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 3065.71,
+          "dispatch_ns": 2347.28,
+          "speedup": 1.3060691523806276
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "count",
+          "scalar_ns": 53050.1,
+          "dispatch_ns": 12466.6,
+          "speedup": 4.255378371007331
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": false,
+          "operation": "write",
+          "scalar_ns": 52971.9,
+          "dispatch_ns": 10662,
+          "speedup": 4.968289251547552
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "count",
+          "scalar_ns": 49542.1,
+          "dispatch_ns": 11586.1,
+          "speedup": 4.27599451066364
+        },
+        {
+          "size": 1024,
+          "ratio": 16,
+          "overlap": true,
+          "operation": "write",
+          "scalar_ns": 50237,
+          "dispatch_ns": 11748.2,
+          "speedup": 4.276144430636182
+        }
+      ]
+    }
+  ]
+}

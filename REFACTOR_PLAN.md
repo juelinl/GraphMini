@@ -82,3 +82,15 @@ time by roughly 50–65% while slowing execution by 2.8–3.4x.
 Normal `-O3` remains the default. The experimental flag is available, but no
 selective-inlining or out-of-line implementation split has been made yet.
 Results and limitations: `tests/benchmarks/no-inline-experiment.md`.
+
+## Follow-up: SIMD set operations
+
+Compilation-time experiments are paused. Added header-only scalar, NEON, and
+AVX2 intersection kernels behind the existing VertexSet API. The normal runtime
+dispatches to SIMD for sufficiently large inputs; the profiling runtime shares
+the scalar kernel to preserve its work counters. Subtraction and compiler
+code generation are unchanged. See `tests/benchmarks/simd-set-operations.md`.
+
+Next candidates are representative end-to-end runtime benchmarks, dispatch
+threshold tuning, and subtraction kernels. Bitmap MiniGraphs and galloping
+remain separate experiments rather than implicit parts of this change.
