@@ -25,6 +25,35 @@ class BitmapCountRegion {
     }
 
   public:
+    // Borrowed until region destruction/rebinding. Construct after binding and
+    // consume within that prefix's loop; never cache across bindings.
+    class CountingView {
+        const bit_ops::Word *source_, *rows_;
+        size_t bits_, stride_;
+        friend class BitmapCountRegion;
+        CountingView(const bit_ops::Word *source, const bit_ops::Word *rows, size_t bits)
+            : source_(source), rows_(rows), bits_(bits), stride_(bit_ops::word_count(bits)) {}
+      public:
+        size_t count(uint32_t position, bool subtract, bool bounded) const {
+            if (position >= bits_) throw std::out_of_range("Invalid bitmap row position");
+            const auto *row = rows_ + position * stride_;
+            const size_t limit = bounded ? position : bits_;
+            if (!subtract) return bit_ops::intersection_count(source_, row, bits_, limit);
+            size_t result = bit_ops::difference_count(source_, row, bits_, limit);
+            if (position < limit && bit_ops::test(source_, bits_, position) &&
+                !bit_ops::test(row, bits_, position)) --result;
+            return result;
+        }
+    };
+    CountingView counting_view(size_t input) const & {
+        if (!graph_.has_universe_rows())
+            throw std::logic_error("Local counting requires universe-indexed rows");
+        return {inputs_.at(input).words().data(), graph_.row_data_at(0), graph_.universe().size()};
+    }
+    CountingView counting_view(size_t) const && = delete;
+    template<class Set> void bind_input(size_t index, const Set &input) {
+        inputs_.at(index).assign_sorted(input.data(), input.size());
+    }
     // Includes persistent row words, candidate words, ID mappings and object
     // storage plus one construction scratch bitmap. Allocator overhead is not
     // an exact resident-memory guarantee. Zero budget forces array fallback.

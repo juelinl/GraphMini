@@ -320,8 +320,14 @@ int main() {
     const auto rebound_view = region->input_view(0);
     const auto *rebound_storage = rebound_view.data();
     require(region && region->row_count() == 3, "Terminal region construction");
+    const auto prepared = region->counting_view(0);
+    rejects([&] { (void)region->counting_view(1); });
+    rejects([&] { (void)prepared.count(3, false, false); });
     for (uint32_t position = 0; position < neighbors.size(); ++position)
         for (bool subtract : {false, true}) {
+            for (bool bounded : {false, true})
+                require(prepared.count(position, subtract, bounded) ==
+                        region->count_local(0, position, subtract, bounded), "Prepared view parity");
             require(region->count_local(0, position, subtract) ==
                         region->count(0, neighbors[position], subtract), "Local count parity");
             require(region->count_local(0, position, subtract, true) ==
@@ -335,6 +341,21 @@ int main() {
     const std::vector<uint32_t> empty;
     require(!BitmapCountRegion::build(graph, 0, neighbors, empty, inputs.size()), "Empty row fallback");
     const std::vector<uint32_t> smaller{1};
+    auto scoped = BitmapCountRegion::build(graph, 0, neighbors, neighbors, 2);
+    scoped->bind_input(0, neighbors); // outer prefix
+    for (const auto &prefix : {smaller, std::vector<uint32_t>{}, neighbors}) {
+        scoped->bind_input(1, prefix); // changing inner prefix, including empty
+        require(scoped->input_view(0).count() == neighbors.size(), "Inner bind changed outer prefix");
+        require(scoped->input_view(1).count() == prefix.size(), "Inner bind retained stale bits");
+        for (uint32_t pos = 0; pos < neighbors.size(); ++pos)
+            for (bool subtract : {false, true})
+                for (bool bound : {false, true})
+                    require(scoped->counting_view(1).count(pos, subtract, bound) ==
+                            scoped->count_local(1, pos, subtract, bound), "Rebound view parity");
+    }
+    rejects([&] { scoped->bind_input(2, smaller); });
+    region->bind_input(0, smaller);
+    require(region->counting_view(0).count(1, false, false) == 1, "Individual binding parity");
     region->bind_inputs(std::vector<const std::vector<uint32_t>*>{&smaller});
     require(region->input_view(0).data() == rebound_storage && rebound_view.count() == 1,
             "Region must reuse live-in words with live cardinality");
@@ -347,6 +368,7 @@ int main() {
     partial->bind_inputs(std::vector<const std::vector<uint32_t>*>{&smaller});
     rejects([&] { (void)partial->local_cursor(0); });
     rejects([&] { (void)partial->count_local(0, 0, false); });
+    rejects([&] { (void)partial->counting_view(0); });
     rejects([&] { region->bind_inputs(std::vector<const std::vector<uint32_t>*>{}); });
     rejects([&] { region->bind_inputs(std::vector<const std::vector<uint32_t>*>{nullptr}); });
     struct OversizedSet {

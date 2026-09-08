@@ -35,6 +35,19 @@ int main() {
                         "Nondeterministic bitmap plan");
                 if (ir.bitmap_region) {
                     ++selected;
+                    const auto code = gen_code(query, config, meta);
+                    require(code.find("bitmap_region ?") == std::string::npos,
+                            "Mixed bitmap/array hot loop");
+                    require(code.find("->counting_view(") != std::string::npos &&
+                            code.find("} // array fallback") != std::string::npos,
+                            "Missing prepared count or fallback scope");
+                    for (size_t index = 0; index < ir.bitmap_region->live_ins.size(); ++index) {
+                        const auto binding = "->bind_input(" + std::to_string(index) + ", s" +
+                            std::to_string(ir.bitmap_region->live_ins[index]) + ");";
+                        const auto first = code.find(binding);
+                        require(first != std::string::npos && code.find(binding, first+1) == std::string::npos,
+                                "Missing or duplicate generated binding");
+                    }
                     for (int mutation = 0; mutation < 6; ++mutation) {
                         auto bad = ir;
                         auto &r = *bad.bitmap_region;
