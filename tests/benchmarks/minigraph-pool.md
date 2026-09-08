@@ -61,3 +61,19 @@ The module smoke test passes grown ManagedContainer storage to the C++17 host.
 
 Standalone pool/container ASan+UBSan checks use GRAPHMINI_POOL_STANDALONE;
 the regular tests additionally cover the MiniGraph classes and profiling hooks.
+
+## Cross-platform verification (2026-09-07)
+
+On macOS ARM64 and Ubuntu x86-64 (Jupiter), PCH builds passed all 9 CTests
+and backend-module builds all 11. Normal and profiling MiniGraph rebuild tests
+passed. ASan+UBSan passed for standalone storage and the full normal-backend
+test, including all four MiniGraph variants, on both platforms.
+
+Each platform also passed 912 generated-query executions: PCH runtime_pool
+(144), runtime_simd (72), runtime_large (48, including 6/7-vertex patterns),
+runtime_smoke (432), and module runtime_pool (144) plus runtime_simd (72).
+All 1,824 executions matched independent expected counts. Following the final
+tracking-vector growth adjustment, both builds were rebuilt and their CTests
+and runtime_pool suites repeated on both platforms.
+
+These are correctness checks, not comparative runtime performance measurements.

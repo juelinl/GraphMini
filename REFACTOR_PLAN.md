@@ -109,8 +109,9 @@ Extracted a shared fixed-capacity thread-local pool implementation. Owning sets
 retain the originating pool pointer; constructor capacity requests are honored,
 and larger graphs select compatible storage without invalidating older owners.
 Generated entry points now call VertexSetPool::configure_for_graph(); allocation
-accounting also lives in the pool rather than VertexSet. MiniGraph has a separate variable-capacity pool
-and remains unchanged. See `tests/benchmarks/vertex-set-pool.md`.
+accounting also lives in the pool rather than VertexSet. The initial extraction
+left MiniGraph unchanged; its subsequent consolidation is described below.
+See `tests/benchmarks/vertex-set-pool.md`.
 
 VertexSet layout is now compacted to two pointers followed by IdType-sized
 count/vertex fields (24 bytes on 64-bit targets). Wide input sizes are checked
