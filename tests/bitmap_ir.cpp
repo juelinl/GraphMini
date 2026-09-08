@@ -35,7 +35,7 @@ int main() {
                         "Nondeterministic bitmap plan");
                 if (ir.bitmap_region) {
                     ++selected;
-                    for (int mutation = 0; mutation < 5; ++mutation) {
+                    for (int mutation = 0; mutation < 6; ++mutation) {
                         auto bad = ir;
                         auto &r = *bad.bitmap_region;
                         if (mutation == 0)
@@ -48,6 +48,8 @@ int main() {
                             r.live_ins.clear();
                         if (mutation == 4)
                             r.count_ops.clear();
+                        if (mutation == 5)
+                            r.iterator_set = -1;
                         bool rejected = false;
                         try {
                             verify_execution(bad, plan);

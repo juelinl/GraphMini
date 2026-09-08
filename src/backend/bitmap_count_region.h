@@ -18,6 +18,8 @@ class BitmapCountRegion {
                  [&](uint32_t vertex) { return graph.N(vertex); }),
           input_count_(input_count) {
         inputs_.reserve(input_count);
+        for (size_t i = 0; i < input_count; ++i)
+            inputs_.emplace_back(graph_.universe());
     }
 
   public:
@@ -46,15 +48,42 @@ class BitmapCountRegion {
     }
     // Called once per penultimate prefix binding. Rows retain their original
     // universe and are reused across these bindings; no nested BitGraph.
-    template <class Set> void bind_inputs(const std::vector<const Set *> &inputs) {
-        if (inputs.size() != input_count_)
+    template <class Set> void bind_inputs(const Set *const *inputs, size_t size) {
+        if (size != input_count_ || (size && !inputs))
             throw std::invalid_argument("Bitmap region live-in count mismatch");
-        inputs_.clear();
-        for (const auto *input : inputs) {
-            if (!input)
+        for (size_t i = 0; i < size; ++i)
+            if (!inputs[i])
                 throw std::invalid_argument("Null bitmap region live-in");
-            inputs_.push_back(Bitmap::from_sorted(graph_.universe(), input->data(), input->size()));
-        }
+        for (size_t i = 0; i < size; ++i)
+            inputs_[i].assign_sorted(inputs[i]->data(), inputs[i]->size());
+    }
+    template <class Set> void bind_inputs(const std::vector<const Set *> &inputs) {
+        bind_inputs(inputs.data(), inputs.size());
+    }
+    BitmapView input_view(size_t input) const & { return inputs_.at(input).view(); }
+    BitmapView input_view(size_t) const && = delete;
+    BitmapLocalCursor local_cursor(size_t input) const & {
+        if (!graph_.has_universe_rows())
+            throw std::logic_error("Local iteration requires universe-indexed rows");
+        return {inputs_.at(input).words().data(), graph_.universe().size()};
+    }
+    BitmapLocalCursor local_cursor(size_t) const && = delete;
+    // Canonicality against the selected local vertex is order-preserving because
+    // universe IDs are sorted. Exclusion also stays entirely in local coordinates.
+    size_t count_local(size_t input, uint32_t position, bool subtract, bool bounded = false) const {
+        if (!graph_.has_universe_rows())
+            throw std::logic_error("Local counting requires universe-indexed rows");
+        const auto *source = inputs_.at(input).words().data();
+        const auto *row = graph_.row_data_at(position);
+        const auto bits = graph_.universe().size();
+        const size_t limit = bounded ? position : bits;
+        if (!subtract)
+            return bit_ops::intersection_count(source, row, bits, limit);
+        size_t count = bit_ops::difference_count(source, row, bits, limit);
+        if (position < limit && bit_ops::test(source, bits, position) &&
+            !bit_ops::test(row, bits, position))
+            --count;
+        return count;
     }
     size_t count(size_t input, uint32_t vertex, bool subtract,
                  std::optional<uint32_t> upper = {}) const {

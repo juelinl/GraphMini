@@ -151,12 +151,15 @@ void containers(std::mt19937_64 &rng) {
                     auto d = aa.view().difference(bb.view(), upper);
                     auto s = aa.view().subtract(bb.view(), owner, upper);
                     require(i.view().vertices() == expected_i &&
+                                i.count() == expected_i.size() &&
                                 aa.view().intersect_count(bb.view(), upper) == expected_i.size(),
                             "Bitmap intersection");
                     require(d.view().vertices() == expected_d &&
+                                d.count() == expected_d.size() &&
                                 aa.view().difference_count(bb.view(), upper) == expected_d.size(),
                             "Pure difference");
                     require(s.view().vertices() == expected_s &&
+                                s.count() == expected_s.size() &&
                                 aa.view().subtract_count(bb.view(), owner, upper) == expected_s.size(),
                             "Owner exclusion");
                     const auto array_count =
@@ -266,6 +269,41 @@ void graphs(std::mt19937_64 &rng) {
 }
 } // namespace
 int main() {
+    {
+        NeighborhoodUniverse universe(99, std::vector<uint32_t>{1, 3, 7, 12});
+        Bitmap bitmap(universe);
+        const auto view = bitmap.view();
+        const auto *storage = bitmap.words().data();
+        bitmap.set(3);
+        bitmap.set(3);
+        require(bitmap.count() == 1 && view.count() == 1, "Live cached cardinality/set idempotence");
+        bitmap.clear(3);
+        bitmap.clear(3);
+        require(view.count() == 0, "Clear cardinality underflow");
+        const std::vector<uint32_t> ids{1, 7, 12};
+        bitmap.assign_sorted(ids.data(), ids.size());
+        require(view.count() == 3 && view.count(7) == 1 && bitmap.words().data() == storage,
+                "Rebinding must reuse words and update borrowed cardinality");
+        auto intersection = bitmap.view().intersect(bitmap.view(), 12);
+        auto difference = bitmap.view().difference(intersection.view());
+        auto bounded = bitmap.view().bounded(7);
+        require(intersection.count() == 2 && difference.count() == 1 && bounded.count() == 1,
+                "Materializing kernels must retain their returned counts");
+        auto cursor = bitmap.view().local_cursor();
+        for (uint32_t expected : {0, 2, 3}) {
+            require(cursor.valid() && cursor.position() == expected, "Local cursor mapping/order");
+            cursor.advance();
+        }
+        require(!cursor.valid(), "Local cursor termination");
+        cursor.advance();
+        rejects([&] { cursor.position(); });
+        Bitmap copy = bitmap;
+        bitmap.reset();
+        require(view.count() == 0 && copy.view().count() == 3, "Copied count ownership");
+        const std::vector<uint32_t> outside{1, 5};
+        rejects([&] { bitmap.assign_sorted(outside.data(), outside.size()); });
+        require(view.count() == 0 && view.vertices().empty(), "Failed conversion cardinality");
+    }
     std::cout << "Explicit SIMD word width: " << bit_ops::simd_word_width() << '\n';
     std::mt19937_64 rng(20260907);
     raw_kernels(rng);
@@ -279,7 +317,17 @@ int main() {
     std::vector<const std::vector<uint32_t> *> inputs{&neighbors};
     auto region = BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs.size());
     region->bind_inputs(inputs);
+    const auto rebound_view = region->input_view(0);
+    const auto *rebound_storage = rebound_view.data();
     require(region && region->row_count() == 3, "Terminal region construction");
+    for (uint32_t position = 0; position < neighbors.size(); ++position)
+        for (bool subtract : {false, true}) {
+            require(region->count_local(0, position, subtract) ==
+                        region->count(0, neighbors[position], subtract), "Local count parity");
+            require(region->count_local(0, position, subtract, true) ==
+                        region->count(0, neighbors[position], subtract, neighbors[position]),
+                    "Local canonical bound parity");
+        }
     require(region->count(0, 1, false) == 1, "Terminal intersection");
     require(region->count(0, 1, true) == 1, "Terminal induced subtraction excludes owner");
     require(region->count(0, 1, true, 3) == 0, "Terminal strict global bound");
@@ -288,7 +336,17 @@ int main() {
     require(!BitmapCountRegion::build(graph, 0, neighbors, empty, inputs.size()), "Empty row fallback");
     const std::vector<uint32_t> smaller{1};
     region->bind_inputs(std::vector<const std::vector<uint32_t>*>{&smaller});
+    require(region->input_view(0).data() == rebound_storage && rebound_view.count() == 1,
+            "Region must reuse live-in words with live cardinality");
     require(region->count(0, 2, false) == 1, "Rows survive prefix rebinding");
+    auto local = region->local_cursor(0);
+    require(local.valid() && local.position() == 0, "Region local iteration");
+    local.advance();
+    require(!local.valid(), "Region cursor end");
+    auto partial = BitmapCountRegion::build(graph, 0, neighbors, smaller, 1);
+    partial->bind_inputs(std::vector<const std::vector<uint32_t>*>{&smaller});
+    rejects([&] { (void)partial->local_cursor(0); });
+    rejects([&] { (void)partial->count_local(0, 0, false); });
     rejects([&] { region->bind_inputs(std::vector<const std::vector<uint32_t>*>{}); });
     rejects([&] { region->bind_inputs(std::vector<const std::vector<uint32_t>*>{nullptr}); });
     struct OversizedSet {

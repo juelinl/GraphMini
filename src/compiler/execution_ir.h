@@ -76,6 +76,7 @@ struct BitmapRegionExecution {
     int entry_depth, conversion_depth, anchor_depth;
     // Rows cover the full universe, so every later selected vertex has a row.
     std::vector<int> live_ins, count_ops;
+    int iterator_set{-1}; // Bitmap live-in traversed by the last explicit matching loop.
 };
 struct ExecutionIR {
     int serial_loop_boundary{1};

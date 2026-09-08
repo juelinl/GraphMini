@@ -27,7 +27,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     }
     out << "namespace minigraph {\n";
     if (config.bitmapDiagnostics)
-        out << "static std::atomic<uint64_t> bitmap_counters[5]{};\n";
+        out << "static std::atomic<uint64_t> bitmap_counters[7]{};\n";
     out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tvoid plan(const GraphType* graph, Context& ctx){\n";
     if (profiling_)
@@ -218,7 +218,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     out << "} // namespace minigraph \n";
     if (config.bitmapDiagnostics)
         out << "extern \"C\" uint64_t graphmini_bitmap_counter(unsigned index) { "
-               "return index < 5 ? minigraph::bitmap_counters[index].load(std::memory_order_relaxed) : 0; }\n";
+               "return index < 7 ? minigraph::bitmap_counters[index].load(std::memory_order_relaxed) : 0; }\n";
 
     out << "extern \"C\" uint64_t graphmini_pattern_size(){return "
            "minigraph::pattern_size();}\n";

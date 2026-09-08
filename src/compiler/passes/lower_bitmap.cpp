@@ -42,10 +42,15 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
                 break;
             }
             const auto &step = op.steps.front();
+            const bool local_bound = !step.upper_bound ||
+                (step.upper_bound->adjacency &&
+                 step.upper_bound->adjacency->source == SetSource::GraphAdjacency &&
+                 step.upper_bound->adjacency->id == conversion + 1) ||
+                (!step.upper_bound->adjacency && step.upper_bound->depth == conversion + 1);
             if ((step.opcode != SetOpcode::Intersect &&
                  step.opcode != SetOpcode::DifferenceExcludingOwner) ||
                 !step.rhs || step.rhs->source != SetSource::GraphAdjacency ||
-                step.rhs->id != conversion + 1 ||
+                step.rhs->id != conversion + 1 || !local_bound ||
                 !contains(ir.domains.sets.at(op.input.id).neighborhood_anchors, region.anchor_depth)) {
                 valid = false;
                 break;
@@ -55,6 +60,9 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             out.count_ops.push_back(op.id);
         }
         if (valid && !out.count_ops.empty()) {
+            out.iterator_set = plan.logical.iter_set.at(conversion).id;
+            if (!contains(out.live_ins, out.iterator_set))
+                out.live_ins.push_back(out.iterator_set);
             reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
             return out;
         }
@@ -76,7 +84,7 @@ void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &ir) {
     const auto &actual = *ir.bitmap_region;
     if (actual.entry_depth != expected->entry_depth || actual.anchor_depth != expected->anchor_depth ||
         actual.conversion_depth != expected->conversion_depth || actual.live_ins != expected->live_ins ||
-        actual.count_ops != expected->count_ops)
+        actual.count_ops != expected->count_ops || actual.iterator_set != expected->iterator_set)
         throw std::logic_error("Invalid bitmap scope, identity, rows, or live-ins");
 }
 } // namespace minigraph

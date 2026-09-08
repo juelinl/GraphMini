@@ -126,6 +126,7 @@ std::string dump_execution(const ExecutionIR &execution) {
         for (int id : region.live_ins) out << " set" << id;
         out << " counts:";
         for (int id : region.count_ops) out << " set" << id;
+        out << " local-iterator=set" << region.iterator_set;
         out << '\n';
     }
     auto ref = [&](SetReference r) {

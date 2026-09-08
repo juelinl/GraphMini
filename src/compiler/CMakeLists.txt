@@ -9,6 +9,8 @@ add_library(graphmini_codegen STATIC
 target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_executable(bitmap_reuse_regression ../../tests/bitmap_reuse.cpp)
+    add_test(NAME bitmap_reuse_regression COMMAND bitmap_reuse_regression)
     add_executable(bit_decode_regression ../../tests/bit_decode.cpp)
     add_test(NAME bit_decode_regression COMMAND bit_decode_regression)
     add_executable(bit_decode_scalar_regression ../../tests/bit_decode.cpp)
