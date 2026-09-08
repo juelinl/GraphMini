@@ -13,82 +13,38 @@
 #include <sstream>
 #include <utility>
 namespace minigraph {
-std::vector<MiniGraphIR> CppCodegen::gen_used_mg(const PlanIR &plan, const CodeGenConfig &config, int loop) {
-    std::vector<MiniGraphIR> used_mg;
-    if (config.pruningType != PruningType::None && loop > 0) {
-        for (int dep = loop; dep < plan.p_size - 1; dep++) {
-            for (auto mg : plan.mg_used.at(dep)) {
-                if (mg.loop_depth() < loop) {
-                    bool exited = false;
-                    for (auto _mg : used_mg) {
-                        if (_mg.id == mg.id)
-                            exited = true;
-                    }
-                    if (!exited)
-                        used_mg.push_back(mg);
-                }
-            }
-        }
-        for (auto mg : plan.mg_ops.at(loop)) {
-            auto parent = plan.get_parent_mg(mg);
-            if (parent.has_value() && parent->loop_depth() < loop) {
-                bool exited = false;
-                for (auto _mg : used_mg) {
-                    if (_mg.id == parent->id)
-                        exited = true;
-                }
-                if (!exited)
-                    used_mg.push_back(parent.value());
-            }
-        }
+std::vector<MiniGraphIR> CppCodegen::gen_used_mg(const PlanIR &plan, const CodeGenConfig &, int loop) {
+    std::vector<MiniGraphIR> result;
+    for (int id : execution_.loops.at(loop).captured_minigraphs) {
+        const auto &physical = execution_.minigraphs.at(id);
+        for (const auto &mg : plan.mg_ops.at(physical.depth))
+            if (mg.id == id)
+                result.push_back(mg);
     }
-    return used_mg;
+    return result;
 }
 
-std::vector<VertexSetIR> CppCodegen::gen_used_set(const PlanIR &plan, const CodeGenConfig &config, int loop) {
-    std::vector<VertexSetIR> used_set;
-    if (loop > 0) {
-        const VertexSetIR &iter = plan.iter_set.at(loop - 1);
-        for (VertexSetIR set : plan.set_ops.at(loop)) {
-            std::optional<VertexSetIR> parent = plan.get_parent_vset(set, loop - 1);
-            if (parent.has_value() && parent->id != iter.id) {
-                bool exited = false;
-                for (auto _set : used_set) {
-                    if (_set.id == parent->id)
-                        exited = true;
-                }
-                if (!exited)
-                    used_set.push_back(parent.value());
-            }
-        }
+std::vector<VertexSetIR> CppCodegen::gen_used_set(const PlanIR &plan, const CodeGenConfig &, int loop) {
+    std::vector<VertexSetIR> result;
+    for (int id : execution_.loops.at(loop).captured_sets) {
+        const auto &physical = execution_.sets.at(id);
+        for (const auto &set : plan.set_ops.at(physical.depth))
+            if (set.id == id)
+                result.push_back(set);
     }
-    return used_set;
+    return result;
 }
 
-std::set<int> CppCodegen::gen_used_adj(const PlanIR &plan, const CodeGenConfig &config, int loop) {
-    std::set<int> used_adj;
-    if (loop > 0) {
-        for (int i = loop; i < plan.p_size - 1; ++i) {
-            const auto &sets = plan.set_ops.at(i);
-            for (auto &set : sets) {
-                if (!plan.get_parent_vset(set, loop - 1).has_value()) {
-                    for (int i = 0; i < loop; ++i) {
-                        used_adj.insert(i);
-                    }
-                }
-            }
-        }
-    }
-    return used_adj;
+std::set<int> CppCodegen::gen_used_adj(const PlanIR &, const CodeGenConfig &, int loop) {
+    return execution_.loops.at(loop).captured_adjacencies;
 }
 
 // loop: the loop at which the next parallel region is evoked
 std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &config, int loop,
                                       int indent_dep) {
     std::ostringstream out;
-    if (loop >= plan.get_serial_loop())
-        return "";
-    if (config.parType != ParallelType::Nested && config.parType != ParallelType::NestedRt)
+    const auto &physical = execution_.loops.at(loop);
+    if (!physical.spawn_nested)
         return "";
     assert(loop > 0);
     int iter_id = plan.iter_set.at(loop - 1).id;
@@ -96,33 +52,33 @@ std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &c
     std::vector<MiniGraphIR> used_mg = gen_used_mg(plan, config, loop);
     std::vector<VertexSetIR> used_set = gen_used_set(plan, config, loop);
     std::set<int> used_adj = gen_used_adj(plan, config, loop);
-    if (config.parType == ParallelType::Nested) {
+    if (!physical.runtime_threshold) {
         out << gen_indent_tbb(indent_dep) + "if (true) ";
-    } else if (config.parType == ParallelType::NestedRt) {
-        // TODO try using different heuristic logic here
-        int factor = 4;
-        int avg_deg = plan.meta.num_edge / plan.meta.num_vertex;
-        if (plan.meta.max_degree / avg_deg > 100) {
-            out << gen_indent_tbb(indent_dep) + fmt::format("if (s{iter_id}.size() > std::min({factor} * "
-                                                            "{avg_deg}, 100)) ",
-                                                            fmt::arg("iter_id", iter_id),
-                                                            fmt::arg("avg_deg", avg_deg),
-                                                            fmt::arg("factor", factor));
+    } else {
+        const int factor = physical.threshold_factor;
+        const int avg_deg = physical.average_degree;
+        if (physical.cap_threshold) {
+            out << gen_indent_tbb(indent_dep) +
+                       fmt::format("if (s{iter_id}.size() > std::min({factor} * "
+                                   "{avg_deg}, 100)) ",
+                                   fmt::arg("iter_id", iter_id), fmt::arg("avg_deg", avg_deg),
+                                   fmt::arg("factor", factor));
         } else {
-            out << gen_indent_tbb(indent_dep) + fmt::format("if (s{iter_id}.size() > {factor} * {avg_deg}) ",
-                                                            fmt::arg("iter_id", iter_id),
-                                                            fmt::arg("avg_deg", avg_deg),
-                                                            fmt::arg("factor", factor));
+            out << gen_indent_tbb(indent_dep) +
+                       fmt::format("if (s{iter_id}.size() > {factor} * {avg_deg}) ",
+                                   fmt::arg("iter_id", iter_id), fmt::arg("avg_deg", avg_deg),
+                                   fmt::arg("factor", factor));
         }
     }
 
-    int grain_size = 1;
+    int grain_size = physical.grain_size;
 
     out << "{\n";
-    out << gen_indent_tbb(indent_dep + 1) + fmt::format("tbb::parallel_for(tbb::blocked_range<size_t>(0, "
-                                                        "s{iter_id}.size(), {grain_size}), Loop{dep}",
-                                                        fmt::arg("grain_size", grain_size),
-                                                        fmt::arg("iter_id", iter_id), fmt::arg("dep", loop));
+    out << gen_indent_tbb(indent_dep + 1) +
+               fmt::format("tbb::parallel_for(tbb::blocked_range<size_t>(0, "
+                           "s{iter_id}.size(), {grain_size}), Loop{dep}",
+                           fmt::arg("grain_size", grain_size), fmt::arg("iter_id", iter_id),
+                           fmt::arg("dep", loop));
     // Args
     out << "(ctx";
     for (int dep : used_adj) {
@@ -494,7 +450,8 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     out << "\t\tgraph = _graph;\n";
     if (config.pruningType != PruningType::None)
         out << "\t\tMiniGraphIF::DATA_GRAPH = graph;\n";
-    out << "\t\tinternal::VertexSetPool::configure_for_graph(graph->get_maxdeg());\n";
+    out << "\t\tinternal::VertexSetPool::configure_for_graph(graph->get_maxdeg())"
+           ";\n";
     out << "\t\ttbb::parallel_for(tbb::blocked_range<size_t>(0, "
            "graph->get_vnum()), Loop0(ctx), tbb::simple_partitioner());\n";
     out << "\t} // plan\n";

@@ -1,46 +1,71 @@
 # Compiler organization
 
-The public `gen_code` API in `include/codegen.h` remains the entry point for
-the CLI, Python API, and profiler. `compiler.cpp` dispatches to a query-mode
-compiler, applies auxiliary-graph planning, and selects a C++ writer.
+The public `gen_code` API in `include/codegen.h` remains the entry point for the
+CLI, Python API, and profiler. Query semantics and configuration remain local
+to each plan; there is no global query-mode switch.
 
-- `vertex_induced.cpp`: vertex-induced planning, including nonedge constraints.
-- `edge_induced.cpp`: edge-induced planning.
-- `edge_induced_iep.cpp`: edge-induced planning with inclusion-exclusion setup.
-- `planning.cpp`: shared scheduling adapter and prefix-set IR construction.
-- `ir.cpp`: IR operations. Each vertex set carries its query semantics; each
-  plan carries its configuration. No global query-mode switch is used.
-- `passes/auxiliary_graphs.cpp`: constructs and prunes auxiliary-graph IR.
-- `codegen/cpp.cpp`: shared C++ operations and inclusion-exclusion expressions.
-- `codegen/openmp.cpp`: OpenMP execution structure.
-- `codegen/tbb.cpp`: TBB top-level and nested execution structure.
+The compiler separates logical planning, execution decisions, and C++ writing:
 
-`CppCodegen` owns the configuration for one source-generation operation.
-Query-mode compilers share the planner and writers rather than duplicating
-complete compiler implementations. The current set-operation IR still contains
-mode-dependent lowering; this refactor preserves those algorithms.
+1. `vertex_induced.cpp`, `edge_induced.cpp`, and `edge_induced_iep.cpp` select query
+   semantics. `planning.cpp` adapts the scheduler into the logical `PlanIR`.
+2. `passes/auxiliary_graphs.cpp` selects auxiliary graphs in the logical plan.
+3. `passes/lower_execution.cpp` resolves set inputs, constraints, MiniGraph reads,
+   terminal cardinalities, and IEP factors into `ExecutionIR`.
+4. `passes/lower_minigraphs.cpp` resolves eager construction, parent builds,
+   direct versus explicit index mapping, and structured reuse estimates.
+5. `passes/lower_loops.cpp` resolves adjacency reads, task captures, and the
+   existing nested-task threshold policy.
+6. `verify_execution` checks the lowered plan before `codegen/` renders C++.
 
-Generated plans continue to use the existing C++17/PCH runtime build and loader.
-Runtime build directories and the Python plan cache are unchanged; concurrent
-runtime compilation is not yet supported by this refactor.
+## Where optimizations belong
 
-## Verification
+Execution IR contains typed operations and references, not C++ expressions.
+Change a lowering rule when changing execution strategy; change codegen only
+when changing how a decided operation is expressed in C++.
 
-Configure with `-DGRAPHMINI_BUILD_TESTS=ON`, build `compiler_regression`, then run
-`ctest --test-dir build --output-on-failure`. The regression executable covers
-all query modes, schedulers, pruning modes, parallel modes, and profiling modes.
-An optional output-directory argument writes generated sources for comparison
-with a baseline build.
+For example, `DifferenceExcludingOwner` explicitly means
+`A \\ B \\ {owner(B)}`. Its optional upper bound is a separate operand.
+`SetResult::Count` requests the count kernel for the final operation in a chain;
+`MaterializeThenCount` retains an intermediate set and its empty guard.
+These distinctions must not be inferred again by the writer.
 
-For end-to-end counting checks, build `pygraphmini` and run:
+MiniGraph index reuse is recorded per iterator. Equal edge prefixes at the same
+depth permit direct indexing through restriction-only prefix views; otherwise
+the plan requests an explicit `indices()` mapping. Cost estimates store set-size
+factors and numeric selectivities rather than source-code fragments.
+
+`SetExecution::rules` explains set-lowering choices. `dump_execution()` prints
+sets, bounds, owner exclusions, result modes, MiniGraph policy, reuse estimates,
+captures, and IEP factors. Generate example dumps with:
 
 ```sh
-PYTHONPATH=build/lib python tests/runtime_smoke.py
+build-inline-pch/bin/execution_ir_regression /tmp/graphmini-ir
 ```
 
-The active Python must have NumPy and match the interpreter used for the build;
-`cmake`, the build tool, and `clang-format` must be on PATH. Runtime compilation
-updates the existing generated `src/codegen_output/plan.cpp` file.
+## Validation and current boundaries
+
+`compiler_regression` covers 1,800 code-generation configurations.
+`execution_ir_regression` checks 75 lowered plans, including six- and seven-vertex
+patterns, deterministic dumps, and rejection of malformed operands/references.
+Runtime tests compare generated kernels with a symmetry-normalized exhaustive
+oracle; see `tests/runtime_smoke.py` and `tests/runtime_large.py`.
+
+This checkpoint preserves the existing execution heuristics and generated C++.
+The nested-task degree calculation additionally handles zero average degree
+without integer division by zero. The innermost-two-loop policy is unchanged.
+
+The verifier checks set definition ordering and basic operand, build-input,
+capture, and IEP validity. It is not a full ownership, alias, or control-flow
+verifier. OpenMP/TBB loop scaffolding and logical comments still use `PlanIR`;
+the writer's capture adapters also resolve physical IDs back to logical objects.
+The next structural step is an explicit loop/block IR and shared body traversal,
+followed by liveness-based materialization and ownership checks. Do not introduce
+new performance heuristics as part of that mechanical conversion.
+
+Runtime builds and Python plan caching are unchanged. Runtime tests require
+NumPy and the Python interpreter used for the build, with CMake, the build tool,
+and clang-format on PATH. Run them serially per checkout because compilation
+updates `src/codegen_output/plan.cpp`; concurrent compilation is not supported.
 
 ### IEP symmetry correction regression
 

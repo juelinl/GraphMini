@@ -19,22 +19,13 @@ std::string CppCodegen::emit_read_adj(const PlanIR &plan, int dep) {
         out += fmt::format("ctx.profiler->set_cur_loop({dep});\n", fmt::arg("dep", dep));
         out += gen_indent(dep);
     }
-    bool NoAdjNeeded = true;
-    if (config_.pruningType == PruningType::None) {
-        NoAdjNeeded = false;
-    } else {
-        for (const auto &op : plan.set_ops.at(dep)) {
-            auto mg = plan.get_parent_mg(op);
-            NoAdjNeeded = NoAdjNeeded && mg.has_value();
-        }
-    }
     if (dep > 0) {
         const VertexSetIR &iter = plan.iter_set.at(dep - 1);
         out += fmt::format("const IdType i{dep}_id = s{iter_id}[i{dep}_idx];\n", fmt::arg("dep", dep),
                            fmt::arg("iter_id", iter.id));
     }
 
-    if (!NoAdjNeeded) {
+    if (execution_.loops.at(dep).read_adjacency) {
         if (dep > 0)
             out += gen_indent(dep);
         out += fmt::format("VertexSet i{dep}_adj = graph->N(i{dep}_id);\n", fmt::arg("dep", dep));
@@ -49,187 +40,77 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
         const auto &iter_set = plan.iter_set.at(dep);
         return fmt::format("for (size_t i{dep}_idx = 0; i{dep}_idx < s{iter_id}.size(); "
                            "i{dep}_idx++) {left} // loop-{dep} begin\n",
-                           fmt::arg("left", "{"), fmt::arg("iter_id", iter_set.id), fmt::arg("dep", dep + 1));
+                           fmt::arg("left", "{"), fmt::arg("iter_id", iter_set.id),
+                           fmt::arg("dep", dep + 1));
     }
 }
 
-std::string CppCodegen::emit_op(const PlanIR &plan, const VertexSetIR &op) {
-    std::string out;
-    auto parent = plan.get_parent_vset(op);
-    int dep = op.loop_depth();
-    std::string upper_bound;
-    if (op.is_restricted(op.loop_depth())) {
-        upper_bound = fmt::format(", i{}_adj.vid()", dep);
+namespace {
+std::string set_name(SetReference ref) {
+    switch (ref.source) {
+    case SetSource::Prefix:
+        return fmt::format("s{}", ref.id);
+    case SetSource::GraphAdjacency:
+        return fmt::format("i{}_adj", ref.id);
+    case SetSource::MiniGraphAdjacency:
+        return fmt::format("m{}_adj", ref.id);
     }
-    if (parent.has_value()) {
-        CHECK(parent->loop_depth() + 1 >= op.loop_depth()) << "Not optimal parent";
-        // generate code from prefix
-        if (parent->loop_depth() == op.loop_depth()) {
-            CHECK(op.is_restricted(op.loop_depth()))
-                << "\nLogic error (op is not restricted at loop_depth)\nOP:\n"
-                << op << "\nParent:\n"
-                << parent.value();
-            out += fmt::format("VertexSet s{op_id} = s{parent_id}.bounded(i{dep}_id);\n",
-                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                               fmt::arg("dep", dep));
-
-        } else if (parent->loop_depth() == op.loop_depth() - 1) {
-
-            if (op.is_edge(op.loop_depth())) {
-                // Both VertexInduced and EdgeInduced: intersection
-                if (!plan.is_last_op(op)) {
-                    // intersect and return vertex set
-                    out += fmt::format("VertexSet s{op_id} = "
-                                       "s{parent_id}.intersect(i{dep}_adj{upper_bound});\n",
-                                       fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                                       fmt::arg("dep", dep), fmt::arg("upper_bound", upper_bound));
-                } else {
-                    // intersect and return counter
-                    out += fmt::format("counter += "
-                                       "s{parent_id}.intersect_cnt(i{dep}_adj{upper_bound});\n",
-                                       fmt::arg("parent_id", parent->id), fmt::arg("dep", dep),
-                                       fmt::arg("upper_bound", upper_bound));
-                }
-            } else {
-                if (plan.config.adjMatType == minigraph::AdjMatType::VertexInduced) {
-                    // VertexInduced: subtraction
-                    if (!plan.is_last_op(op)) {
-                        // last op: intersect and return vertex set
-                        out += fmt::format("VertexSet s{op_id} = "
-                                           "s{parent_id}.subtract(i{dep}_adj{upper_bound});\n",
-                                           fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                                           fmt::arg("dep", dep), fmt::arg("upper_bound", upper_bound));
-                    } else {
-                        // intersect and return counter
-                        out += fmt::format("counter += "
-                                           "s{parent_id}.subtract_cnt(i{dep}_adj{upper_bound});\n",
-                                           fmt::arg("parent_id", parent->id), fmt::arg("dep", dep),
-                                           fmt::arg("upper_bound", upper_bound));
-                    }
-                } else {
-                    // EdgeInduced: remove v_iter
-                    if (!plan.is_last_op(op)) {
-                        if (op.is_restricted(op.loop_depth())) {
-                            out += fmt::format("VertexSet s{op_id} = "
-                                               "s{parent_id}.bounded(i{dep}_adj.vid());\n",
-                                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                                               fmt::arg("dep", dep));
-                        } else {
-                            out += fmt::format("VertexSet s{op_id} = "
-                                               "s{parent_id}.remove(i{dep}_adj.vid());\n",
-                                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                                               fmt::arg("dep", dep));
-                        }
-                    } else {
-                        if (op.is_restricted(op.loop_depth())) {
-                            out += fmt::format("counter += s{parent_id}.bounded_cnt(i{dep}_adj.vid());\n",
-                                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                                               fmt::arg("dep", dep));
-                        } else {
-                            out += fmt::format("counter += s{parent_id}.remove_cnt(i{dep}_adj.vid());\n",
-                                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                                               fmt::arg("dep", dep));
-                        }
-                    }
-                }
-            }
+    throw std::logic_error("Unknown set source");
+}
+std::string vertex_name(const VertexReference &ref) {
+    return ref.adjacency ? set_name(*ref.adjacency) + ".vid()" : fmt::format("i{}_id", ref.depth);
+}
+std::string set_expression(const SetExecution &op) {
+    std::string out = set_name(op.input);
+    for (size_t i = 0; i < op.steps.size(); ++i) {
+        const auto &step = op.steps[i];
+        switch (step.opcode) {
+        case SetOpcode::Intersect:
+            out += ".intersect";
+            break;
+        // VertexSet::subtract also excludes the right adjacency's owner.
+        case SetOpcode::DifferenceExcludingOwner:
+            out += ".subtract";
+            break;
+        case SetOpcode::Bound:
+            out += ".bounded";
+            break;
+        case SetOpcode::Remove:
+            out += ".remove";
+            break;
         }
-    } else {
-        // no parent
-        CHECK(op.edge_num() == 1 && op.is_edge(op.loop_depth()))
-            << "\nLogic error: VertexSetIR should have one parent but get none\n"
-            << op;
-
-        if (op.is_restricted(op.loop_depth())) {
-            out += fmt::format("VertexSet s{op_id} = i{dep}_adj.bounded(i{dep}_id)", fmt::arg("op_id", op.id),
-                               fmt::arg("dep", dep));
-        } else {
-            out += fmt::format("VertexSet s{op_id} = i{dep}_adj", fmt::arg("op_id", op.id),
-                               fmt::arg("dep", dep));
-        }
-
-        for (int subtract_id = 0; subtract_id < dep; subtract_id++) {
-            if (plan.config.adjMatType == minigraph::AdjMatType::VertexInduced) {
-                std::string subtract_bound;
-                if (op.is_restricted(subtract_id)) {
-                    subtract_bound = fmt::format(", i{}_adj.vid()", subtract_id);
-                }
-                //                    out += fmt::format("s{op_id} =
-                //                    s{op_id}.subtract(i{subtract_id}_adj{upper_bound});\n",
-                //                                   fmt::arg("op_id", op.id),
-                //                                   fmt::arg("iter_id", dep),
-                //                                   fmt::arg("subtract_id",
-                //                                   subtract_id),
-                //                                   fmt::arg("upper_bound",
-                //                                   subtract_bound));
-                out += fmt::format(".subtract(i{subtract_id}_adj{upper_bound})", fmt::arg("op_id", op.id),
-                                   fmt::arg("iter_id", dep), fmt::arg("subtract_id", subtract_id),
-                                   fmt::arg("upper_bound", subtract_bound));
-
-            } else { // EdgeInduced
-                if (op.is_restricted(subtract_id)) {
-                    //                        out += fmt::format("s{op_id} =
-                    //                        s{op_id}.bounded(i{subtract_id}_adj.vid());\n",
-                    //                                           fmt::arg("op_id", op.id),
-                    //                                           fmt::arg("iter_id", dep),
-                    //                                           fmt::arg("subtract_id",
-                    //                                           subtract_id));
-                    out += fmt::format(".bounded(i{subtract_id}_adj.vid())", fmt::arg("op_id", op.id),
-                                       fmt::arg("iter_id", dep), fmt::arg("subtract_id", subtract_id));
-                } else {
-                    //                        out += fmt::format("s{op_id} =
-                    //                        s{op_id}.remove(i{subtract_id}_adj.vid());\n",
-                    //                                           fmt::arg("op_id", op.id),
-                    //                                           fmt::arg("iter_id", dep),
-                    //                                           fmt::arg("subtract_id",
-                    //                                           subtract_id));
-                    out += fmt::format(".remove(i{subtract_id}_adj.vid())", fmt::arg("op_id", op.id),
-                                       fmt::arg("iter_id", dep), fmt::arg("subtract_id", subtract_id));
-                }
-            }
-        }
-        out += ";\n";
-        out +=
-            gen_indent(dep) + fmt::format("if (s{op_id}.size() == 0) continue;\n", fmt::arg("op_id", op.id));
-        if (plan.is_last_op(op)) {
-            out += fmt::format("counter += s{op_id}.size();\n", fmt::arg("op_id", op.id));
-        }
+        if (op.result == SetResult::Count && i + 1 == op.steps.size())
+            out += "_cnt";
+        out += "(";
+        out += step.rhs ? set_name(*step.rhs) : vertex_name(*step.vertex);
+        if (step.upper_bound)
+            out += ", " + vertex_name(*step.upper_bound);
+        out += ")";
     }
+    return out;
+}
+} // namespace
 
+std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
+    const auto &op = execution_.sets.at(logical.id);
+    std::string out =
+        op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
+    out += set_expression(op) + ";\n";
+    if (op.guard_empty)
+        out += gen_indent(op.depth) + fmt::format("if (s{}.size() == 0) continue;\n", op.id);
+    if (op.result == SetResult::MaterializeThenCount)
+        out += fmt::format("counter += s{}.size();\n", op.id);
     return out;
 }
 
-bool CppCodegen::mg_should_eager(const PlanIR &plan, const MiniGraphIR &mg) {
-    // for (int loop_dep = mg.loop_depth() + 1; loop_dep < plan.mg_ops.size();
-    // loop_dep++){
-    //     for (auto& cmg: plan.mg_ops.at(loop_dep)) {
-    //         if (mg.is_superset_of(cmg)) return true;
-    //     }
-    // }
-
-    // if (plan.get_parent_mg(mg).has_value()) return true;
-
-    VertexSetIR next_vertices = plan.iter_set.at(mg.loop_depth()); // next iteration
-    if (!(next_vertices == mg.m_vertices))
-        return false;
-    for (const auto &next_intersect : plan.set_ops.at(mg.loop_depth() + 1)) {
-        if (mg.computed(next_vertices, next_intersect)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-std::string CppCodegen::gen_mg_type(const PlanIR &plan, const MiniGraphIR &mg) {
-    return mg_should_eager(plan, mg) ? "MiniGraphEager" : "MiniGraphType";
+std::string CppCodegen::gen_mg_type(const PlanIR &, const MiniGraphIR &mg) {
+    return execution_.minigraphs.at(mg.id).eager ? "MiniGraphEager" : "MiniGraphType";
 }
 
 std::string CppCodegen::emit_mg_init(const PlanIR &plan, const MiniGraphIR &mg) {
-    //        const VertexSetIR &iter = plan.iter_set.at(mg.loop_depth());
-    std::string mgType = gen_mg_type(plan, mg);
-    return fmt::format("{mg_type} m{mg_id}({_bounded},{_par});\n", fmt::arg("mg_id", mg.id),
-                       fmt::arg("mg_type", mgType), fmt::arg("_bounded", plan.is_bounded(mg)),
-                       fmt::arg("_par", plan.is_par(mg)));
+    const auto &physical = execution_.minigraphs.at(mg.id);
+    return fmt::format("{} m{}({},{});\n", gen_mg_type(plan, mg), mg.id, physical.bounded,
+                       physical.parallel);
 }
 
 std::string CppCodegen::emit_mg_adj(const PlanIR &plan, int dep, int indent_dep) {
@@ -239,45 +120,26 @@ std::string CppCodegen::emit_mg_adj(const PlanIR &plan, int dep, int indent_dep)
     const VertexSetIR &iter = plan.iter_set.at(dep - 1);
     std::string out;
     for (const auto &mg : plan.mg_used.at(dep)) {
-        auto &vertices = mg.m_vertices;
-        bool same_address = true;
-        if (iter.loop_depth() == vertices.loop_depth()) {
-            for (int i = 0; i <= iter.loop_depth(); i++) {
-                if (iter.is_edge(i) != vertices.is_edge(i))
-                    same_address = false;
-            }
-        } else {
-            same_address = false;
-        }
+        const bool same_address = skip_build_indices(plan, mg, iter);
 
         if (same_address) {
             out += indent;
-            out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N(i{dep}_idx);\n", fmt::arg("mg_id", mg.id),
-                               fmt::arg("dep", dep));
+            out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N(i{dep}_idx);\n",
+                               fmt::arg("mg_id", mg.id), fmt::arg("dep", dep));
         } else {
             std::string v_idx = fmt::format("m{mg_id}_s{iter_id}[i{dep}_idx]", fmt::arg("mg_id", mg.id),
                                             fmt::arg("iter_id", iter.id), fmt::arg("dep", dep));
             out += indent;
-            out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N({v_idx});\n", fmt::arg("mg_id", mg.id),
-                               fmt::arg("v_idx", v_idx));
+            out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N({v_idx});\n",
+                               fmt::arg("mg_id", mg.id), fmt::arg("v_idx", v_idx));
         }
     }
     return out;
 }
 
-bool CppCodegen::skip_build_indices(const PlanIR &plan, const MiniGraphIR &mg, const VertexSetIR &iter) {
-    auto &vertices = mg.m_vertices;
-    if (iter.loop_depth() == vertices.loop_depth()) {
-        bool same_address = true;
-        for (int i = 0; i <= iter.loop_depth(); i++) {
-            if (iter.is_edge(i) != vertices.is_edge(i))
-                same_address = false;
-        }
-        if (same_address)
-            return true;
-    }
-    return false;
-};
+bool CppCodegen::skip_build_indices(const PlanIR &, const MiniGraphIR &mg, const VertexSetIR &iter) {
+    return execution_.minigraphs.at(mg.id).direct_indices.at(iter.id);
+}
 
 std::string CppCodegen::emit_mg_indice(const PlanIR &plan, const MiniGraphIR &mg, int dep) {
     const VertexSetIR &iter = plan.iter_set.at(dep);
@@ -290,188 +152,46 @@ std::string CppCodegen::emit_mg_indice(const PlanIR &plan, const MiniGraphIR &mg
                            fmt::arg("mg_id", mg.id), fmt::arg("iter_id", iter.id));
 };
 
-std::string CppCodegen::emit_mg_est_visits(const PlanIR &plan, const MiniGraphIR &mg, int iter_dep) {
-    int iter_id = plan.iter_set.at(mg.loop_depth()).id;
-    std::string out = fmt::format("s{}.size()", iter_id);
-    for (int dep = mg.loop_depth() + 1; dep < iter_dep; dep++) {
-        const VertexSetIR &cur_iter = plan.iter_set.at(dep);
-        auto parent = plan.get_parent_vset(cur_iter, mg.loop_depth());
-        if (parent.has_value()) {
-            double p1 = 1.0 * plan.meta.num_edge / plan.meta.num_vertex / plan.meta.num_vertex;
-            double p2 = 1.0 * plan.meta.num_triangle * 6 * plan.meta.num_vertex / plan.meta.num_edge /
-                        plan.meta.num_edge;
-            double rate = 1.0;
-            for (int adj_dep = mg.loop_depth(); adj_dep < cur_iter.loop_depth(); adj_dep++) {
-                auto &adj_iter = plan.iter_set.at(adj_dep);
-                if (adj_iter.share_at_least_one_parent_node(parent.value())) {
-                    rate *= p2;
-                } else {
-                    rate *= p1;
-                }
+std::string CppCodegen::emit_mg_build(const PlanIR &, const MiniGraphIR &logical) {
+    const auto &mg = execution_.minigraphs.at(logical.id);
+    std::string out;
+    if (mg.estimate_reuse) {
+        out += fmt::format("double m{}_factor = 0;\n", mg.id);
+        for (const auto &estimate : mg.reuse) {
+            std::string visits = fmt::format("s{}.size()", estimate.initial_set);
+            for (const auto &factor : estimate.factors) {
+                if (factor.set_id)
+                    visits += fmt::format(" * s{}.size()", *factor.set_id);
+                visits += fmt::format(" * {}", factor.scale);
             }
-
-            out += fmt::format(" * s{par_id}.size() * {rate}", fmt::arg("par_id", parent->id),
-                               fmt::arg("rate", rate));
-        } else {
-            double avg_deg = 1.0 * plan.meta.num_edge / plan.meta.num_vertex;
-            out += fmt::format(" * {}", avg_deg);
+            out += gen_indent(mg.depth) +
+                   fmt::format("m{}_factor += {} * {};\n", mg.id, visits, estimate.uses);
         }
+        out +=
+            gen_indent(mg.depth) + fmt::format("m{}.set_reuse_multiplier(m{}_factor); ", mg.id, mg.id);
     }
-    return out;
+    out += fmt::format("m{}.build(", mg.id);
+    if (mg.parent)
+        out += fmt::format("&m{}, ", *mg.parent);
+    return out + fmt::format("s{}, s{}, s{});\n", mg.vertices, mg.intersect, mg.iter);
 }
 
-std::string CppCodegen::emit_mg_build(const PlanIR &plan, const MiniGraphIR &mg) {
-    const VertexSetIR &iter = plan.iter_set.at(mg.loop_depth());
-    int iter_id = iter.id;
-    std::optional<MiniGraphIR> parent_mg = plan.get_parent_mg(mg);
-    std::string out;
-    bool should_build_mg_eagerly = mg_should_eager(plan, mg);
-
-    if (config_.pruningType == PruningType::CostModel && !should_build_mg_eagerly) {
-        std::string factor = fmt::format("double m{mg_id}_factor = 0;\n", fmt::arg("mg_id", mg.id));
-        int max_dep = std::min(plan.p_size - 2, plan.p_size - plan.iep_num - 1);
-
-        int total_reuse = 0;
-        for (int dep = mg.loop_depth() + 2; dep <= max_dep; dep++) {
-            //                    const VertexSetIR &cur_iter =
-            //                    plan.iter_set.at(dep-1);
-            int multiplier = 0;
-            for (const auto &op : plan.set_ops.at(dep)) {
-                auto parent_mg = plan.get_parent_mg(op);
-                if (parent_mg.has_value()) {
-                    if (mg.is_superset_of(parent_mg.value()) || mg == parent_mg.value())
-                        multiplier++;
-                }
-            }
-            if (multiplier > 0) {
-                std::string est_visits = emit_mg_est_visits(plan, mg, dep);
-                factor +=
-                    gen_indent(mg.loop_depth()) +
-                    fmt::format("m{mg_id}_factor += {est_visits} * {multiplier};\n", fmt::arg("mg_id", mg.id),
-                                fmt::arg("est_visits", est_visits), fmt::arg("multiplier", multiplier));
-            }
-            total_reuse += multiplier;
-        };
-        // assert(total_reuse > 0);
-        out += factor;
-        out += gen_indent(mg.loop_depth());
-        out += fmt::format("m{mg_id}.set_reuse_multiplier(m{mg_id}_factor); ", fmt::arg("mg_id", mg.id));
-    }
-
-    if (parent_mg.has_value()) {
-        out += fmt::format("m{mg_id}.build(&m{parent_id}, s{vset_id}, s{vint_id}, s{iter_id});\n",
-                           fmt::arg("parent_id", parent_mg->id), fmt::arg("mg_id", mg.id),
-                           fmt::arg("vset_id", mg.vset_id()), fmt::arg("vint_id", mg.vint_id()),
-                           fmt::arg("iter_id", iter_id));
-    } else {
-        out += fmt::format("m{mg_id}.build(s{vset_id}, s{vint_id}, s{iter_id});\n", fmt::arg("mg_id", mg.id),
-                           fmt::arg("vset_id", mg.vset_id()), fmt::arg("vint_id", mg.vint_id()),
-                           fmt::arg("iter_id", iter_id));
-    }
-    return out;
-};
-
 std::string CppCodegen::emit_mg_op(const PlanIR &plan, const VertexSetIR &op) {
-    std::optional<MiniGraphIR> mg = plan.get_parent_mg(op);
-    if (!mg.has_value())
-        return emit_op(plan, op);
-    int dep = op.loop_depth();
-    std::optional<VertexSetIR> parent = plan.get_parent_vset(op);
-    CHECK(parent.has_value()) << "Logic error (find vset's pruned graph but not its parent)";
-    VertexSetIR iter = plan.iter_set.at(op.loop_depth() - 1);
-    std::string out;
-    if (mg->computed(iter, op)) {
-        // Read directly from the pruned graph
-        if (op.is_restricted(op.loop_depth())) {
-            out += fmt::format("VertexSet s{op_id} = m{mg_id}_adj.bounded(i{dep}_id);\n",
-                               fmt::arg("mg_id", mg->id), fmt::arg("op_id", op.id),
-                               fmt::arg("iter_id", iter.id), fmt::arg("dep", dep));
-        } else {
-            out += fmt::format("VertexSet s{op_id} = m{mg_id}_adj;\n", fmt::arg("mg_id", mg->id),
-                               fmt::arg("op_id", op.id), fmt::arg("iter_id", iter.id), fmt::arg("dep", dep));
-        }
+    return emit_op(plan, op);
+}
 
-        CHECK(!plan.is_last_op(op)) << "\nLogic error (vset should not be the last op if it can be read "
-                                       "directly from a pruned graph)";
-    } else if (op.is_edge(op.loop_depth())) {
-        std::string upper_bound;
-        if (op.is_restricted(op.loop_depth())) {
-            upper_bound = fmt::format(", m{mg_id}_adj.vid()", fmt::arg("mg_id", mg->id));
-        }
-        if (!plan.is_last_op(op)) {
-            // intersect and return vertex set
-            out += fmt::format("VertexSet s{op_id} = "
-                               "s{parent_id}.intersect(m{mg_id}_adj{upper_bound});\n",
-                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                               fmt::arg("mg_id", mg->id), fmt::arg("upper_bound", upper_bound));
-        } else {
-            // intersect and return counter
-            out += fmt::format("counter += s{parent_id}.intersect_cnt(m{mg_id}_adj{upper_bound});\n",
-                               fmt::arg("parent_id", parent->id), fmt::arg("mg_id", mg->id),
-                               fmt::arg("upper_bound", upper_bound));
-        }
-    } else {
-        // VertexInduced: subtraction | EdgeInduced: remove one (should not arrive
-        // here)
-        CHECK(plan.config.adjMatType == AdjMatType::VertexInduced)
-            << "Logic error (EdgeInduced patterns does not require set "
-               "subtraction)";
-        std::string upper_bound;
-        if (op.is_restricted(op.loop_depth())) {
-            upper_bound = fmt::format(", m{mg_id}_adj.vid()", fmt::arg("mg_id", mg->id));
-        }
-        if (!plan.is_last_op(op)) {
-            // subtract and return vertex set
-            out += fmt::format("VertexSet s{op_id} = "
-                               "s{parent_id}.subtract(m{mg_id}_adj{upper_bound});\n",
-                               fmt::arg("op_id", op.id), fmt::arg("parent_id", parent->id),
-                               fmt::arg("mg_id", mg->id), fmt::arg("upper_bound", upper_bound));
-        } else {
-            // subtract and return counter
-            out += fmt::format("counter += s{parent_id}.subtract_cnt(m{mg_id}_adj{upper_bound});\n",
-                               fmt::arg("parent_id", parent->id), fmt::arg("mg_id", mg->id),
-                               fmt::arg("upper_bound", upper_bound));
-        }
+std::string CppCodegen::emit_iep(const PlanIR &, size_t group_id) {
+    const auto &term = execution_.iep.at(group_id);
+    std::string out = fmt::format("counter += {}ll", term.coefficient);
+    for (const auto &factor : term.factors) {
+        out += fmt::format(" * s{}", factor.at(0));
+        if (factor.size() == 1)
+            out += ".size()";
+        for (size_t i = 1; i < factor.size(); ++i)
+            out += fmt::format(".{}(s{})", i + 1 == factor.size() ? "intersect_cnt" : "intersect",
+                               factor[i]);
     }
-    if (!plan.is_last_op(op))
-        out +=
-            gen_indent(dep) + fmt::format("if (s{op_id}.size() == 0) continue;\n", fmt::arg("op_id", op.id));
-    return out;
-};
-
-std::string CppCodegen::emit_iep(const PlanIR &plan, size_t group_id) {
-    int val = plan.iep_vals.at(group_id);
-    const auto &group = plan.iep_groups.at(group_id);
-    std::string out = fmt::format("counter += {}ll", val);
-    for (size_t set_id = 0; set_id < group.size(); set_id++) {
-        const auto &set = group.at(set_id);
-        if (set.size() == 1) {
-            int set_id = set.at(0);
-            const VertexSetIR &left = plan.iep_set.at(set_id);
-            out += fmt::format(" * s{left_id}.size()", fmt::arg("left_id", left.id));
-        } else if (set.size() == 2) {
-            const VertexSetIR &left = plan.iep_set.at(set.at(0));
-            const VertexSetIR &right = plan.iep_set.at(set.at(1));
-            if (left == right) {
-                out += fmt::format(" * s{left_id}.size()", fmt::arg("left_id", left.id));
-            } else {
-                out += fmt::format(" * s{left_id}.intersect_cnt(s{right_id})", fmt::arg("left_id", left.id),
-                                   fmt::arg("right_id", right.id));
-            }
-
-        } else {
-            const VertexSetIR &left = plan.iep_set.at(set.at(0));
-            out += fmt::format(" * s{left_id}", fmt::arg("left_id", left.id));
-            for (size_t i = 1; i < set.size() - 1; ++i) {
-                const VertexSetIR &right = plan.iep_set.at(set.at(i));
-                out += fmt::format(".intersect(s{right_id})", fmt::arg("right_id", right.id));
-            }
-            const VertexSetIR &right = plan.iep_set.at(set.at(set.size() - 1));
-            out += fmt::format(".intersect_cnt(s{right_id})", fmt::arg("right_id", right.id));
-        }
-    }
-    out += ";\n";
-    return out;
+    return out + ";\n";
 }
 
 std::string CppCodegen::gen_comment_iep(const PlanIR &plan, size_t group_id) {
@@ -498,8 +218,9 @@ std::string CppCodegen::gen_comment_iep(const PlanIR &plan, size_t group_id) {
             comp_str += "*";
         }
     }
-    return fmt::format("/* Val: {val} | Group: {group_str} | Comp: {compute_str} */\n", fmt::arg("val", val),
-                       fmt::arg("group_str", group_str), fmt::arg("compute_str", comp_str));
+    return fmt::format("/* Val: {val} | Group: {group_str} | Comp: {compute_str} */\n",
+                       fmt::arg("val", val), fmt::arg("group_str", group_str),
+                       fmt::arg("compute_str", comp_str));
 }
 
 } // namespace minigraph
