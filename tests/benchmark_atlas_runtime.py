@@ -138,6 +138,7 @@ def main():
     parser.add_argument("--worker")
     parser.add_argument("--threads", type=int, default=12)
     parser.add_argument("--parallel", choices=["openmp", "tbb_top", "nested", "nested_rt"], default="nested_rt")
+    parser.add_argument("--backends", choices=["array,bitmap", "array", "bitmap"], default="array,bitmap")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--execution-budget", type=float, default=60)
     parser.add_argument("--preparation-budget", type=float, default=300)
@@ -170,7 +171,9 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     metadata = dict(commit=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                     corpus_sha256=hashlib.sha256(corpus).hexdigest(), threads=args.threads,
-                    trials=args.trials, parallel=args.parallel, execution_budget=args.execution_budget,
+                    trials=args.trials, parallel=args.parallel, backends=args.backends,
+                    bitmap_task_policy=os.environ.get("GRAPHMINI_BITMAP_TASK_POLICY", "baseline"),
+                    execution_budget=args.execution_budget,
                     preparation_budget=args.preparation_budget, atlas_ids=args.atlas_ids,
                     affinity=sorted(os.sched_getaffinity(0)),
                     driver_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -185,6 +188,7 @@ def main():
             pair = []
             # Alternate backend order by pattern; no concurrent native compilations.
             order = ["array", "bitmap"] if pattern["atlas_id"] % 2 else ["bitmap", "array"]
+            order = [backend for backend in order if backend in args.backends.split(",")]
             for backend in order:
                 directory = output / f'{pattern["atlas_id"]}-{backend}'
                 directory.mkdir(exist_ok=True)
@@ -206,7 +210,7 @@ def main():
                 pair.append(record)
                 if record["status"] in ("error", "preparation_timeout"):
                     raise RuntimeError(f"Investigate {directory / 'worker.log'}")
-            if all("count" in r for r in pair):
+            if len(pair) == 2 and all("count" in r for r in pair):
                 assert pair[0]["count"] == pair[1]["count"], f"Backend count mismatch: {pattern}"
     print("SWEEP_COMPLETE", flush=True)
 

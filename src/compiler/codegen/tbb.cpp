@@ -424,6 +424,8 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     if (execution_.bitmap_region) out << "#include \"backend/bitmap_tasks.h\"\n";
     // out << "#include \"oneapi/tbb/parallel_for.h\"\n";
     out << "namespace minigraph {\n";
+    if (execution_.bitmap_region)
+        out << "static const auto bitmap_task_policy = BitmapTaskPolicy::from_environment();\n";
     if (config.bitmapDiagnostics) out << "static std::atomic<uint64_t> bitmap_counters[7]{};\n";
     out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tstatic const Graph * graph;\n";

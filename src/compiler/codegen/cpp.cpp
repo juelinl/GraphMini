@@ -150,7 +150,7 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
         }
         if (depth < plan.logical.p_size - 2)
             out += fmt::format("counter += bitmap_level{}(task_state);\n", depth+1);
-        out += "return counter;\n});\n};\n";
+        out += fmt::format("return counter;\n}}, bitmap_task_policy, {});\n}};\n", depth-dep-1);
     }
     out += fmt::format("return bitmap_level{}(*bitmap_region);\n", dep+1);
     out += "};\n"

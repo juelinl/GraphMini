@@ -32,7 +32,9 @@ int main() {
                 require(seen == end);
             }
         }
-        for (int repeat = 0; repeat < 4; ++repeat) {
+        for (const BitmapTaskPolicy policy : {BitmapTaskPolicy{}, BitmapTaskPolicy{16, 99, true},
+              BitmapTaskPolicy{64, 99, true}, BitmapTaskPolicy{128, 99, true}, BitmapTaskPolicy{64, 1, true}}) {
+          for (int repeat = 0; repeat < 4; ++repeat) {
             const auto result = bitmap_for_each(*region, 0, true,
                 [&](BitmapCountRegion &local, uint32_t position) {
                     // Produce [0,position), then recursively split its iteration.
@@ -41,11 +43,20 @@ int main() {
                         [&](BitmapCountRegion &child, uint32_t inner) -> uint64_t {
                             require(child.input_size(1) == position);
                             return inner + 1;
-                        });
-                });
+                        }, policy, 1);
+                }, policy, 0);
             require(result == n * (n-1) * (n+1) / 6);
             require(region->input_size(0) == n && region->input_size(1) == (n == 1 ? 0 : n));
             require(graph.reads == n); // No row rebuild in any nested task.
+          }
+          // Gaps and empty task ranges: only the two endpoints are candidates.
+          std::vector<uint32_t> sparse{graph.ids.front()};
+          if (n > 1) sparse.push_back(graph.ids.back());
+          region->bind_input(0, sparse);
+          require(bitmap_for_each(*region, 0, true,
+              [](BitmapCountRegion &, uint32_t position) -> uint64_t { return position+1; }, policy)
+              == (n == 1 ? 1 : n+1));
+          region->bind_input(0, graph.ids);
         }
     }
 }
