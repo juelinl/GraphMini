@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <atomic>
+#include "set_ops/set_ops.h"
 
 namespace minigraph {
     using IdType = uint32_t;    // support up to 4-billion number of vertexes (2^64-1 edges)
@@ -147,79 +148,32 @@ namespace minigraph {
 
     VertexSet VertexSet::intersect(const VertexSet &other) const {
         VertexSet out(size());
-        size_t idx_l = 0, idx_r = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left == right) out[out.m_size++] = left;
-        }
+        out.m_size = set_ops::intersection_write(m_data, size(), other.m_data, other.size(), out.m_data);
         return out;
     };
 
     size_t VertexSet::intersect(const VertexSet &other, IdType *buffer) const {
-        size_t idx_l = 0, idx_r = 0, out_size = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left == right) buffer[out_size++] = left;
-        }
-        return out_size;
+        return set_ops::intersection_write(m_data, size(), other.m_data, other.size(), buffer);
     };
 
     VertexSet VertexSet::intersect(const VertexSet &other, IdType upper) const {
         VertexSet out(size());
-        size_t idx_l = 0, idx_r = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left >= upper || right >= upper) break;
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left == right) out[out.m_size++] = left;
-        }
+        out.m_size = intersect(other, upper, out.m_data);
         return out;
     };
 
     size_t VertexSet::intersect(const VertexSet &other, IdType upper, IdType *buffer) const {
-        size_t idx_l = 0, idx_r = 0, out_size = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left >= upper || right >= upper) break;
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left == right) buffer[out_size++] = left;
-        }
-        return out_size;
+        return set_ops::intersection_write(m_data, set_ops::prefix_size(m_data, size(), upper),
+            other.m_data, set_ops::prefix_size(other.m_data, other.size(), upper), buffer);
     };
 
     size_t VertexSet::intersect_cnt(const VertexSet &other) const {
-        size_t idx_l = 0, idx_r = 0, out_size = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left == right) out_size++;
-        }
-        return out_size;
+        return set_ops::intersection_count(m_data, size(), other.m_data, other.size());
     };
 
     size_t VertexSet::intersect_cnt(const VertexSet &other, IdType upper) const {
-        size_t idx_l = 0, idx_r = 0, out_size = 0;
-        while (idx_l < size() && idx_r < other.size()) {
-            const IdType left = m_data[idx_l];
-            const IdType right = other[idx_r];
-            if (left >= upper || right >= upper) break;
-            if (left <= right) idx_l++;
-            if (right <= left) idx_r++;
-            if (left == right) out_size++;
-        }
-        return out_size;
+        return set_ops::intersection_count(m_data, set_ops::prefix_size(m_data, size(), upper),
+            other.m_data, set_ops::prefix_size(other.m_data, other.size(), upper));
     };
 
     VertexSet VertexSet::subtract(const VertexSet &other) const {

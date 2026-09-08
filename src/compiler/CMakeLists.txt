@@ -6,6 +6,13 @@ add_library(graphmini_codegen STATIC
 target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_executable(set_ops_regression ../../tests/set_ops_regression.cpp)
+    add_test(NAME set_ops_regression COMMAND set_ops_regression)
+    add_executable(set_ops_benchmark ../../tests/set_ops_benchmark.cpp)
+    add_executable(set_ops_profile_regression ../../tests/set_ops_regression.cpp)
+    target_compile_definitions(set_ops_profile_regression PRIVATE GRAPHMINI_PROFILE_RUNTIME)
+    target_link_libraries(set_ops_profile_regression PRIVATE common OpenMP::OpenMP_CXX TBB::tbb)
+    add_test(NAME set_ops_profile_regression COMMAND set_ops_profile_regression)
     add_executable(compiler_regression ../../tests/compiler_regression.cpp)
     target_compile_definitions(compiler_regression PRIVATE GRAPHMINI_REFACTORED)
     target_link_libraries(compiler_regression PRIVATE graphmini_codegen)
