@@ -472,7 +472,7 @@ namespace minigraph {
                 const IdType *iter_ptr = _iter.begin();
                 for (uint64_t i = 0; i < m_vertex.size(); i++) {
                     IdType v_id = m_vertex[i];
-                    iter_ptr = advance(iter_ptr, _iter.end(), v_id);
+                    iter_ptr = set_ops::advance_to(iter_ptr, _iter.end(), v_id);
                     if (*iter_ptr == v_id) {
                         // can prune for free
                         size_t buffer_required = m_intersect.size() + m_pos[i];
@@ -569,7 +569,7 @@ namespace minigraph {
                 const IdType *iter_ptr = _iter.begin();
                 for (uint64_t i = 0; i < m_vertex.size(); i++) {
                     IdType v_id = m_vertex[i];
-                    iter_ptr = advance(iter_ptr, _iter.end(), v_id);
+                    iter_ptr = set_ops::advance_to(iter_ptr, _iter.end(), v_id);
                     if (*iter_ptr == v_id) {
                         size_t buffer_required = m_intersect.size() + m_pos[i];
                         if (m_ctn.capacity() < buffer_required) m_ctn.Resize(buffer_required);

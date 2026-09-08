@@ -35,6 +35,7 @@ void check(std::vector<uint32_t> a, std::vector<uint32_t> b) {
     if (na) { targets.push_back(a.front()); targets.push_back(a[na / 2]); targets.push_back(a.back()); }
     for (auto value : targets) {
         const size_t idx = std::lower_bound(a.begin(), a.end(), value) - a.begin();
+        require(set_ops::advance_to(ap, na ? ap + na : ap, value) == (na ? ap + idx : ap));
         require(set_ops::lower_bound_index(ap, na, value) == idx);
         require(set_ops::lower_bound_binary(ap, na, value) == idx);
         if (set_ops::sorted_simd_available()) require(set_ops::lower_bound_simd(ap, na, value) == idx);
@@ -80,5 +81,8 @@ int main() {
     }
     // Left SIMD block matching several right blocks and a scalar tail.
     check({0, 3, 7, 1000, 2000, 3000, 4000, UINT32_MAX}, {0, 1, 2, 3, 4, 5, 6, 7, UINT32_MAX});
-    std::cout << "Validated " << cases + 1 << " sorted-operation pairs and wrapper ownership\n";
+    std::vector<uint32_t> high(129);
+    for (size_t i = 0; i < high.size(); ++i) high[i] = UINT32_MAX - 128 + i;
+    check(high, high);
+    std::cout << "Validated " << cases + 2 << " sorted-operation pairs and wrapper ownership\n";
 }

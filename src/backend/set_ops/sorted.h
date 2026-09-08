@@ -5,6 +5,10 @@
 #include <cstring>
 
 namespace minigraph::set_ops {
+inline const uint32_t* advance_to(const uint32_t* begin, const uint32_t* end, uint32_t value) {
+    while (begin != end && *begin < value) ++begin;
+    return begin;
+}
 // Sorted unique uint32 arrays, no padding/alignment requirements. Empty inputs
 // may be null. Write outputs must not alias inputs and need only the result size.
 inline size_t lower_bound_binary(const uint32_t* a, size_t n, uint32_t value) {
