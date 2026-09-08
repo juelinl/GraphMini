@@ -82,11 +82,46 @@ for size in range(4, 8):
                         bitmap_calls += counter(3)
                         observed_reuse |= counter(2) > counter(0) and counter(3) > 0
                         assert counter(4) == threads, "OpenMP team does not match requested threads"
+                        if size == 4 and missing == [(0, 1), (2, 3)]:
+                            assert "// bitmap-region build once" not in plan.generated_code
+                            assert counter(0) == counter(3) == 0, "C4 has no universal root anchor"
                         if expected and "// bitmap-region build once" in plan.generated_code:
                             assert counter(0) > 0 and counter(3) > 0, "Eligible positive case used no bitmaps"
                             assert counter(1) >= counter(0), "Constructed an empty BitGraph"
         print(f"Validated K{size} minus {missing}", flush=True)
-print(f"Validated {cases} induced clique-like executions against subset oracle", flush=True)
+
+# A planted K4 (or K4 minus one edge) plus leaves attached to the highest-ID
+# universal vertex. Leaves have degree one and cannot belong to either pattern,
+# so the unique induced matching subset is exactly the planted core. This gives
+# a tractable independent answer while exercising high-degree universe tails.
+for missing_edge in [False, True]:
+    query = matrix(4, [e for e in itertools.combinations(range(4), 2)
+                       if not missing_edge or e != (0, 1)])
+    pattern = "".join(str(v) for row in query for v in row)
+    boundary_plans = None
+    for degree in [63, 64, 65, 127, 128, 129]:
+        core = list(range(degree - 3, degree + 1))
+        edges = [(core[i], core[j]) for i in range(4) for j in range(i + 1, 4) if query[i][j]]
+        edges.extend((leaf, degree) for leaf in range(degree - 3))
+        host = graph(matrix(degree + 1, edges))
+        if boundary_plans is None:
+            boundary_plans = [gm.compile_plan(host, pattern, "vertex", pruning_type="none",
+                                               parallel_type="openmp", scheduler=args.scheduler,
+                                               bitmap=bitmap, bitmap_diagnostics=bitmap)
+                              for bitmap in ([False, True] if args.bitmap else [False])]
+        for plan in boundary_plans:
+            for threads in [1, 2]:
+                assert plan.run(host, num_threads=threads).number_of_matches == 1
+                cases += 1
+                if args.bitmap and plan is boundary_plans[-1]:
+                    library = ctypes.CDLL(plan.module_path)
+                    counter = library.graphmini_bitmap_counter
+                    counter.argtypes = [ctypes.c_uint]
+                    counter.restype = ctypes.c_uint64
+                    assert counter(0) > 0 and counter(3) > 0
+                    assert counter(4) == threads
+print("Validated generated-query universe boundaries through 129 neighbors", flush=True)
+print(f"Validated {cases} induced clique-like executions against subset and planted-graph oracles", flush=True)
 if args.bitmap:
     assert bitmap_calls > 0 and bitmap_builds > 0, "Bitmap route silently fell back everywhere"
     assert observed_reuse, "No case reused a BitGraph across prefix bindings"

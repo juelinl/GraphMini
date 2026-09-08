@@ -38,7 +38,8 @@ std::string gen_code(const std::string &query, CodeGenConfig config, MetaData me
     case ParallelType::TbbTop:
     case ParallelType::Nested:
     case ParallelType::NestedRt:
-        return writer.emit_nested(plan, config);
+        return (config.bitmap ? "// bitmap: " + execution.bitmap_reason + "\n" : "") +
+               writer.emit_nested(plan, config);
     default:
         throw std::invalid_argument("Unsupported parallel type");
     }

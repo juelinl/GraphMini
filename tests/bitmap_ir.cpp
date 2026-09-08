@@ -65,6 +65,9 @@ int main() {
                 unsupported.context.config.parType = ParallelType::NestedRt;
                 require(!lower_execution(unsupported).bitmap_region,
                         "Unsupported task capture accepted");
+                if (n == 4 && missing == 0 && scheduler == SchedulerType::GraphPi)
+                    require(gen_code(query, unsupported.context.config, meta).find("// bitmap: requires") == 0,
+                            "Missing generated-code fallback explanation");
             }
         }
     }
