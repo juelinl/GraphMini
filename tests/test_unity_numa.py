@@ -3,9 +3,15 @@ from pathlib import Path
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from unity_numa import cpu_list, choose_domain, physical_cpus, benchmark_command
+from unity_node import partition_patterns
 
 
 class NumaTest(unittest.TestCase):
+    def test_worker_patterns_are_disjoint_and_complete(self):
+        self.assertEqual(partition_patterns([117, 158, 207, 208], 2), [[117, 207], [158, 208]])
+        groups = [partition_patterns(list(range(112))[2*i:2*i+2], 2) for i in range(56)]
+        self.assertEqual([v for groupset in groups for group in groupset for v in group], list(range(112)))
+
     def test_physical_cores_exclude_smt(self):
         self.assertEqual(physical_cpus([0, 1, 2, 3],
                          {0: (0, 0), 1: (0, 1), 2: (0, 0), 3: (0, 1)}), [0, 1])

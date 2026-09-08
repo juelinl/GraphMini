@@ -1,6 +1,5 @@
 #!/bin/bash -l
-# Request 64 physical CPUs on EPYC 7763, block placement. unity_numa.py
-# verifies full NUMA-domain ownership before any measured work.
+# Launched by unity_node.py inside one owned NUMA domain of an exclusive node.
 set -euo pipefail
 root=/home/juelinliu_umass_edu/GraphMini
 module load conda/latest
@@ -9,7 +8,7 @@ export CONDA_PKGS_DIRS="$root/conda-pkgs"
 export GRAPHMINI_BITMAP_TASK_POLICY=grain64
 export CORPUS="$root/atlas6-corpus.json"
 unset GRAPHMINI_PROGRESS_FILE
-job_dir="$root/runs/${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}-${SLURM_ARRAY_TASK_ID:-pilot}"
+job_dir="$root/runs/${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}-${SLURM_ARRAY_TASK_ID:-pilot}-numa${GRAPHMINI_NUMA_NODE:?}"
 mkdir -p "$job_dir"
 git clone --no-hardlinks "$root/source" "$job_dir/repo"
 cd "$job_dir/repo"
@@ -24,10 +23,14 @@ ctest --test-dir build --output-on-failure
 python tests/test_atlas_watchdog.py
 python tests/runtime_progress.py
 python tests/test_unity_numa.py
-if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+if [[ -n "${GRAPHMINI_ATLAS_IDS:-}" ]]; then
+    atlas_ids="$GRAPHMINI_ATLAS_IDS"
+elif [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     atlas_ids=$(python -c 'import json,os; print(json.load(open(os.environ["CORPUS"]))["patterns"][int(os.environ["SLURM_ARRAY_TASK_ID"])]["atlas_id"])')
 else
     atlas_ids=117,158,207,208
+fi
+if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     # Exercise a real native cutoff before allowing the full array to start.
     python scripts/unity_numa.py --metadata "$job_dir/timeout-topology.json" -- \
         python tests/benchmark_atlas_runtime.py --corpus "$root/atlas6-corpus.json" \

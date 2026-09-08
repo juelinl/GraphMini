@@ -38,6 +38,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--metadata', required=True)
     parser.add_argument('--threads', type=int, help='Default: every physical core in the selected NUMA domain')
+    parser.add_argument('--node', type=int, default=int(os.environ['GRAPHMINI_NUMA_NODE']) if 'GRAPHMINI_NUMA_NODE' in os.environ else None)
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if not os.environ.get('SLURM_JOB_ID'):
@@ -47,6 +48,8 @@ def main():
     nodes = []
     for node in Path('/sys/devices/system/node').glob('node[0-9]*'):
         nodes.append((int(node.name[4:]), cpu_list((node / 'cpulist').read_text())))
+    if args.node is not None:
+        nodes = [(node, cpus) for node, cpus in nodes if node == args.node]
     if args.threads is not None and args.threads < 1:
         parser.error('--threads must be positive')
     node, cpus = choose_domain(allowed, online, nodes, args.threads or 1)
