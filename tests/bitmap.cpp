@@ -23,7 +23,8 @@ template <class F> void rejects(F action) {
 }
 
 void raw_kernels(std::mt19937_64 &rng) {
-    for (size_t n : {0, 1, 2, 63, 64, 65, 127, 128, 129, 255, 256, 257, 1025}) {
+    for (size_t n : {0, 1, 2, 63, 64, 65, 127, 128, 129, 255, 256, 257, 511, 512, 513,
+                     1023, 1024, 1025, 8191, 8192, 8193}) {
         const size_t nw = bit_ops::word_count(n);
         for (int trial = 0; trial < 50; ++trial) {
             std::vector<uint64_t> a(nw), b(nw), output(nw);
@@ -73,6 +74,9 @@ void raw_kernels(std::mt19937_64 &rng) {
                 alias = b;
                 bit_ops::intersection_write(a.data(), alias.data(), n, alias.data(), limit);
                 check_output(alias, false);
+                alias = b;
+                bit_ops::difference_write(a.data(), alias.data(), n, alias.data(), limit);
+                check_output(alias, true);
                 alias = a;
                 bit_ops::copy_prefix(alias.data(), n, alias.data(), limit);
                 require(bit_ops::count(alias.data(), n) == cardinality, "In-place bound");
@@ -85,6 +89,25 @@ void raw_kernels(std::mt19937_64 &rng) {
     require(bit_ops::trailing_zeros(0) == 64 && bit_ops::popcount(~uint64_t{0}) == 64,
             "Word primitives");
     require(bit_ops::intersection_count(nullptr, nullptr, 0) == 0, "Null empty bitmap");
+    // uint64-aligned but not necessarily vector-aligned inputs, with exact
+    // allocation ends (ASan catches vector overreads) and output canaries.
+    for (size_t n : {0, 1, 127, 128, 129, 255, 256, 257, 511, 512, 513, 131073}) {
+        const size_t nw = bit_ops::word_count(n);
+        for (size_t offset : {1, 2, 3}) {
+            std::vector<uint64_t> a(nw + offset, ~uint64_t{0});
+            std::vector<uint64_t> b(nw + offset, 0), out(nw + offset + 1, 42);
+            auto *left = a.data() + offset, *right = b.data() + offset;
+            for (size_t limit : {size_t{0}, n / 2, n, n + 1}) {
+                const size_t expected = std::min(n, limit);
+                require(bit_ops::difference_write(left, right, n, out.data() + offset, limit) == expected,
+                        "SIMD misaligned difference/tail/accumulator");
+                require(out[offset - 1] == 42 && out.back() == 42, "SIMD output overrun");
+                require(bit_ops::intersection_count(left, left, n, limit) == expected,
+                        "SIMD all-ones count/accumulator");
+                require(bit_ops::difference_count(left, left, n, limit) == 0, "SIMD alias difference");
+            }
+        }
+    }
 }
 
 void containers(std::mt19937_64 &rng) {
@@ -243,6 +266,7 @@ void graphs(std::mt19937_64 &rng) {
 }
 } // namespace
 int main() {
+    std::cout << "Explicit SIMD word width: " << bit_ops::simd_word_width() << '\n';
     std::mt19937_64 rng(20260907);
     raw_kernels(rng);
     containers(rng);

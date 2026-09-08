@@ -99,7 +99,7 @@ for missing_edge in [False, True]:
                        if not missing_edge or e != (0, 1)])
     pattern = "".join(str(v) for row in query for v in row)
     boundary_plans = None
-    for degree in [63, 64, 65, 127, 128, 129]:
+    for degree in [63, 64, 65, 127, 128, 129, 255, 256, 257, 511, 512, 513]:
         core = list(range(degree - 3, degree + 1))
         edges = [(core[i], core[j]) for i in range(4) for j in range(i + 1, 4) if query[i][j]]
         edges.extend((leaf, degree) for leaf in range(degree - 3))
@@ -120,7 +120,7 @@ for missing_edge in [False, True]:
                     counter.restype = ctypes.c_uint64
                     assert counter(0) > 0 and counter(3) > 0
                     assert counter(4) == threads
-print("Validated generated-query universe boundaries through 129 neighbors", flush=True)
+print("Validated generated-query universe boundaries through 513 neighbors", flush=True)
 print(f"Validated {cases} induced clique-like executions against subset and planted-graph oracles", flush=True)
 if args.bitmap:
     assert bitmap_calls > 0 and bitmap_builds > 0, "Bitmap route silently fell back everywhere"

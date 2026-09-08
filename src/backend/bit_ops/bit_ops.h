@@ -1,4 +1,6 @@
 #pragma once
+#include "avx2.h"
+#include "neon.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -48,13 +50,48 @@ inline size_t trailing_zeros(Word value) {
 // is supported; partial overlap is not. All reads ignore unused tail bits and
 // writes clear them. limit is an exclusive LOCAL bit position, not a vertex ID.
 enum class Binary { Intersection, Difference };
-template <Binary Op, bool Write>
+// Allow tests/benchmarks to retain compiler builtins while bypassing explicit
+// vector kernels. PORTABLE additionally forces portable word primitives.
+inline size_t simd_word_width() {
+#if defined(GRAPHMINI_BIT_OPS_PORTABLE) || defined(GRAPHMINI_BIT_OPS_SCALAR)
+    return 0;
+#elif defined(__aarch64__) || defined(_M_ARM64)
+    return 2;
+#elif defined(__x86_64__) && (defined(__clang__) || defined(__GNUC__))
+    return internal::has_avx2() ? 4 : 0;
+#else
+    return 0;
+#endif
+}
+template <Binary Op, bool Write, bool Simd = true>
 inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nullptr,
                       size_t limit = unlimited) {
     const size_t active_bits = std::min(bits, limit);
     const size_t active_words = word_count(active_bits);
     size_t count = 0;
-    for (size_t i = 0; i < active_words; ++i) {
+    size_t processed = 0;
+    if constexpr (Simd) {
+#if defined(__aarch64__) || defined(_M_ARM64)
+        constexpr size_t minimum_bits = 128;
+#else
+        constexpr size_t minimum_bits = 256;
+#endif
+        // Avoid even the runtime x86 feature check for sub-vector inputs.
+        if (active_bits >= minimum_bits) {
+            const size_t width = simd_word_width();
+            if (width) {
+                processed = (active_bits / word_bits) / width * width;
+                if (processed) {
+#if defined(__aarch64__) || defined(_M_ARM64)
+                    count = internal::neon_words<Op == Binary::Difference, Write>(a, b, processed, out);
+#elif defined(__x86_64__) && (defined(__clang__) || defined(__GNUC__))
+                    count = internal::avx2_words<Op == Binary::Difference, Write>(a, b, processed, out);
+#endif
+                }
+            }
+        }
+    }
+    for (size_t i = processed; i < active_words; ++i) {
         Word value = (Op == Binary::Intersection ? a[i] & b[i] : a[i] & ~b[i]);
         value &= word_mask(i, active_bits);
         if constexpr (Write)
@@ -81,11 +118,7 @@ inline size_t difference_write(const Word *a, const Word *b, size_t bits, Word *
     return combine<Binary::Difference, true>(a, b, bits, out, limit);
 }
 inline size_t count(const Word *a, size_t bits, size_t limit = unlimited) {
-    const size_t active = std::min(bits, limit);
-    size_t result = 0;
-    for (size_t i = 0; i < word_count(active); ++i)
-        result += popcount(a[i] & word_mask(i, active));
-    return result;
+    return intersection_count(a, a, bits, limit);
 }
 inline void copy_prefix(const Word *a, size_t bits, Word *out, size_t limit = unlimited) {
     const size_t active = std::min(bits, limit);
