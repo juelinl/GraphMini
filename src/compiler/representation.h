@@ -7,7 +7,7 @@
 namespace minigraph {
 // Universe identity is a matched loop depth, not a runtime graph vertex ID.
 // Each loop binding creates a fresh universe ordered by global vertex ID.
-struct NeighborhoodUniverse {
+struct NeighborhoodUniverseIR {
     int anchor_depth;
 };
 struct SetDomain {
@@ -20,7 +20,7 @@ struct SharedUniverseRegion {
     std::vector<int> remaining_vertices; // scheduled pattern positions
 };
 struct DomainAnalysis {
-    std::map<int, NeighborhoodUniverse> universes;
+    std::map<int, NeighborhoodUniverseIR> universes;
     std::map<int, SetDomain> sets;
     std::vector<SharedUniverseRegion> regions;
 };

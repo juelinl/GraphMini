@@ -92,6 +92,7 @@ set(PROJECT_PLAN_DIR "${PROJECT_SOURCE_DIR}/plan/")
 file(GLOB plan_runtime_inputs CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/src/backend/*.h" "${PROJECT_SOURCE_DIR}/include/*.h"
     "${PROJECT_SOURCE_DIR}/src/backend/set_ops/*.h"
+    "${PROJECT_SOURCE_DIR}/src/backend/bit_ops/*.h"
     "${PROJECT_SOURCE_DIR}/src/codegen_output/plan.h")
 list(APPEND plan_runtime_inputs "${PROJECT_SOURCE_DIR}/src/backend/graphmini_backend.cppm")
 set(plan_build_fingerprint "${CMAKE_CXX_COMPILER};${CMAKE_CXX_COMPILER_VERSION};${CMAKE_BUILD_TYPE};${CMAKE_CXX_FLAGS};${CMAKE_CXX_FLAGS_RELEASE};${CMAKE_CXX_FLAGS_DEBUG};${OpenMP_CXX_FLAGS};${TBB_VERSION};${TBB_DIR};${GRAPHMINI_EXPERIMENTAL_HEADER_UNITS};${GRAPHMINI_EXPERIMENTAL_TBB_MODULE}")

@@ -19,7 +19,7 @@ DomainAnalysis analyze_domains(const ScheduledConstraints &logical) {
             for (int anchor = 0; anchor <= set.loop_depth(); ++anchor) {
                 if (set.is_edge(anchor)) {
                     domain.neighborhood_anchors.push_back(anchor);
-                    out.universes.emplace(anchor, NeighborhoodUniverse{anchor});
+                    out.universes.emplace(anchor, NeighborhoodUniverseIR{anchor});
                 }
             }
             if (!out.sets.emplace(set.id, std::move(domain)).second)
@@ -37,7 +37,7 @@ DomainAnalysis analyze_domains(const ScheduledConstraints &logical) {
                 region.remaining_vertices.push_back(vertex);
             }
             if (region.remaining_vertices.size() == static_cast<size_t>(n - depth - 1)) {
-                out.universes.emplace(anchor, NeighborhoodUniverse{anchor});
+                out.universes.emplace(anchor, NeighborhoodUniverseIR{anchor});
                 out.regions.push_back(std::move(region));
             }
         }

@@ -8,6 +8,12 @@ add_library(graphmini_codegen STATIC
 target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_executable(bitmap_regression ../../tests/bitmap.cpp)
+    add_test(NAME bitmap_regression COMMAND bitmap_regression)
+    add_executable(bitmap_portable_regression ../../tests/bitmap.cpp)
+    target_compile_definitions(bitmap_portable_regression PRIVATE GRAPHMINI_BIT_OPS_PORTABLE)
+    add_test(NAME bitmap_portable_regression COMMAND bitmap_portable_regression)
+    add_executable(bitmap_benchmark ../../tests/bitmap_benchmark.cpp)
     add_executable(set_ops_regression ../../tests/set_ops_regression.cpp)
     add_test(NAME set_ops_regression COMMAND set_ops_regression)
     add_executable(set_ops_benchmark ../../tests/set_ops_benchmark.cpp)
