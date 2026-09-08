@@ -124,3 +124,10 @@ retain their originating pool; growth is exception-safe, pool Resize is growth-o
 and bounds/overflow checks protect size and allocation requests. Scratch writes
 beyond logical size remain supported. Pruning policies/codegen are unchanged.
 See `tests/benchmarks/minigraph-pool.md` for ownership limits and regression tests.
+
+## Shared sorted-set kernels
+
+VertexSet search/removal/index mapping and MiniGraph index mapping now delegate
+array work to set_ops/sorted.h. Ownership remains in wrappers. NEON/AVX2 index
+matching is enabled for sufficiently large inputs; SIMD search remains an
+explicit benchmark candidate. See `tests/benchmarks/sorted-set-operations.md`.

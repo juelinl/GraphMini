@@ -5,13 +5,14 @@
 using namespace minigraph::set_ops;
 volatile size_t sink;
 template<class F> double measure(F f) {
+    for (size_t i = 0; i < 1000; ++i) { asm volatile("" ::: "memory"); sink = f(i); }
     std::vector<double> times;
     for (int t = 0; t < 5; ++t) {
         const auto start = std::chrono::steady_clock::now();
         size_t sum = 0;
-        for (size_t i = 0; i < 10000; ++i) { asm volatile("" ::: "memory"); sum += f(i); }
+        for (size_t i = 0; i < 50000; ++i) { asm volatile("" ::: "memory"); sum += f(i); }
         sink = sum;
-        times.push_back(std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - start).count() / 10000);
+        times.push_back(std::chrono::duration<double, std::nano>(std::chrono::steady_clock::now() - start).count() / 50000);
     }
     std::sort(times.begin(), times.end()); return times[2];
 }
