@@ -16,6 +16,7 @@ namespace minigraph {
         GraphZero = 2,
         Outgoing = 3, // Experimental: outgoing profile, then canonicality weights.
         BitmapBalanced = 4, // Experimental: bitmap opportunity within a top-eight shortlist.
+        IepFirst = 5, // Experimental: supported IEP width, outgoing profile, canonicality.
     };
 
     enum class PruningType {

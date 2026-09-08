@@ -38,7 +38,7 @@ int main() {
                 expected = std::max(expected, outgoing);
         } while (std::next_permutation(order.begin(), order.end()));
         for (auto policy : {ScheduleHeuristic::Current, ScheduleHeuristic::Outgoing,
-                            ScheduleHeuristic::BitmapBalanced}) {
+                            ScheduleHeuristic::BitmapBalanced, ScheduleHeuristic::IepFirst}) {
             GraphMiniScheduler scheduler;
             scheduler.get_schedule(a.c_str(), 4, 0, 0, 0, policy);
             const auto result = scheduler.get_adj_mat_str();
@@ -62,7 +62,17 @@ int main() {
             ++checked;
         }
     }
-    require(checked == 38 * 3);
+    require(checked == 38 * 4);
+    require(supported_iep_width("0111100010001000", 4) == 2);
+    require(supported_iep_width("0111101111011110", 4) == 0);
+    // Atlas 660: outgoing-first misses a legal three-vertex independent suffix.
+    const std::string iep_counterexample = "0011010001100111011001110100001101010001000100000";
+    GraphMiniScheduler outgoing, iep;
+    outgoing.get_schedule(iep_counterexample.c_str(), 7, 0, 0, 0, ScheduleHeuristic::Outgoing);
+    iep.get_schedule(iep_counterexample.c_str(), 7, 0, 0, 0, ScheduleHeuristic::IepFirst);
+    require(supported_iep_width(outgoing.get_adj_mat_str(), 7) == 0);
+    require(iep.get_in_exclusion_optimize_num() == 2);
+    require(supported_iep_width(iep.get_adj_mat_str(), 7) == 2);
     require(bitmap_opportunity_entry("0111101111011110", 4) == 0);
     require(bitmap_opportunity_entry("0101101001011010", 4) == -1);
     // K(2,4): the shortlist should move the second A vertex before the B suffix.

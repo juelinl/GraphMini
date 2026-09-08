@@ -6,6 +6,16 @@
 #include <stdexcept>
 
 namespace minigraph {
+int supported_iep_width(const std::string &a, int n) {
+    int suffix = 1;
+    for (int i = n - 2; i >= 0; --i) {
+        for (int j = i + 1; j < n; ++j)
+            if (a[i * n + j] == '1')
+                return suffix >= 3 ? suffix - 1 : 0;
+        ++suffix;
+    }
+    return suffix >= 3 ? suffix - 1 : 0;
+}
 std::vector<int> outgoing_profile(const std::string &adjacency, int n) {
     std::vector<int> out(n);
     for (int i = 0; i < n; ++i)
@@ -91,6 +101,8 @@ std::vector<ScheduleCandidate> heuristic_candidates(const std::string &a, int n,
     }
     auto score = [n, policy](const ScheduleCandidate &candidate) {
         auto result = outgoing_profile(candidate.adjacency, n);
+        if (policy == ScheduleHeuristic::IepFirst)
+            result.insert(result.begin(), supported_iep_width(candidate.adjacency, n));
         if (policy == ScheduleHeuristic::BitmapBalanced) {
             const int entry = bitmap_opportunity_entry(candidate.adjacency, n);
             result.insert(result.begin(), entry < 0 ? 0 : n - entry);

@@ -127,9 +127,11 @@ ScheduleResult schedule_pattern(const std::string &adj_mat, int p_size, const Co
     }
     case SchedulerType::GraphMini:
     case SchedulerType::Outgoing:
+    case SchedulerType::IepFirst:
     case SchedulerType::BitmapBalanced: {
         GraphMiniScheduler scheduler{};
-        const auto policy = config.schedulerType == SchedulerType::Outgoing ? ScheduleHeuristic::Outgoing :
+        const auto policy = config.schedulerType == SchedulerType::IepFirst ? ScheduleHeuristic::IepFirst :
+            config.schedulerType == SchedulerType::Outgoing ? ScheduleHeuristic::Outgoing :
             config.schedulerType == SchedulerType::BitmapBalanced ? ScheduleHeuristic::BitmapBalanced :
             ScheduleHeuristic::Current;
         scheduler.get_schedule(adj_mat.c_str(), p_size, meta.num_vertex, meta.num_edge, meta.num_triangle, policy);

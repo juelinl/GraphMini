@@ -21,6 +21,8 @@ namespace minigraph
                     return "GraphZero";
                 case SchedulerType::Outgoing:
                     return "Outgoing";
+                case SchedulerType::IepFirst:
+                    return "IepFirst";
                 case SchedulerType::BitmapBalanced:
                     return "BitmapBalanced";
             }

@@ -70,6 +70,8 @@ const char *scheduler_type_name(SchedulerType scheduler_type) {
             return "graphzero";
         case SchedulerType::Outgoing:
             return "outgoing";
+        case SchedulerType::IepFirst:
+            return "iep_first";
         case SchedulerType::BitmapBalanced:
             return "bitmap_balanced";
     }

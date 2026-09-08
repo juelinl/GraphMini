@@ -101,6 +101,9 @@ SchedulerType parse_scheduler_type(const std::string &value) {
     if (lowered == "outgoing") {
         return SchedulerType::Outgoing;
     }
+    if (lowered == "iep_first") {
+        return SchedulerType::IepFirst;
+    }
     if (lowered == "bitmap_balanced") {
         return SchedulerType::BitmapBalanced;
     }
