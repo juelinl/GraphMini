@@ -20,10 +20,14 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
         reason = "requires vertex-induced, no MiniGraph, OpenMP, benchmark, and at least four vertices";
         return {};
     }
-    const int entry = plan.logical.p_size - 4;
-    const int conversion = entry + 1;
+    const int latest_entry = plan.logical.p_size - 4;
+    const int conversion = plan.logical.p_size - 3;
+    // Prefer the earliest legal scope in this forced experiment: building at
+    // a fixed late depth needlessly repeats identical anchor-universe rows.
+    // Profitability remains separate; the array backend is still the default.
     for (const auto &region : ir.domains.regions) {
-        if (region.entry_depth != entry)
+        const int entry = region.entry_depth;
+        if (entry > latest_entry)
             continue;
         if (!contains(ir.domains.sets.at(plan.logical.iter_set.at(conversion).id).neighborhood_anchors,
                       region.anchor_depth))
@@ -51,7 +55,7 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             out.count_ops.push_back(op.id);
         }
         if (valid && !out.count_ops.empty()) {
-            reason = "terminal counts reuse one neighborhood BitGraph across two matching loops";
+            reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
             return out;
         }
     }

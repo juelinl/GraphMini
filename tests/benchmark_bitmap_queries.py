@@ -1,5 +1,6 @@
 """Full execution comparison. No diagnostic counters; compilation timed separately."""
 import itertools
+import argparse
 import json
 import random
 import statistics
@@ -9,8 +10,14 @@ from matching_oracle import matrix
 from runtime_test_support import restore_generated_plan_at_exit
 
 restore_generated_plan_at_exit()
+parser = argparse.ArgumentParser()
+parser.add_argument("--host-size", type=int)
+parser.add_argument("--trials", type=int, default=7)
+args = parser.parse_args()
+assert args.trials > 0
 results = []
 for size, host_size in [(4, 65), (5, 40), (6, 24), (7, 20)]:
+    host_size = args.host_size or host_size
     for missing in [False, True]:
         query = matrix(size, [e for e in itertools.combinations(range(size), 2)
                               if not missing or e != (0, 1)])
@@ -31,7 +38,7 @@ for size, host_size in [(4, 65), (5, 40), (6, 24), (7, 20)]:
             times = [[], []]
             expected = plans[0].run(graph, num_threads=1).number_of_matches
             assert plans[1].run(graph, num_threads=1).number_of_matches == expected
-            for trial in range(7):
+            for trial in range(args.trials):
                 for index in ([0, 1] if trial % 2 == 0 else [1, 0]):
                     result = plans[index].run(graph, num_threads=1)
                     assert result.number_of_matches == expected
