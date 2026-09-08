@@ -14,9 +14,10 @@ def cpu_list(text):
     return cpus
 
 
-def choose_domain(allowed, online, nodes, threads):
-    candidates = [(node, sorted(cpus & online)) for node, cpus in nodes
-                  if len(cpus & online) >= threads and (cpus & online) <= allowed]
+def choose_domain(allowed, online, nodes, threads, allow_shared=False):
+    candidates = [(node, sorted(cpus & online & allowed)) for node, cpus in nodes
+                  if len(cpus & online & allowed) >= threads
+                  and (allow_shared or (cpus & online) <= allowed)]
     if not candidates:
         raise RuntimeError(f'Allocation {sorted(allowed)} does not own an entire NUMA domain; refusing benchmark')
     return sorted(candidates, key=lambda pair: (-len(pair[1]), pair[0]))[0]
@@ -39,6 +40,8 @@ def main():
     parser.add_argument('--metadata', required=True)
     parser.add_argument('--threads', type=int, help='Default: every physical core in the selected NUMA domain')
     parser.add_argument('--node', type=int, default=int(os.environ['GRAPHMINI_NUMA_NODE']) if 'GRAPHMINI_NUMA_NODE' in os.environ else None)
+    parser.add_argument('--allow-shared', action='store_true', default=os.environ.get('GRAPHMINI_SHARED_NUMA') == '1',
+                        help='Use allocated cores within a NUMA domain shared with other jobs')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if not os.environ.get('SLURM_JOB_ID'):
@@ -52,7 +55,7 @@ def main():
         nodes = [(node, cpus) for node, cpus in nodes if node == args.node]
     if args.threads is not None and args.threads < 1:
         parser.error('--threads must be positive')
-    node, cpus = choose_domain(allowed, online, nodes, args.threads or 1)
+    node, cpus = choose_domain(allowed, online, nodes, args.threads or 1, args.allow_shared)
     topology = {}
     for cpu in cpus:
         path = Path(f'/sys/devices/system/cpu/cpu{cpu}/topology')
@@ -68,12 +71,14 @@ def main():
                     slurm_job=os.environ['SLURM_JOB_ID'],
                     topology=subprocess.check_output(['lscpu', '--json'], text=True),
                     slurm_allocation=subprocess.check_output(['scontrol', 'show', 'job', os.environ['SLURM_JOB_ID']], text=True))
+    metadata['isolation'] = 'shared-numa' if args.allow_shared else 'full-numa'
+    metadata['whole_domain_owned'] = next(full & online for number, full in nodes if number == node) <= allowed
     Path(args.metadata).write_text(json.dumps(metadata, indent=2) + '\n')
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     if not command:
         raise RuntimeError('Missing command')
     command = benchmark_command(command, threads)
-    print(f'Owned NUMA domain {node}: {cpus}; {threads} matching threads', flush=True)
+    print(f'NUMA domain {node}: allocated CPUs {cpus}; {threads} matching threads; {metadata["isolation"]}', flush=True)
     os.execvp('numactl', ['numactl', '--physcpubind=' + ','.join(map(str, binding)),
                          f'--membind={node}', *command])
 

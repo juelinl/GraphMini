@@ -8,7 +8,7 @@ export CONDA_PKGS_DIRS="$root/conda-pkgs"
 export GRAPHMINI_BITMAP_TASK_POLICY=grain64
 export CORPUS="$root/atlas6-corpus.json"
 unset GRAPHMINI_PROGRESS_FILE
-job_dir="$root/runs/${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}-${SLURM_ARRAY_TASK_ID:-pilot}-numa${GRAPHMINI_NUMA_NODE:?}"
+job_dir="$root/runs/${SLURM_ARRAY_JOB_ID:-$SLURM_JOB_ID}-${SLURM_ARRAY_TASK_ID:-pilot}-numa${GRAPHMINI_NUMA_NODE:-auto}"
 mkdir -p "$job_dir"
 git clone --no-hardlinks "$root/source" "$job_dir/repo"
 cd "$job_dir/repo"
@@ -18,7 +18,7 @@ cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_COMPILER="$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-c++" \
     -DPython3_EXECUTABLE="$CONDA_PREFIX/bin/python" \
     -DTBB_DIR="$root/oneTBB/lib/cmake/TBB" -DGRAPHMINI_BUILD_TESTS=ON
-cmake --build build --parallel 8
+cmake --build build --parallel "${GRAPHMINI_BUILD_JOBS:-4}"
 ctest --test-dir build --output-on-failure
 python tests/test_atlas_watchdog.py
 python tests/runtime_progress.py
@@ -28,7 +28,7 @@ if [[ -n "${GRAPHMINI_ATLAS_IDS:-}" ]]; then
 elif [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     atlas_ids=$(python -c 'import json,os; print(json.load(open(os.environ["CORPUS"]))["patterns"][int(os.environ["SLURM_ARRAY_TASK_ID"])]["atlas_id"])')
 else
-    atlas_ids=117,158,207,208
+    atlas_ids=207,208
 fi
 if [[ -z "${SLURM_ARRAY_TASK_ID:-}" ]]; then
     # Exercise a real native cutoff before allowing the full array to start.

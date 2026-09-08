@@ -7,6 +7,15 @@ from unity_node import partition_patterns
 
 
 class NumaTest(unittest.TestCase):
+    def test_shared_domain_selects_allocated_subset(self):
+        nodes = [(0, set(range(32))), (1, set(range(32, 64)))]
+        self.assertEqual(choose_domain(set(range(24, 56)), set(range(64)), nodes, 1, True),
+                         (1, list(range(32, 56))))
+
+    def test_shared_domain_does_not_use_unallocated_cpus(self):
+        self.assertEqual(choose_domain({2, 3, 33, 34}, set(range(64)),
+                         [(0, set(range(32))), (1, set(range(32, 64)))], 1, True), (0, [2, 3]))
+
     def test_worker_patterns_are_disjoint_and_complete(self):
         self.assertEqual(partition_patterns([117, 158, 207, 208], 2), [[117, 207], [158, 208]])
         groups = [partition_patterns(list(range(112))[2*i:2*i+2], 2) for i in range(56)]
