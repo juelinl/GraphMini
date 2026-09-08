@@ -1,4 +1,6 @@
-#ifdef GRAPHMINI_PROFILE_RUNTIME
+#ifdef GRAPHMINI_POOL_STANDALONE
+#include "backend/managed_container.h"
+#elif defined(GRAPHMINI_PROFILE_RUNTIME)
 #include "backend_prof/minigraph.h"
 #else
 #include "backend/minigraph.h"
