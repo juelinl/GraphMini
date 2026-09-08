@@ -9,8 +9,8 @@ is the recommended installation method.
 
 | Platform | Default installation compiler | Verification |
 |---|---|---|
-| macOS | Clang / `clang++` (including AppleClang) | Native builds and Python runtime checks on our macOS host. |
-| Ubuntu/Linux | GCC / `g++` | Native verification on Ubuntu 22.04 (`ssh jupiter`). |
+| macOS | Clang / `clang++` | Verified with upstream Clang 21.1.8 on macOS arm64. AppleClang can be selected for PCH but was not reverified in this update. |
+| Ubuntu/Linux | GCC / `g++` | Verified with Conda GCC/G++ 15.3.0 on Ubuntu 22.04 x86-64 (`ssh jupiter`), not Ubuntu's system GCC 12. |
 | Windows | MSVC / `cl.exe` | **Unverified.** Compiler selection is tested with mocks only; no Windows build or runtime has been validated. |
 
 Both `install_python.py` and `install_onetbb.py` explicitly select these compilers
@@ -90,6 +90,8 @@ multi-config generator. It supplies MSVC-style optimization flags and places the
 query DLL beside the extension. These accommodations are **not evidence of
 Windows compatibility**: native compilation, OpenMP behavior, DLL dependencies,
 and runtime query compilation remain unverified and may require further fixes.
+`environment.yml` has only been exercised on macOS and Ubuntu; Windows dependency
+provisioning may also require adjustments.
 Do not use the Unix shell wrappers on Windows.
 
 ## Experimental Clang modules (separate from normal installation)
