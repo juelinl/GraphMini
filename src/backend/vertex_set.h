@@ -9,6 +9,7 @@
 #include <cassert>
 #include <cstddef>
 #include <atomic>
+#include "vertex_set_pool.h"
 #include "set_ops/set_ops.h"
 
 namespace minigraph {
@@ -21,42 +22,8 @@ namespace minigraph {
         IdType *m_data{nullptr};
         IdType m_vid{INVALID_ID};
         uint64_t m_size{0};
-        bool m_pooled{false};
+        detail::VertexSetPool* m_pool{nullptr};
 
-        class VertexSetPool {
-        private:
-            std::vector<IdType *> buffer_exist;
-            std::vector<IdType *> buffer_avail;
-        public:
-            VertexSetPool() = default;
-
-            ~VertexSetPool() {
-                for (IdType *_data: buffer_exist) {
-                    delete[] _data;
-                }
-            }
-
-            static VertexSetPool &Get() {
-                thread_local static VertexSetPool pool;
-                return pool;
-            };
-
-            IdType *AllocateWorkSpace() {
-                if (buffer_avail.empty()) {
-                    IdType *_data = new IdType[MAX_DEGREE + 1];
-                    buffer_exist.push_back(_data);
-                    buffer_avail.push_back(_data);
-                    TOTAL_ALLOCATED += (MAX_DEGREE + 1) * sizeof(IdType);
-                }
-                IdType *out = buffer_avail.back();
-                buffer_avail.pop_back();
-                return out;
-            };
-
-            void FreeWorkSpace(IdType *_data) {
-                buffer_avail.push_back(_data);
-            };
-        };
 
     public:
         inline static uint64_t MAX_DEGREE{0};
@@ -65,21 +32,27 @@ namespace minigraph {
 
         VertexSet(IdType _vid, IdType *_data, uint64_t _size) :
                 m_data{_data}, m_vid{_vid},
-                m_size{_size}, m_pooled{false} {};
+                m_size{_size}, m_pool{nullptr} {};
 
-        // TODO add fine grained buffer management
-        VertexSet(size_t capacity) : m_pooled{true} {
-            m_data = static_cast<IdType *>(VertexSetPool::Get().AllocateWorkSpace());
+        VertexSet(size_t capacity) {
+            // Keep the existing graph-level configuration/API. The constructor
+            // request is also honored, even for standalone sets larger than a graph.
+            const uint64_t max_capacity = std::numeric_limits<size_t>::max() / sizeof(IdType);
+            if (MAX_DEGREE >= max_capacity || capacity > max_capacity)
+                throw std::length_error("VertexSet capacity overflow");
+            const size_t required = std::max(capacity, static_cast<size_t>(MAX_DEGREE + 1));
+            m_pool = &detail::VertexSetPool::for_capacity(required, TOTAL_ALLOCATED);
+            m_data = m_pool->acquire();
         };
 
         ~VertexSet() {
-            if (m_pooled) VertexSetPool::Get().FreeWorkSpace(m_data);
+            if (m_pool) m_pool->release(m_data);
         };
 
         void swap(VertexSet &other) noexcept {
             std::swap(m_data, other.m_data);
             std::swap(m_size, other.m_size);
-            std::swap(m_pooled, other.m_pooled);
+            std::swap(m_pool, other.m_pool);
             std::swap(m_vid, other.m_vid);
         };
 
@@ -88,7 +61,7 @@ namespace minigraph {
             m_data = src.m_data;
             m_size = src.m_size;
             m_vid = src.m_vid;
-            m_pooled = false;
+            m_pool = nullptr;
         };
 
         // reference to src / pointer copy
@@ -111,7 +84,7 @@ namespace minigraph {
         IdType vid() const { return m_vid; };
         IdType *begin() { return m_data; };
         IdType *end() { return m_data + m_size; };
-        bool pooled() const { return m_pooled; };
+        bool pooled() const { return m_pool != nullptr; };
         const IdType *begin() const { return m_data; };
         const IdType *end() const { return m_data + m_size; };
 
@@ -273,16 +246,16 @@ namespace minigraph {
     // Lvalue operations intentionally remain borrowed views of their live parent.
     VertexSet VertexSet::bounded(IdType upper) && {
         VertexSet out = static_cast<const VertexSet&>(*this).bounded(upper);
-        out.m_pooled = m_pooled;
-        m_pooled = false;
+        out.m_pool = m_pool;
+        m_pool = nullptr;
         return out;
     }
 
     VertexSet VertexSet::remove(IdType upper) && {
         VertexSet out = static_cast<const VertexSet&>(*this).remove(upper);
         if (out.m_data == m_data) {
-            out.m_pooled = m_pooled;
-            m_pooled = false;
+            out.m_pool = m_pool;
+            m_pool = nullptr;
         }
         return out;
     }

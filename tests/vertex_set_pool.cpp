@@ -1,0 +1,84 @@
+#ifdef GRAPHMINI_PROFILE_RUNTIME
+#include "backend_prof/vertex_set.h"
+#else
+#include "backend/vertex_set.h"
+#endif
+#include <iostream>
+#include <thread>
+
+using namespace minigraph;
+void require(bool b) { if (!b) throw std::runtime_error("VertexSetPool regression"); }
+void fill(VertexSet& set, size_t n, uint32_t offset = 0) {
+    set.set_size(n);
+    for (size_t i = 0; i < n; ++i) set[i] = offset + i;
+}
+int main() {
+    std::atomic_uint64_t allocated{0};
+    {
+        detail::VertexSetPool pool(17, allocated);
+        auto* p = pool.acquire();
+        require(pool.capacity() == 17 && pool.checked_out() == 1);
+        for (size_t i = 0; i < 17; ++i) p[i] = i;
+        pool.release(p);
+        auto* reused = pool.acquire();
+        require(reused == p && allocated == 17 * sizeof(uint32_t));
+        pool.release(reused);
+        require(pool.buffer_count() == 1 && pool.checked_out() == 0);
+    }
+    bool rejected = false;
+    try { detail::VertexSetPool invalid(0, allocated); }
+    catch (const std::length_error&) { rejected = true; }
+    require(rejected);
+
+    VertexSet::MAX_DEGREE = 3;
+    VertexSet old(3);
+    fill(old, 3, 10);
+    {
+        VertexSet churn(3);
+        fill(churn, 3);
+    }
+    // Grow while an old owner is still live, then release owners in mixed order.
+    VertexSet::MAX_DEGREE = 255;
+    {
+        VertexSet large(255);
+        fill(large, 255);
+        require(old[0] == 10 && old[2] == 12);
+        auto moved = std::move(large).bounded(100).remove(999);
+        require(moved.pooled() && moved.size() == 100 && moved[99] == 99);
+        VertexSet copy = moved;
+        require(!copy.pooled());
+        VertexSet destination(255);
+        destination = std::move(moved);
+        require(destination.pooled() && destination[99] == 99);
+        VertexSet assigned;
+        assigned = destination;
+        require(!assigned.pooled() && assigned[99] == 99);
+    }
+    VertexSet::MAX_DEGREE = 1;
+    {
+        VertexSet small(1);
+        fill(small, 1, 7);
+        // The explicit constructor request cannot silently exceed allocation.
+        VertexSet standalone(1024);
+        fill(standalone, 1024);
+        require(standalone[1023] == 1023 && old[2] == 12);
+    }
+    for (size_t degree : {2, 2048, 4, 4096, 8, 2048}) {
+        VertexSet::MAX_DEGREE = degree;
+        VertexSet set(degree);
+        fill(set, degree);
+        require(set[degree - 1] == degree - 1 && old[0] == 10);
+    }
+    // Independent workers own independent pools. Owners are never transferred
+    // between threads; all buffers are returned before each worker exits.
+    auto worker = [] {
+        for (int iteration = 0; iteration < 100; ++iteration) {
+            VertexSet set(4096);
+            fill(set, 4096);
+            require(set[4095] == 4095);
+        }
+    };
+    std::thread a(worker), b(worker);
+    a.join(); b.join();
+    std::cout << "Fixed-capacity reuse, overlapping owners, growth/shrink, moves/views and workers passed\n";
+}
