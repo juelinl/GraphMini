@@ -71,8 +71,11 @@ public:
         }
         // Reserve before acquisition so returning a buffer cannot allocate.
         const size_t n = owned_.size() + 1;
-        owned_.reserve(n);
-        free.reserve(n);
+        if (free.capacity() < n) {
+            const size_t grown = free.capacity() <= free.max_size() / 2
+                ? free.capacity() * 2 : free.max_size();
+            free.reserve(std::max(n, grown));
+        }
         std::unique_ptr<uint32_t[]> data(new uint32_t[capacity]);
         Container out(data.get(), capacity);
         owned_.push_back(std::move(data));
