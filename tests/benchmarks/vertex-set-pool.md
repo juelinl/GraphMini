@@ -129,3 +129,48 @@ PYTHONPATH=build-inline-backend/lib python tests/runtime_simd.py
 
 Each Python script restores the shared generated source. Pool growth tests
 intentionally keep different graph executions in the same process.
+
+## Compact VertexSet layout
+
+Follow-up implementation checkpoint: `c384d9a`.
+
+Both normal and profiling VertexSet now store their fields in this order:
+
+```cpp
+internal::VertexSetPool* m_pool;
+IdType* m_data;
+IdType m_size;
+IdType m_vid;
+```
+
+On the supported 64-bit targets this reduces sizeof(VertexSet) from 32 to 24
+bytes: two 8-byte pointers followed by two 4-byte fields, with no padding gap.
+The regression test statically checks the 24-byte size when pointers are 8 bytes.
+This is a 25% reduction in object storage, not a claimed execution-time speedup.
+
+An ID's width alone does not guarantee that every conceivable set count fits:
+the set of all 2^32 possible uint32_t IDs would have an unrepresentable count.
+VertexSet now explicitly limits its stored size to UINT32_MAX. The borrowed-view
+constructor and set_size() reject out-of-range values with length_error instead
+of narrowing silently. Owning construction likewise validates its capacity
+request and the configured graph maximum degree before allocating. Assigning
+MAX_DEGREE itself remains unchanged. Pool padding and allocation-byte arithmetic
+remain wide.
+
+The public size() return type remains uint64_t for source compatibility.
+Internal set-operation outputs are subsets of their left inputs, so valid input
+sizes also bound the stored output counts. Counters and graph metadata are not
+narrowed by this change.
+
+Boundary tests use metadata-only synthetic views to accept UINT32_MAX and reject
+UINT32_MAX + 1 without allocating huge arrays; a rejected set_size() leaves the
+previous size unchanged. Normal/profile pool tests, existing set-operation
+tests, and the C++17-host/C++20-module interoperability test cover the new layout.
+Existing binaries must be rebuilt; the runtime-header cache fingerprint changes
+automatically. No codegen changes are needed.
+
+The compact layout was reverified on macOS and Jupiter: 7/7 PCH CTests,
+9/9 module CTests, size-boundary ASan/UBSan checks, and all 1,824 graph
+executions listed above passed with zero mismatches. Both normal and profiling
+objects satisfy the 24-byte assertion. Local sanitizer checks additionally
+covered the profiling pool and all 6,557 set-operation pairs.

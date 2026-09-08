@@ -110,3 +110,7 @@ retain the originating pool pointer; constructor capacity requests are honored,
 and larger graphs select compatible storage without invalidating older owners.
 No codegen changes. MiniGraph already has a separate variable-capacity pool
 and remains unchanged. See `tests/benchmarks/vertex-set-pool.md`.
+
+VertexSet layout is now compacted to two pointers followed by IdType-sized
+count/vertex fields (24 bytes on 64-bit targets). Wide input sizes are checked
+before narrowing; the public size() arithmetic type and codegen remain unchanged.

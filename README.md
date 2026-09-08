@@ -555,6 +555,8 @@ undersized buffers from earlier graphs. Owning sets retain their originating
 pool through moves and temporary views. Codegen is unchanged.
 See [pool design and verification](tests/benchmarks/vertex-set-pool.md), including
 thread-confinement and cache-retention limitations.
+VertexSet uses two pointers and two 32-bit fields (24 bytes on the supported
+64-bit targets); sizes beyond UINT32_MAX are rejected rather than truncated.
 
 ### Tooling
 
