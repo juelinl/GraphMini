@@ -228,7 +228,7 @@ public:
             num_threads = default_thread_count();
         }
 
-        VertexSet::TOTAL_ALLOCATED = 0;
+        internal::VertexSetPool::TOTAL_ALLOCATED = 0;
         MiniGraphPool::TOTAL_ALLOCATED = 0;
 
         Timer timer;
@@ -244,7 +244,7 @@ public:
                          ? static_cast<double>(out.number_of_matches) / out.execution_time_seconds
                          : 0.0;
         out.num_threads = num_threads;
-        out.vertex_allocated = VertexSet::TOTAL_ALLOCATED;
+        out.vertex_allocated = internal::VertexSetPool::TOTAL_ALLOCATED;
         out.minigraph_allocated = MiniGraphPool::TOTAL_ALLOCATED;
 
         std::vector<double> active_times;

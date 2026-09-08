@@ -12,6 +12,9 @@ export using ::uint64_t;
 export using ::omp_get_thread_num;
 export using ::omp_get_wtime;
 export namespace minigraph {
+    namespace internal {
+        using ::minigraph::internal::VertexSetPool;
+    }
     using ::minigraph::IdType;
     using ::minigraph::VertexSet;
     using ::minigraph::Graph;

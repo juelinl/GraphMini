@@ -24,22 +24,25 @@ The accounting counter must remain valid while new allocations can occur.
 
 ## VertexSet integration
 
-The existing generated entry point assigns VertexSet::MAX_DEGREE before running
-worker loops. VertexSet keeps this API and lazily selects a compatible worker
-pool using max(constructor_request, MAX_DEGREE + 1). Constructor requests are
-now honored even when larger than the configured graph maximum.
+The generated entry point calls internal::VertexSetPool::configure_for_graph()
+before running worker loops. This validates the maximum degree and stores a
+default capacity of max_degree + 1. VertexSet delegates storage selection to
+for_request(), using max(constructor_request, default_capacity). Constructor
+requests are honored even when larger than the configured graph maximum.
 
 A thread-local registry caches the current compatible pool. Smaller requests
 can reuse a larger fixed-capacity pool; requests beyond its capacity select or
 create a larger pool. Existing pools never resize, so outstanding sets from an
 earlier graph remain valid. This addresses the old undersized-buffer reuse risk
-when a later graph increases MAX_DEGREE.
+when a later graph increases the configured capacity.
 
 Each owning VertexSet stores its originating pool pointer instead of a boolean.
 Destruction returns its buffer to that pool, not whichever pool is currently
 selected. Copies remain borrowed; moves, swaps, and rvalue bounded/remove views
 transfer the pool pointer with ownership. Allocation accounting continues through
-the existing VertexSet::TOTAL_ALLOCATED atomic.
+internal::VertexSetPool::TOTAL_ALLOCATED, a 64-bit atomic. It counts newly
+allocated bytes since the last reset, not resident bytes: reusing a retained
+buffer after a reset does not increment it.
 
 The runtime-header fingerprint already includes the new top-level backend
 header, invalidating stale query-library caches. This is an internal layout
@@ -53,7 +56,7 @@ change, not a promise of binary compatibility with previously built consumers.
 - Borrowed views may be read by other workers while their owner remains alive.
   Copying a set still does not extend the owner's lifetime.
 - This refactor does not make concurrent independent queries safe. Existing
-  graph-level globals, including MAX_DEGREE, remain; no new execution-context
+  graph-level globals, including the pool default capacity, remain; no new execution-context
   plumbing or scheduler semantics are introduced.
 - Pools and cached buffers remain until worker exit. A sequence of increasing
   capacities may retain multiple pools. There is no idle-pool eviction policy
@@ -153,9 +156,9 @@ the set of all 2^32 possible uint32_t IDs would have an unrepresentable count.
 VertexSet now explicitly limits its stored size to UINT32_MAX. The borrowed-view
 constructor and set_size() reject out-of-range values with length_error instead
 of narrowing silently. Owning construction likewise validates its capacity
-request and the configured graph maximum degree before allocating. Assigning
-MAX_DEGREE itself remains unchanged. Pool padding and allocation-byte arithmetic
-remain wide.
+request before allocating. configure_for_graph() validates the graph maximum
+degree before changing the default; rejection preserves the previous setting.
+Pool padding and allocation-byte arithmetic remain wide.
 
 The public size() return type remains uint64_t for source compatibility.
 Internal set-operation outputs are subsets of their left inputs, so valid input

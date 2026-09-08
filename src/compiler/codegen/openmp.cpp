@@ -44,7 +44,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     }
     if (config.pruningType != PruningType::None)
         out << "\t\tMiniGraphIF::DATA_GRAPH = graph;\n";
-    out << "\t\tVertexSetType::MAX_DEGREE = graph->get_maxdeg();\n";
+    out << "\t\tinternal::VertexSetPool::configure_for_graph(graph->get_maxdeg());\n";
     out << "#pragma omp parallel num_threads(ctx.num_threads) default(none) "
            "shared(ctx, graph)\n\t\t{ // pragma parallel \n";
     out << "\t\t\tcc &counter = "

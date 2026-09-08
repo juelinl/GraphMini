@@ -33,12 +33,22 @@ int main() {
         catch (const std::length_error&) { overflow_rejected = true; }
         require(overflow_rejected);
     }
-    VertexSet::MAX_DEGREE = max_size + 1;
+    internal::VertexSetPool::configure_for_graph(3);
     overflow_rejected = false;
-    try { VertexSet invalid(0); }
+    try { internal::VertexSetPool::configure_for_graph(max_size + 1); }
     catch (const std::length_error&) { overflow_rejected = true; }
     require(overflow_rejected);
-    VertexSet::MAX_DEGREE = 0;
+    // Invalid configuration must leave the previous default intact.
+    internal::VertexSetPool::TOTAL_ALLOCATED = 0;
+    {
+        VertexSet set(0);
+        fill(set, 4);
+        require(internal::VertexSetPool::TOTAL_ALLOCATED == 4 * sizeof(IdType));
+    }
+    internal::VertexSetPool::TOTAL_ALLOCATED = 0;
+    { VertexSet reused(0); }
+    require(internal::VertexSetPool::TOTAL_ALLOCATED == 0);
+    internal::VertexSetPool::configure_for_graph(0);
     std::atomic_uint64_t allocated{0};
     {
         internal::VertexSetPool pool(17, allocated);
@@ -56,7 +66,7 @@ int main() {
     catch (const std::length_error&) { rejected = true; }
     require(rejected);
 
-    VertexSet::MAX_DEGREE = 3;
+    internal::VertexSetPool::configure_for_graph(3);
     VertexSet old(3);
     fill(old, 3, 10);
     {
@@ -64,7 +74,7 @@ int main() {
         fill(churn, 3);
     }
     // Grow while an old owner is still live, then release owners in mixed order.
-    VertexSet::MAX_DEGREE = 255;
+    internal::VertexSetPool::configure_for_graph(255);
     {
         VertexSet large(255);
         fill(large, 255);
@@ -80,7 +90,7 @@ int main() {
         assigned = destination;
         require(!assigned.pooled() && assigned[99] == 99);
     }
-    VertexSet::MAX_DEGREE = 1;
+    internal::VertexSetPool::configure_for_graph(1);
     {
         VertexSet small(1);
         fill(small, 1, 7);
@@ -90,7 +100,7 @@ int main() {
         require(standalone[1023] == 1023 && old[2] == 12);
     }
     for (size_t degree : {2, 2048, 4, 4096, 8, 2048}) {
-        VertexSet::MAX_DEGREE = degree;
+        internal::VertexSetPool::configure_for_graph(degree);
         VertexSet set(degree);
         fill(set, degree);
         require(set[degree - 1] == degree - 1 && old[0] == 10);

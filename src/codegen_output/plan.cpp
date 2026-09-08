@@ -85,7 +85,7 @@ void plan(const GraphType *_graph, Context &ctx) { // plan
   ctx.iep_redundency = 0;
   graph = _graph;
   MiniGraphIF::DATA_GRAPH = graph;
-  VertexSetType::MAX_DEGREE = graph->get_maxdeg();
+  internal::VertexSetPool::configure_for_graph(graph->get_maxdeg());
   tbb::parallel_for(tbb::blocked_range<size_t>(0, graph->get_vnum()),
                     Loop0(ctx), tbb::simple_partitioner());
 } // plan

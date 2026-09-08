@@ -16,6 +16,7 @@ namespace minigraph::internal {
 // their originating worker; borrowed views may be read by other workers while
 // the owner remains alive. No per-buffer capacity lookup is needed.
 class VertexSetPool {
+    inline static size_t default_capacity_{1};
     const size_t capacity_;
     std::atomic_uint64_t* allocated_;
     std::vector<std::unique_ptr<uint32_t[]>> owned_;
@@ -24,6 +25,25 @@ class VertexSetPool {
     const std::thread::id thread_ = std::this_thread::get_id();
 #endif
 public:
+    // Bytes newly allocated since the last reset, not currently resident bytes.
+    inline static std::atomic_uint64_t TOTAL_ALLOCATED{0};
+
+    // Configure before starting workers. This is process-wide configuration,
+    // not support for concurrent queries with different graph capacities.
+    static void configure_for_graph(uint64_t max_degree) {
+        if (max_degree > std::numeric_limits<uint32_t>::max() ||
+            max_degree >= std::numeric_limits<size_t>::max() / sizeof(uint32_t))
+            throw std::length_error("VertexSet graph capacity overflow");
+        default_capacity_ = static_cast<size_t>(max_degree + 1);
+    }
+
+    static VertexSetPool& for_request(size_t capacity) {
+        if (capacity > std::numeric_limits<uint32_t>::max() ||
+            capacity > std::numeric_limits<size_t>::max() / sizeof(uint32_t))
+            throw std::length_error("VertexSet capacity overflow");
+        return for_capacity(std::max(capacity, default_capacity_), TOTAL_ALLOCATED);
+    }
+
     VertexSetPool(size_t capacity, std::atomic_uint64_t& allocated)
         : capacity_(capacity), allocated_(&allocated) {
         if (!capacity || capacity > std::numeric_limits<size_t>::max() / sizeof(uint32_t))

@@ -147,7 +147,7 @@ void check(const std::vector<uint32_t>& a, const std::vector<uint32_t>& b) {
     }
 }
 int main() {
-    VertexSet::MAX_DEGREE = 4096;
+    internal::VertexSetPool::configure_for_graph(4096);
 #ifdef GRAPHMINI_PROFILE_RUNTIME
     VertexSet::profiler = std::make_shared<Profiler>(2, 2);
 #endif

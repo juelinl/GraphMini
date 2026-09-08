@@ -132,8 +132,8 @@ int main(int argc, char *argv[]){
             log.expId = expId;
             log.result = result;
             log.numThread = processor_count;
-            log.vertexAllocated = VertexSetType::TOTAL_ALLOCATED;
-            log.miniGraphAllocated = VertexSetType ::TOTAL_ALLOCATED;
+            log.vertexAllocated = internal::VertexSetPool::TOTAL_ALLOCATED;
+            log.miniGraphAllocated = MiniGraphPool::TOTAL_ALLOCATED;
             log.threadTimeSTD = 0.0;
             log.save(PROJECT_LOG_DIR);
             return 0;
@@ -156,8 +156,8 @@ int main(int argc, char *argv[]){
         log.expId = expId;
         log.result = result;
         log.numThread = processor_count;
-        log.vertexAllocated = VertexSetType::TOTAL_ALLOCATED;
-        log.miniGraphAllocated = VertexSetType ::TOTAL_ALLOCATED;
+        log.vertexAllocated = internal::VertexSetPool::TOTAL_ALLOCATED;
+        log.miniGraphAllocated = MiniGraphPool::TOTAL_ALLOCATED;
         log.runTime = seconds;
         log.threadMinTime = seconds;
         log.threadMeanTime = seconds;
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]){
         LOG(MSG) << "Execution Time: Timeout";
         LOG(MSG) << "Result: " << ctx.get_result();
         LOG(MSG) << "Throughput: " << result / seconds;
-        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(internal::VertexSetPool::TOTAL_ALLOCATED);
         LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
         LOG(MSG) << "Thread Count: " << processor_count;
     } else {
@@ -178,7 +178,7 @@ int main(int argc, char *argv[]){
         log.expId = expId;
         log.result = result;
         log.numThread = processor_count;
-        log.vertexAllocated = VertexSetType::TOTAL_ALLOCATED;
+        log.vertexAllocated = internal::VertexSetPool::TOTAL_ALLOCATED;
         log.miniGraphAllocated = MiniGraphPool::TOTAL_ALLOCATED;
         log.runTime = seconds;
         log.threadMinTime = ctx.get_min_time();
@@ -193,7 +193,7 @@ int main(int argc, char *argv[]){
         // LOG(MSG) << "ThreadMinTime=" << ctx.get_min_time() << "s";
         // LOG(MSG) << "ThreadMaxTime=" << ctx.get_max_time() << "s";
         // LOG(MSG) << "TimeSTD=" << sqrt(ctx.get_var_time());
-        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(internal::VertexSetPool::TOTAL_ALLOCATED);
         LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
         LOG(MSG) << "Thread Count: " << processor_count;
     }

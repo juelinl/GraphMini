@@ -214,7 +214,7 @@ namespace minigraph {
 		ctx.tick_begin = tick_count::now();
 		ctx.iep_redundency = 0;
 		graph = _graph;
-		VertexSetType::MAX_DEGREE = graph->get_maxdeg();
+		internal::VertexSetPool::configure_for_graph(graph->get_maxdeg());
 		parallel_for(blocked_range<size_t>(0, graph->get_vnum()), Loop0(ctx), simple_partitioner());
 	} // plan
 } // minigraph

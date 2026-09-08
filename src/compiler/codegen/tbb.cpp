@@ -494,7 +494,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     out << "\t\tgraph = _graph;\n";
     if (config.pruningType != PruningType::None)
         out << "\t\tMiniGraphIF::DATA_GRAPH = graph;\n";
-    out << "\t\tVertexSetType::MAX_DEGREE = graph->get_maxdeg();\n";
+    out << "\t\tinternal::VertexSetPool::configure_for_graph(graph->get_maxdeg());\n";
     out << "\t\ttbb::parallel_for(tbb::blocked_range<size_t>(0, "
            "graph->get_vnum()), Loop0(ctx), tbb::simple_partitioner());\n";
     out << "\t} // plan\n";

@@ -142,8 +142,8 @@ int main(int argc, char *argv[]){
         log.expId = expId;
         log.result = result;
         log.numThread = processor_count;
-        log.vertexAllocated = VertexSetType::TOTAL_ALLOCATED;
-        log.miniGraphAllocated = VertexSetType ::TOTAL_ALLOCATED;
+        log.vertexAllocated = internal::VertexSetPool::TOTAL_ALLOCATED;
+        log.miniGraphAllocated = MiniGraphPool::TOTAL_ALLOCATED;
         log.runTime = seconds;
         log.threadMinTime = seconds;
         log.threadMeanTime = seconds;
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]){
         LOG(MSG) << "Execution Time: Timeout";
         LOG(MSG) << "Result: " << ctx.get_result();
         LOG(MSG) << "Throughput: " << result / seconds;
-        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(internal::VertexSetPool::TOTAL_ALLOCATED);
         LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
     } else {
         result = ctx.get_result();
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]){
         log.expId = expId;
         log.result = result;
         log.numThread = processor_count;
-        log.vertexAllocated = VertexSetType::TOTAL_ALLOCATED;
+        log.vertexAllocated = internal::VertexSetPool::TOTAL_ALLOCATED;
         log.miniGraphAllocated = MiniGraphPool::TOTAL_ALLOCATED;
         log.runTime = seconds;
         log.threadMinTime = ctx.get_min_time();
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]){
         LOG(MSG) << "Thread Min Time: " << ToReadableDuration(ctx.get_min_time());
         LOG(MSG) << "Thread Max Time: " << ToReadableDuration(ctx.get_max_time());
         LOG(MSG) << "Thread Time Std Dev: " << ToReadableDuration(sqrt(ctx.get_var_time()));
-        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(VertexSetType::TOTAL_ALLOCATED);
+        LOG(MSG) << "Vertex Set Allocated: " << ToReadableSize(internal::VertexSetPool::TOTAL_ALLOCATED);
         LOG(MSG) << "MiniGraph Allocated: " << ToReadableSize(MiniGraphPool::TOTAL_ALLOCATED);
 
         uint64_t *VID_TO_DEG = new uint64_t [graph->get_vnum()];

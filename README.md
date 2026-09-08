@@ -552,7 +552,8 @@ accumulated match masks, upper bounds, and extra vertex exclusion.
 Normal and profiling VertexSet share a dedicated header-only, fixed-capacity
 worker pool. Compatible requests reuse buffers; larger requests cannot reuse
 undersized buffers from earlier graphs. Owning sets retain their originating
-pool through moves and temporary views. Codegen is unchanged.
+pool through moves and temporary views. Generated entry points configure the
+pool before starting workers; allocation accounting also belongs to the pool.
 See [pool design and verification](tests/benchmarks/vertex-set-pool.md), including
 thread-confinement and cache-retention limitations.
 VertexSet uses two pointers and two 32-bit fields (24 bytes on the supported

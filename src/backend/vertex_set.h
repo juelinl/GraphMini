@@ -29,23 +29,13 @@ namespace minigraph {
             return static_cast<IdType>(size);
         }
     public:
-        inline static uint64_t MAX_DEGREE{0};
-        inline static std::atomic_uint64_t TOTAL_ALLOCATED{0};
         VertexSet() = default;
 
         VertexSet(IdType _vid, IdType *_data, uint64_t _size) :
                 m_data{_data}, m_size{checked_size(_size)}, m_vid{_vid} {};
 
         VertexSet(size_t capacity) {
-            // Keep the existing graph-level configuration/API. The constructor
-            // request is also honored, even for standalone sets larger than a graph.
-            const uint64_t max_capacity = std::numeric_limits<size_t>::max() / sizeof(IdType);
-            if (MAX_DEGREE >= max_capacity || capacity > max_capacity ||
-                MAX_DEGREE > std::numeric_limits<IdType>::max() ||
-                capacity > std::numeric_limits<IdType>::max())
-                throw std::length_error("VertexSet capacity overflow");
-            const size_t required = std::max(capacity, static_cast<size_t>(MAX_DEGREE + 1));
-            m_pool = &internal::VertexSetPool::for_capacity(required, TOTAL_ALLOCATED);
+            m_pool = &internal::VertexSetPool::for_request(capacity);
             m_data = m_pool->acquire();
         };
 

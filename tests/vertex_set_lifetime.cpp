@@ -8,7 +8,7 @@
 using namespace minigraph;
 
 int main() {
-    VertexSet::MAX_DEGREE = 8;
+    internal::VertexSetPool::configure_for_graph(8);
     IdType data[]{1, 3, 5};
     VertexSet source(7, data, 3);
     auto removed = source.remove(3).remove(99);
