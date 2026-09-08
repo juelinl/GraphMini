@@ -30,7 +30,9 @@ No codegen changes or additional profiling counters are introduced.
 - SIMD lower-bound scanning is implemented and tested as a benchmark candidate,
   but not enabled in lower_bound_index: gains depend on where the search stops.
 - MiniGraph's cost-model cursor advancement also uses a shared helper. Its
-  end-of-range guard precedes dereferencing, unlike the previous helper.
+  end-of-range guard precedes dereferencing, unlike the previous helper. Both
+  cost-model build paths also check for an exhausted cursor before reading it;
+  this fixes a pre-existing out-of-range read on empty/exhausted iterator subsets.
 
 The old duplicated MiniGraph binary_search helper was removed. The runtime
 header fingerprint covers sorted.h, so generated query caches are invalidated.
@@ -43,6 +45,16 @@ unsigned IDs, sparse/absent matches, exact-size unaligned buffers, identity
 mapping, and wrapper ownership. It runs against normal and profiling runtimes.
 Direct SIMD entry points are exercised even below the dispatcher threshold.
 Existing MiniGraph parent/child rebuild and VertexSet lifetime tests also apply.
+Targeted cost-model parent/child cases additionally exercise empty, early-ending,
+and last-vertex iterator subsets, checking every returned adjacency.
+
+On macOS ARM64 and Ubuntu x86-64 (Jupiter), all 11 PCH and 13 backend-module
+CTests passed. Normal-backend ASan/UBSan checks passed on both platforms.
+Each platform passed 912 generated-query executions: PCH runtime_pool (144),
+runtime_simd (72), runtime_large (48, including 6/7-vertex patterns), runtime_smoke
+(432), plus module runtime_pool (144) and runtime_simd (72). All 1,824 matched
+independent expected counts. After adding the final exhausted-cursor guards,
+both builds were rebuilt and CTests plus runtime_pool repeated on both platforms.
 
 `tests/sorted_ops_benchmark.cpp` measures hot-cache kernels at -O3. Each result is
 the median of five batches of 50,000 calls after 1,000 warm-up calls, with a
@@ -52,3 +64,19 @@ identical values in separate arrays (1), and partial overlap (2). This initial
 benchmark uses equal-sized index inputs; it does not characterize skewed graph
 workloads or establish an optimal dispatcher threshold. These measurements are
 not whole-query speedup claims.
+
+Raw results are recorded in [sorted-set-operations.json](sorted-set-operations.json).
+For the tested index inputs of at least 32 elements, scalar/dispatch ratios
+ranged from 0.94–2.62x on macOS NEON and 1.42–6.10x on Jupiter AVX2. Thus the
+NEON dispatcher had a small regression in one case; SIMD is not universally
+faster. At 128 elements with identical values in separate arrays, scalar versus
+dispatch was 626.5 vs 294.4 ns locally and 428.0 vs 224.0 ns on Jupiter.
+
+Search results depend strongly on stop position: at 64 elements, a front hit
+took 1.25 ns scalar versus 2.22 ns direct SIMD locally, while a past-end search
+took 67.2 versus 21.7 ns. For larger sets, binary search avoids scanning the full
+prefix. We retain the existing production search policy and leave SIMD scanning
+as an explicit candidate. Short-call timings also depend on compiler inlining,
+code layout, and CPU frequency; the scalar and dispatch columns can differ even
+when they ultimately select the same algorithm. Threshold tuning needs broader
+workload measurements rather than treating these microbenchmarks as universal.

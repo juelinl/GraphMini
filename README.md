@@ -547,6 +547,10 @@ for memory contracts, tests, and benchmark limitations.
 The [subtraction follow-up](tests/benchmarks/simd-subtraction.md) covers the
 accumulated match masks, upper bounds, and extra vertex exclusion.
 
+Search, removal, and index mapping also use shared array kernels. Index mapping
+supports NEON/AVX2; small-set SIMD search remains a benchmark candidate.
+See [sorted-set kernels and measurements](tests/benchmarks/sorted-set-operations.md).
+
 ### Vertex-set workspace pools
 
 Normal and profiling VertexSet share a dedicated header-only, fixed-capacity

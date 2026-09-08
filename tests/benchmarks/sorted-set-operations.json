@@ -1,0 +1,799 @@
+{
+  "date": "2026-09-07",
+  "compiler": "Clang 21.1.8, Release -O3",
+  "benchmark": "tests/sorted_ops_benchmark.cpp",
+  "iterations": 50000,
+  "batches": 5,
+  "warmup": 1000,
+  "units": "nanoseconds per call",
+  "platforms": {
+    "macos_arm64": [
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 0,
+        "scalar_ns": 1.24,
+        "simd_ns": 2.09666,
+        "dispatch_ns": 1.23918
+      },
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 1,
+        "scalar_ns": 2.74834,
+        "simd_ns": 2.68168,
+        "dispatch_ns": 2.77582
+      },
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 2,
+        "scalar_ns": 3.60166,
+        "simd_ns": 2.81168,
+        "dispatch_ns": 3.0775
+      },
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 3,
+        "scalar_ns": 2.47834,
+        "simd_ns": 3.03834,
+        "dispatch_ns": 7.1625
+      },
+      {
+        "operation": "indices",
+        "n": 4,
+        "shape": 0,
+        "scalar_ns": 20.1367,
+        "simd_ns": 8.05,
+        "dispatch_ns": 24.935
+      },
+      {
+        "operation": "indices",
+        "n": 4,
+        "shape": 1,
+        "scalar_ns": 9.51332,
+        "simd_ns": 9.00416,
+        "dispatch_ns": 7.48918
+      },
+      {
+        "operation": "indices",
+        "n": 4,
+        "shape": 2,
+        "scalar_ns": 7.57916,
+        "simd_ns": 6.64666,
+        "dispatch_ns": 9.9025
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 0,
+        "scalar_ns": 1.24084,
+        "simd_ns": 2.12,
+        "dispatch_ns": 1.26084
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 1,
+        "scalar_ns": 3.35084,
+        "simd_ns": 3.78084,
+        "dispatch_ns": 3.37334
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 2,
+        "scalar_ns": 5.105,
+        "simd_ns": 3.92834,
+        "dispatch_ns": 5.225
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 3,
+        "scalar_ns": 3.72168,
+        "simd_ns": 3.28084,
+        "dispatch_ns": 4.175
+      },
+      {
+        "operation": "indices",
+        "n": 8,
+        "shape": 0,
+        "scalar_ns": 35.9833,
+        "simd_ns": 13.55,
+        "dispatch_ns": 37.565
+      },
+      {
+        "operation": "indices",
+        "n": 8,
+        "shape": 1,
+        "scalar_ns": 18.2325,
+        "simd_ns": 17.9592,
+        "dispatch_ns": 17.4458
+      },
+      {
+        "operation": "indices",
+        "n": 8,
+        "shape": 2,
+        "scalar_ns": 23.5242,
+        "simd_ns": 15.9142,
+        "dispatch_ns": 26.4033
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 0,
+        "scalar_ns": 1.24584,
+        "simd_ns": 2.17084,
+        "dispatch_ns": 2.83166
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 1,
+        "scalar_ns": 5.10166,
+        "simd_ns": 4.82918,
+        "dispatch_ns": 5.37416
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 2,
+        "scalar_ns": 9.23582,
+        "simd_ns": 6.16918,
+        "dispatch_ns": 8.76084
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 3,
+        "scalar_ns": 5.43,
+        "simd_ns": 4.47916,
+        "dispatch_ns": 5.56082
+      },
+      {
+        "operation": "indices",
+        "n": 16,
+        "shape": 0,
+        "scalar_ns": 81.13,
+        "simd_ns": 39.9817,
+        "dispatch_ns": 111.594
+      },
+      {
+        "operation": "indices",
+        "n": 16,
+        "shape": 1,
+        "scalar_ns": 40.085,
+        "simd_ns": 36.505,
+        "dispatch_ns": 41.5458
+      },
+      {
+        "operation": "indices",
+        "n": 16,
+        "shape": 2,
+        "scalar_ns": 59.06,
+        "simd_ns": 44.5367,
+        "dispatch_ns": 112.123
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 0,
+        "scalar_ns": 1.23916,
+        "simd_ns": 2.09334,
+        "dispatch_ns": 1.54418
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 1,
+        "scalar_ns": 23.48,
+        "simd_ns": 9.54834,
+        "dispatch_ns": 16.175
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 2,
+        "scalar_ns": 15.7833,
+        "simd_ns": 20.2375,
+        "dispatch_ns": 22.4417
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 3,
+        "scalar_ns": 10.6333,
+        "simd_ns": 11.2375,
+        "dispatch_ns": 29.7208
+      },
+      {
+        "operation": "indices",
+        "n": 32,
+        "shape": 0,
+        "scalar_ns": 196.715,
+        "simd_ns": 94.9275,
+        "dispatch_ns": 96.795
+      },
+      {
+        "operation": "indices",
+        "n": 32,
+        "shape": 1,
+        "scalar_ns": 86.89,
+        "simd_ns": 99.84,
+        "dispatch_ns": 73.2258
+      },
+      {
+        "operation": "indices",
+        "n": 32,
+        "shape": 2,
+        "scalar_ns": 132.582,
+        "simd_ns": 124.319,
+        "dispatch_ns": 140.639
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 0,
+        "scalar_ns": 1.2475,
+        "simd_ns": 2.2225,
+        "dispatch_ns": 1.23918
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 1,
+        "scalar_ns": 17.6383,
+        "simd_ns": 15.2417,
+        "dispatch_ns": 48.4892
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 2,
+        "scalar_ns": 67.2083,
+        "simd_ns": 21.6783,
+        "dispatch_ns": 53.6317
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 3,
+        "scalar_ns": 29.1658,
+        "simd_ns": 12.0592,
+        "dispatch_ns": 36.0892
+      },
+      {
+        "operation": "indices",
+        "n": 64,
+        "shape": 0,
+        "scalar_ns": 677.115,
+        "simd_ns": 293.653,
+        "dispatch_ns": 309.336
+      },
+      {
+        "operation": "indices",
+        "n": 64,
+        "shape": 1,
+        "scalar_ns": 319.694,
+        "simd_ns": 157.14,
+        "dispatch_ns": 185.283
+      },
+      {
+        "operation": "indices",
+        "n": 64,
+        "shape": 2,
+        "scalar_ns": 296.458,
+        "simd_ns": 312.259,
+        "dispatch_ns": 213.496
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 0,
+        "scalar_ns": 16.6167,
+        "simd_ns": 2.41416,
+        "dispatch_ns": 16.6667
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 1,
+        "scalar_ns": 15.1067,
+        "simd_ns": 20.4042,
+        "dispatch_ns": 14.4925
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 2,
+        "scalar_ns": 14.5158,
+        "simd_ns": 39.0875,
+        "dispatch_ns": 14.8875
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 3,
+        "scalar_ns": 14.6492,
+        "simd_ns": 24.7025,
+        "dispatch_ns": 14.515
+      },
+      {
+        "operation": "indices",
+        "n": 128,
+        "shape": 0,
+        "scalar_ns": 1246.66,
+        "simd_ns": 438.175,
+        "dispatch_ns": 476.643
+      },
+      {
+        "operation": "indices",
+        "n": 128,
+        "shape": 1,
+        "scalar_ns": 626.544,
+        "simd_ns": 292.337,
+        "dispatch_ns": 294.352
+      },
+      {
+        "operation": "indices",
+        "n": 128,
+        "shape": 2,
+        "scalar_ns": 1017.16,
+        "simd_ns": 602.903,
+        "dispatch_ns": 422.327
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 0,
+        "scalar_ns": 25.3092,
+        "simd_ns": 2.095,
+        "dispatch_ns": 25.2517
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 1,
+        "scalar_ns": 23.7008,
+        "simd_ns": 212.439,
+        "dispatch_ns": 25.1308
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 2,
+        "scalar_ns": 24.53,
+        "simd_ns": 307.886,
+        "dispatch_ns": 23.7
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 3,
+        "scalar_ns": 24.7117,
+        "simd_ns": 192.144,
+        "dispatch_ns": 23.9733
+      },
+      {
+        "operation": "indices",
+        "n": 1024,
+        "shape": 0,
+        "scalar_ns": 9767.98,
+        "simd_ns": 4448.72,
+        "dispatch_ns": 3942.78
+      },
+      {
+        "operation": "indices",
+        "n": 1024,
+        "shape": 1,
+        "scalar_ns": 3851.07,
+        "simd_ns": 2411.65,
+        "dispatch_ns": 2474.3
+      },
+      {
+        "operation": "indices",
+        "n": 1024,
+        "shape": 2,
+        "scalar_ns": 6294.38,
+        "simd_ns": 3661.03,
+        "dispatch_ns": 3590.11
+      }
+    ],
+    "jupiter_x86_64": [
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 0,
+        "scalar_ns": 6.3813,
+        "simd_ns": 6.38188,
+        "dispatch_ns": 4.01358
+      },
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 1,
+        "scalar_ns": 10.0277,
+        "simd_ns": 11.0936,
+        "dispatch_ns": 10.0314
+      },
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 2,
+        "scalar_ns": 10.015,
+        "simd_ns": 6.58086,
+        "dispatch_ns": 9.39974
+      },
+      {
+        "operation": "search",
+        "n": 4,
+        "shape": 3,
+        "scalar_ns": 11.7105,
+        "simd_ns": 11.1771,
+        "dispatch_ns": 8.83406
+      },
+      {
+        "operation": "indices",
+        "n": 4,
+        "shape": 0,
+        "scalar_ns": 15.8404,
+        "simd_ns": 19.0484,
+        "dispatch_ns": 12.6401
+      },
+      {
+        "operation": "indices",
+        "n": 4,
+        "shape": 1,
+        "scalar_ns": 5.97724,
+        "simd_ns": 8.77162,
+        "dispatch_ns": 5.829
+      },
+      {
+        "operation": "indices",
+        "n": 4,
+        "shape": 2,
+        "scalar_ns": 8.41876,
+        "simd_ns": 9.74772,
+        "dispatch_ns": 8.474
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 0,
+        "scalar_ns": 2.00556,
+        "simd_ns": 2.14866,
+        "dispatch_ns": 1.14638
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 1,
+        "scalar_ns": 4.01092,
+        "simd_ns": 2.50698,
+        "dispatch_ns": 4.68034
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 2,
+        "scalar_ns": 4.86248,
+        "simd_ns": 2.43098,
+        "dispatch_ns": 7.3524
+      },
+      {
+        "operation": "search",
+        "n": 8,
+        "shape": 3,
+        "scalar_ns": 6.18536,
+        "simd_ns": 6.78574,
+        "dispatch_ns": 7.54934
+      },
+      {
+        "operation": "indices",
+        "n": 8,
+        "shape": 0,
+        "scalar_ns": 37.173,
+        "simd_ns": 7.01756,
+        "dispatch_ns": 38.4776
+      },
+      {
+        "operation": "indices",
+        "n": 8,
+        "shape": 1,
+        "scalar_ns": 15.3436,
+        "simd_ns": 14.6397,
+        "dispatch_ns": 15.0341
+      },
+      {
+        "operation": "indices",
+        "n": 8,
+        "shape": 2,
+        "scalar_ns": 24.263,
+        "simd_ns": 9.88894,
+        "dispatch_ns": 24.0819
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 0,
+        "scalar_ns": 2.19356,
+        "simd_ns": 2.35006,
+        "dispatch_ns": 1.33744
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 1,
+        "scalar_ns": 7.35196,
+        "simd_ns": 3.34214,
+        "dispatch_ns": 6.68356
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 2,
+        "scalar_ns": 8.14544,
+        "simd_ns": 3.19032,
+        "dispatch_ns": 11.9042
+      },
+      {
+        "operation": "search",
+        "n": 16,
+        "shape": 3,
+        "scalar_ns": 10.1012,
+        "simd_ns": 6.14548,
+        "dispatch_ns": 10.4017
+      },
+      {
+        "operation": "indices",
+        "n": 16,
+        "shape": 0,
+        "scalar_ns": 91.5967,
+        "simd_ns": 16.7177,
+        "dispatch_ns": 87.9648
+      },
+      {
+        "operation": "indices",
+        "n": 16,
+        "shape": 1,
+        "scalar_ns": 38.523,
+        "simd_ns": 28.0255,
+        "dispatch_ns": 39.6423
+      },
+      {
+        "operation": "indices",
+        "n": 16,
+        "shape": 2,
+        "scalar_ns": 62.0256,
+        "simd_ns": 25.7684,
+        "dispatch_ns": 65.0504
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 0,
+        "scalar_ns": 2.19382,
+        "simd_ns": 2.35006,
+        "dispatch_ns": 1.2542
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 1,
+        "scalar_ns": 8.1712,
+        "simd_ns": 3.75992,
+        "dispatch_ns": 11.9047
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 2,
+        "scalar_ns": 13.3075,
+        "simd_ns": 4.58328,
+        "dispatch_ns": 20.0519
+      },
+      {
+        "operation": "search",
+        "n": 32,
+        "shape": 3,
+        "scalar_ns": 13.9686,
+        "simd_ns": 7.04974,
+        "dispatch_ns": 18.129
+      },
+      {
+        "operation": "indices",
+        "n": 32,
+        "shape": 0,
+        "scalar_ns": 207.107,
+        "simd_ns": 34.1099,
+        "dispatch_ns": 34.834
+      },
+      {
+        "operation": "indices",
+        "n": 32,
+        "shape": 1,
+        "scalar_ns": 90.1074,
+        "simd_ns": 53.6998,
+        "dispatch_ns": 52.9201
+      },
+      {
+        "operation": "indices",
+        "n": 32,
+        "shape": 2,
+        "scalar_ns": 144.142,
+        "simd_ns": 55.3927,
+        "dispatch_ns": 55.4946
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 0,
+        "scalar_ns": 2.19368,
+        "simd_ns": 2.27882,
+        "dispatch_ns": 1.21594
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 1,
+        "scalar_ns": 13.4271,
+        "simd_ns": 5.16464,
+        "dispatch_ns": 22.6914
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 2,
+        "scalar_ns": 23.1047,
+        "simd_ns": 8.48564,
+        "dispatch_ns": 42.1707
+      },
+      {
+        "operation": "search",
+        "n": 64,
+        "shape": 3,
+        "scalar_ns": 26.7717,
+        "simd_ns": 9.55426,
+        "dispatch_ns": 32.6602
+      },
+      {
+        "operation": "indices",
+        "n": 64,
+        "shape": 0,
+        "scalar_ns": 443.396,
+        "simd_ns": 71.4697,
+        "dispatch_ns": 72.662
+      },
+      {
+        "operation": "indices",
+        "n": 64,
+        "shape": 1,
+        "scalar_ns": 203.218,
+        "simd_ns": 106.398,
+        "dispatch_ns": 106.287
+      },
+      {
+        "operation": "indices",
+        "n": 64,
+        "shape": 2,
+        "scalar_ns": 321.667,
+        "simd_ns": 109.387,
+        "dispatch_ns": 109.994
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 0,
+        "scalar_ns": 7.51896,
+        "simd_ns": 2.50668,
+        "dispatch_ns": 6.9737
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 1,
+        "scalar_ns": 8.0202,
+        "simd_ns": 8.76294,
+        "dispatch_ns": 6.09058
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 2,
+        "scalar_ns": 7.11696,
+        "simd_ns": 14.0384,
+        "dispatch_ns": 6.39848
+      },
+      {
+        "operation": "search",
+        "n": 128,
+        "shape": 3,
+        "scalar_ns": 10.2807,
+        "simd_ns": 11.3792,
+        "dispatch_ns": 10.3498
+      },
+      {
+        "operation": "indices",
+        "n": 128,
+        "shape": 0,
+        "scalar_ns": 865.903,
+        "simd_ns": 148.937,
+        "dispatch_ns": 146.075
+      },
+      {
+        "operation": "indices",
+        "n": 128,
+        "shape": 1,
+        "scalar_ns": 428.046,
+        "simd_ns": 225.883,
+        "dispatch_ns": 223.97
+      },
+      {
+        "operation": "indices",
+        "n": 128,
+        "shape": 2,
+        "scalar_ns": 647.286,
+        "simd_ns": 242.078,
+        "dispatch_ns": 235.182
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 0,
+        "scalar_ns": 9.71234,
+        "simd_ns": 2.36338,
+        "dispatch_ns": 8.84108
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 1,
+        "scalar_ns": 10.3488,
+        "simd_ns": 64.8623,
+        "dispatch_ns": 10.5595
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 2,
+        "scalar_ns": 10.0795,
+        "simd_ns": 132.986,
+        "dispatch_ns": 9.20826
+      },
+      {
+        "operation": "search",
+        "n": 1024,
+        "shape": 3,
+        "scalar_ns": 46.0688,
+        "simd_ns": 72.2085,
+        "dispatch_ns": 40.8038
+      },
+      {
+        "operation": "indices",
+        "n": 1024,
+        "shape": 0,
+        "scalar_ns": 6865.75,
+        "simd_ns": 1178.92,
+        "dispatch_ns": 1170.74
+      },
+      {
+        "operation": "indices",
+        "n": 1024,
+        "shape": 1,
+        "scalar_ns": 3339.64,
+        "simd_ns": 2363.6,
+        "dispatch_ns": 2356.78
+      },
+      {
+        "operation": "indices",
+        "n": 1024,
+        "shape": 2,
+        "scalar_ns": 4999.1,
+        "simd_ns": 1765.69,
+        "dispatch_ns": 1799.37
+      }
+    ]
+  }
+}
