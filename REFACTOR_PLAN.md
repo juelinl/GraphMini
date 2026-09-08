@@ -108,7 +108,8 @@ preserved. See `tests/benchmarks/simd-subtraction.md` for validation and measure
 Extracted a shared fixed-capacity thread-local pool implementation. Owning sets
 retain the originating pool pointer; constructor capacity requests are honored,
 and larger graphs select compatible storage without invalidating older owners.
-No codegen changes. MiniGraph already has a separate variable-capacity pool
+Generated entry points now call VertexSetPool::configure_for_graph(); allocation
+accounting also lives in the pool rather than VertexSet. MiniGraph has a separate variable-capacity pool
 and remains unchanged. See `tests/benchmarks/vertex-set-pool.md`.
 
 VertexSet layout is now compacted to two pointers followed by IdType-sized

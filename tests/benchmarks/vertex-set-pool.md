@@ -24,6 +24,12 @@ The accounting counter must remain valid while new allocations can occur.
 
 ## VertexSet integration
 
+The pool-owned configuration/accounting follow-up passed 7/7 PCH and 9/9
+module CTests on macOS and Jupiter, plus 144 graph-growth/shrink executions
+per build on each platform (576 total). ASan/UBSan pool checks passed on both.
+The module interoperability test additionally checks that C++17 host
+configuration and allocation accounting are shared with C++20 module code.
+
 The generated entry point calls internal::VertexSetPool::configure_for_graph()
 before running worker loops. This validates the maximum degree and stores a
 default capacity of max_degree + 1. VertexSet delegates storage selection to
