@@ -14,7 +14,7 @@ def resolve_python_executable(python_bin: str) -> pathlib.Path:
     if python_bin in {"python", "python3"}:
         virtual_env = os.environ.get("VIRTUAL_ENV")
         if virtual_env:
-            venv_python = pathlib.Path(virtual_env) / "bin" / "python"
+            venv_python = pathlib.Path(virtual_env) / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
             if venv_python.exists():
                 return pathlib.Path(os.path.abspath(venv_python))
 

@@ -22,8 +22,12 @@ target_link_libraries(graph_runtime PUBLIC common OpenMP::OpenMP_CXX TBB::tbb TB
 pybind11_add_module(graphmini MODULE
         python_api.cpp)
 target_link_libraries(graphmini PRIVATE graphmini_codegen graph_runtime)
+if(WIN32)
+    set_target_properties(graphmini PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
+endif()
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_test(NAME install_toolchain COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/install_toolchain.py)
     add_test(NAME python_import
         COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:graphmini>"
                 ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/python_import.py

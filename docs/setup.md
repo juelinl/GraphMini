@@ -5,6 +5,25 @@
 Run all commands below from the repository root. The Conda environment below
 is the recommended installation method.
 
+## Compiler policy and verification status
+
+| Platform | Default installation compiler | Verification |
+|---|---|---|
+| macOS | Clang / `clang++` (including AppleClang) | Native builds and Python runtime checks on our macOS host. |
+| Ubuntu/Linux | GCC / `g++` | Native verification on Ubuntu 22.04 (`ssh jupiter`). |
+| Windows | MSVC / `cl.exe` | **Unverified.** Compiler selection is tested with mocks only; no Windows build or runtime has been validated. |
+
+Both `install_python.py` and `install_onetbb.py` explicitly select these compilers
+from PATH, rather than inheriting `CC`/`CXX` from another environment. Activate
+the intended compiler environment first. Matching `--cc` and `--cxx` overrides
+are available for experiments; do not mix compilers within a build directory.
+The scripts refuse a cached compiler or generator mismatch and ask for a fresh
+`--build-dir`. Installations use Release and headers/PCH by default.
+
+The default Python build directories are `build-macos-clang`, `build-linux-gcc`,
+and `build-windows-msvc`. Explicit CMake commands do not apply the script's
+compiler policy automatically: pass `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER` yourself.
+
 ## Installation options
 
 ### Conda environment
@@ -18,18 +37,29 @@ CMake discovers the installed packages; it does not fetch pinned dependency copi
 conda env create -f environment.yml
 conda activate graphmini
 python scripts/install_onetbb.py
-cmake -S . -B build-conda -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DPython3_EXECUTABLE="$CONDA_PREFIX/bin/python" -DOpenMP_ROOT="$CONDA_PREFIX" \
-  -DGRAPHMINI_BUILD_TESTS=ON
-python scripts/install_python.py --build-dir build-conda
-cmake --build build-conda --parallel 6
-ctest --test-dir build-conda --output-on-failure
+python scripts/install_python.py --tests --jobs 6
+python -c "import graphmini; print(graphmini.__file__)"
 ```
 
 Micromamba users can create the same environment with
 `micromamba create -f environment.yml` and activate it with
 `micromamba activate graphmini`. Use this setup instead of the virtual-environment
-steps below. `build-conda` keeps its Python-specific build separate from `build`.
+steps below. Compiler-specific directories keep this installation separate from
+older Clang/module experiments. Use the same compiler family and compatible C++
+runtime for dependencies and GraphMini; on Ubuntu the active environment must
+provide `gcc` and `g++`, not just Clang.
+
+For end-to-end counting verification, run serially from the repository root:
+
+```bash
+# macOS; replace with build-linux-gcc on Ubuntu.
+PYTHONPATH=build-macos-clang/lib python tests/runtime_smoke.py
+PYTHONPATH=build-macos-clang/lib python tests/runtime_large.py
+```
+
+`--tests` builds all CMake test targets and runs CTest; it does not run these
+longer Python runtime suites. They compare counts to an independent,
+symmetry-normalized oracle, including six- and seven-vertex patterns.
 
 GraphMini requires **oneTBB 2023.1 or newer**. The installer above builds the
 2023.1.0 tag into `.deps/oneTBB-2023.1.0`, including its preview `oneapi/tbb.cppm`
@@ -40,6 +70,42 @@ The default still uses headers/PCH: installing the release does not itself
 enable the official named module. Finished query-library caches are separated
 by oneTBB version so an upgrade does not reuse old query binaries.
 
+The oneTBB installer uses a compiler-specific build directory as well. To retain
+an existing dependency installation, pass `--prefix /another/prefix` and select
+it for GraphMini with `--cmake-arg=-DTBB_DIR=/another/prefix/lib/cmake/TBB`.
+
+## Windows/MSVC: unverified installation path
+
+Install Visual Studio C++ Build Tools, the Windows SDK, Ninja, Python/NumPy,
+and MSVC-compatible builds of the C++ dependencies. Use an **x64 Developer
+PowerShell for Visual Studio**, where `cl.exe` and `ninja` are on PATH:
+
+```powershell
+python scripts/install_onetbb.py
+python scripts/install_python.py --tests --jobs 6
+```
+
+The installer uses MSVC with single-config Ninja, not MinGW or Visual Studio's
+multi-config generator. It supplies MSVC-style optimization flags and places the
+query DLL beside the extension. These accommodations are **not evidence of
+Windows compatibility**: native compilation, OpenMP behavior, DLL dependencies,
+and runtime query compilation remain unverified and may require further fixes.
+Do not use the Unix shell wrappers on Windows.
+
+## Experimental Clang modules (separate from normal installation)
+
+The named-module and header-unit experiments require upstream Clang/Ninja,
+including on Ubuntu. GCC is the default **PCH installation** compiler, not a
+supported compiler for these experimental module targets. AppleClang and MSVC
+are also not supported for the module experiments. Keep a separate build folder
+and explicitly select Clang, for example:
+
+```bash
+cmake -S . -B build-backend-clang -G Ninja \
+  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_BUILD_TYPE=Release -DGRAPHMINI_EXPERIMENTAL_BACKEND_MODULE=ON
+```
+
 On the tested Clang 21/libc++ setup, upstream 2023.1.0's unmodified `tbb.cppm`
 currently fails to compile: it unconditionally exports `cache_aligned_resource`
 and `scalable_memory_resource`, while oneTBB's feature check disables those
@@ -47,6 +113,7 @@ declarations for libc++. An opt-in build-local workaround is available:
 
 ```bash
 cmake -S . -B build-tbb-module -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
   -DGRAPHMINI_BUILD_TESTS=ON -DGRAPHMINI_EXPERIMENTAL_TBB_MODULE=ON
 cmake --build build-tbb-module --target tbb_module_smoke
 ctest --test-dir build-tbb-module -R '^tbb_module_smoke$' --output-on-failure
@@ -67,6 +134,7 @@ To precompile GraphMini's backend as well, use the experimental backend module:
 
 ```bash
 cmake -S . -B build-backend-module -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
   -DGRAPHMINI_BUILD_TESTS=ON -DGRAPHMINI_EXPERIMENTAL_BACKEND_MODULE=ON
 cmake --build build-backend-module --parallel 6
 ctest --test-dir build-backend-module --output-on-failure
@@ -85,7 +153,7 @@ For a serial PCH/backend-module correctness and compilation/API comparison:
 
 ```bash
 python scripts/verify_platform.py --backend-module \
-  --module-build build-backend-module --output-dir .verification/backend
+  --compiler clang++ --module-build build-backend-module --output-dir .verification/backend
 ```
 
 On Ubuntu, install upstream Clang and matching `clang-scan-deps` (for example,
@@ -131,7 +199,7 @@ python scripts/install_python.py
 
 This is a source-tree install. The script:
 
-1. configures CMake for the active Python interpreter
+1. selects the platform compiler, checks the existing cache, and configures Release for the active Python interpreter
 2. builds `graphmini` and the generated plan-module target
 3. writes a `.pth` file into the environment so `import graphmini` resolves to this repository's build output
 
@@ -146,6 +214,10 @@ You can override the interpreter or build directory if needed:
 ```bash
 python scripts/install_python.py --python venv/bin/python --build-dir build
 ```
+
+For an explicit compiler override, provide both drivers, e.g.
+`--cc clang --cxx clang++ --build-dir build-clang-custom`.
+Additional dependency options can be passed as `--cmake-arg=-DCMAKE_PREFIX_PATH=/prefix`.
 
 On Unix-like systems, the shell wrappers still work:
 
