@@ -48,9 +48,17 @@ int main(int argc, char **argv) {
                 auto plan = mode == VertexInduced ? compile_vertex_induced(pattern, config, meta)
                             : mode == EdgeInduced ? compile_edge_induced(pattern, config, meta)
                                                   : compile_edge_induced_iep(pattern, config, meta);
+                require(plan.query.adjacency == pattern, "Original query semantics were lost");
+                require(plan.query.mode == (mode == VertexInduced ? VertexInduced : EdgeInduced),
+                        "IEP strategy leaked into query semantics");
+                const auto domains_before = analyze_domains(plan.logical);
+                const auto arrays_before = select_representations(plan.logical, domains_before);
                 if (pruning != PruningType::None)
                     plan = create_plan_mg(plan, config);
                 const auto execution = lower_execution(plan);
+                require(dump_domains(domains_before, arrays_before) ==
+                            dump_domains(execution.domains, execution.representations),
+                        "Auxiliary planning changed logical domains");
                 require(dump_execution(execution) == dump_execution(lower_execution(plan)),
                         "Nondeterministic lowering");
                 for (const auto &[id, op] : execution.sets) {
@@ -90,8 +98,8 @@ int main(int argc, char **argv) {
                 }
                 // Sparse/empty metadata cannot cause integer division by zero in task
                 // policy.
-                plan.meta.num_edge = 0;
-                plan.meta.num_vertex = 0;
+                plan.context.meta.num_edge = 0;
+                plan.context.meta.num_vertex = 0;
                 ExecutionIR loops_only;
                 lower_loops(plan, loops_only);
                 for (const auto &loop : loops_only.loops)

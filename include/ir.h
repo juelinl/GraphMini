@@ -96,32 +96,52 @@ namespace minigraph {
         friend std::ostream &operator<<(std::ostream &out, const MiniGraphIR &mg);
     };
 
-    struct PlanIR {
-        int p_size{0}, iep_num{0}, iep_depth{0}, iep_redundancy{0};
+    // Query semantics are independent of scheduling, graph statistics, and storage.
+    struct QueryIR {
+        std::string adjacency;
+        AdjMatType mode{AdjMatType::VertexInduced};
+    };
+
+    // Representation-independent constraints after choosing a matching order.
+    struct ScheduledConstraints {
+        int p_size{0};
+        std::string adjacency;
+        std::vector<int> matching_order;
+        std::vector<std::vector<VertexSetIR>> set_ops;
+        std::vector<VertexSetIR> iter_set;
+    };
+
+    struct PlanningContext {
         MetaData meta;
         CodeGenConfig config;
+    };
+
+    struct InclusionExclusionPlan {
+        int iep_num{0}, iep_depth{0}, iep_redundancy{0};
         std::vector<int> iep_vals;
         std::vector<std::vector<std::vector<int>>> iep_groups;
-        std::vector<std::vector<VertexSetIR>> set_ops;
+        std::vector<VertexSetIR> iep_set;
+    };
+
+    struct AuxiliaryGraphPlan {
         std::vector<std::vector<MiniGraphIR>> mg_ops;
         std::vector<std::vector<MiniGraphIR>> mg_used;
-        std::vector<bool> mg_bounded; // id to is_clique
-        std::vector<VertexSetIR> iter_set;
-        std::vector<VertexSetIR> iep_set;
+        std::vector<bool> mg_bounded;
+    };
+
+    // Pipeline aggregate, not a purely logical IR. Analyses can take only the
+    // component they need, without depending on auxiliary or physical decisions.
+    struct PlanIR {
+        QueryIR query;
+        ScheduledConstraints logical;
+        PlanningContext context;
+        InclusionExclusionPlan counting;
+        AuxiliaryGraphPlan auxiliary;
         std::optional<VertexSetIR> get_parent_vset(const VertexSetIR& vset) const;
         std::optional<VertexSetIR> get_parent_vset(const VertexSetIR& vset, size_t dep) const;
         std::optional<MiniGraphIR> get_parent_mg(const VertexSetIR& intersect) const;
         std::optional<MiniGraphIR> get_parent_mg(const MiniGraphIR& child) const;
-        bool is_last_op(const VertexSetIR &op) const;
         bool is_bounded(const MiniGraphIR &mg) const;
         bool is_bounded(const VertexSetIR &vset) const;
-        bool is_par(const MiniGraphIR& mg) const;
-        int get_serial_loop() const {
-            if (iep_num <= 1) {
-                return std::max(1, p_size - 2); // no iep available
-            } else {
-                return std::max(1, p_size - iep_num - 1);
-            }
-        };
     };
 } // NAMESPACE minigraph

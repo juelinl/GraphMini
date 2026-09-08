@@ -21,7 +21,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     else
         out << "#include \"plan.h\"\n";
     out << "namespace minigraph {\n";
-    out << "\tuint64_t pattern_size() {return " << plan.p_size << ";}\n";
+    out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tvoid plan(const GraphType* graph, Context& ctx){\n";
     if (profiling_)
         out << "\t\tVertexSet::profiler = ctx.profiler;\n";
@@ -52,15 +52,15 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     out << "\t\t\tcc &handled = "
            "ctx.per_thread_handled.at(omp_get_thread_num());\n";
     out << "\t\t\tdouble start = omp_get_wtime();\n";
-    out << "\t\t\tctx.iep_redundency = " << plan.iep_redundancy << ";\n";
+    out << "\t\t\tctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
     out << "#pragma omp for schedule(dynamic, 1) nowait\n";
     out << "\t\t\tfor (IdType i0_id = 0; i0_id < graph->get_vnum(); i0_id++) { "
            "// loop-0 begin\n";
-    int max_dep = plan.p_size - 1;
-    const auto &set_ops = plan.set_ops;
+    int max_dep = plan.logical.p_size - 1;
+    const auto &set_ops = plan.logical.set_ops;
     switch (config.pruningType) {
     case (PruningType::None):
-        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.iep_num <= 1) {
+        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.counting.iep_num <= 1) {
             for (int dep = 0; dep < max_dep; dep++) {
                 // code for reading adj from the graph
                 out << gen_indent(dep) << emit_read_adj(plan, dep);
@@ -71,13 +71,13 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                     out << gen_indent(dep) << op;
                 }
                 // code for iterating next loop
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
                 out << gen_indent(dep) << emit_iter(plan, dep);
             }
         } else {
-            assert(plan.iep_num + plan.iep_depth == plan.p_size - 1);
-            for (int dep = 0; dep < plan.iep_depth; dep++) {
+            assert(plan.counting.iep_num + plan.counting.iep_depth == plan.logical.p_size - 1);
+            for (int dep = 0; dep < plan.counting.iep_depth; dep++) {
                 // code for reading adj from the graph
                 out << gen_indent(dep) << emit_read_adj(plan, dep);
                 // code for computation at this loop
@@ -87,12 +87,12 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                     out << gen_indent(dep) << op;
                 }
                 // code for iterating next loop
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
                 out << gen_indent(dep) << emit_iter(plan, dep);
             }
             // Code for IEP
-            int dep = plan.iep_depth;
+            int dep = plan.counting.iep_depth;
             out << gen_indent(dep) << emit_read_adj(plan, dep);
             // code for computation at this loop
             const auto &ops = set_ops.at(dep);
@@ -101,7 +101,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                 out << gen_indent(dep) << op;
             }
 
-            for (size_t group_id = 0; group_id < plan.iep_groups.size(); group_id++) {
+            for (size_t group_id = 0; group_id < plan.counting.iep_groups.size(); group_id++) {
                 out << gen_indent(dep) << emit_iep(plan, group_id);
                 out << gen_indent(dep) << gen_comment_iep(plan, group_id);
             }
@@ -109,7 +109,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
         break;
 
     default: // enable pruning
-        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.iep_num <= 1) {
+        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.counting.iep_num <= 1) {
             for (int dep = 0; dep < max_dep; dep++) {
                 // code for reading adj from the graph
                 out << gen_indent(dep) << emit_read_adj(plan, dep);
@@ -121,25 +121,25 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                     out << gen_indent(dep) << emit_mg_op(plan, op);
                     out << gen_indent(dep) << op;
                 }
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
                 // code for building pruned graphs
-                const auto &mgs = plan.mg_ops.at(dep);
+                const auto &mgs = plan.auxiliary.mg_ops.at(dep);
                 for (const auto &mg : mgs) {
                     out << gen_indent(dep) << emit_mg_init(plan, mg);
                     out << gen_indent(dep) << mg;
                     out << gen_indent(dep) << emit_mg_build(plan, mg);
                 }
 
-                for (const auto &mg : plan.mg_used.at(dep + 1)) {
+                for (const auto &mg : plan.auxiliary.mg_used.at(dep + 1)) {
                     out << gen_indent(dep) << emit_mg_indice(plan, mg, dep);
                 }
                 // code for iterating next loop
                 out << gen_indent(dep) << emit_iter(plan, dep);
             }
         } else {
-            assert(plan.iep_num + plan.iep_depth == plan.p_size - 1);
-            for (int dep = 0; dep < plan.iep_depth; dep++) {
+            assert(plan.counting.iep_num + plan.counting.iep_depth == plan.logical.p_size - 1);
+            for (int dep = 0; dep < plan.counting.iep_depth; dep++) {
                 // code for reading adj from the graph
                 out << gen_indent(dep) << emit_read_adj(plan, dep);
                 if (dep > 0)
@@ -150,23 +150,23 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                     out << gen_indent(dep) << emit_mg_op(plan, op);
                     out << gen_indent(dep) << op;
                 }
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
                 // code for building pruned graphs
-                const auto &mgs = plan.mg_ops.at(dep);
+                const auto &mgs = plan.auxiliary.mg_ops.at(dep);
                 for (const auto &mg : mgs) {
                     out << gen_indent(dep) << emit_mg_init(plan, mg);
                     out << gen_indent(dep) << mg;
                     out << gen_indent(dep) << emit_mg_build(plan, mg);
                 }
 
-                for (const auto &mg : plan.mg_used.at(dep + 1)) {
+                for (const auto &mg : plan.auxiliary.mg_used.at(dep + 1)) {
                     out << gen_indent(dep) << emit_mg_indice(plan, mg, dep);
                 }
                 // code for iterating next loop
                 out << gen_indent(dep) << emit_iter(plan, dep);
             }
-            int dep = plan.iep_depth;
+            int dep = plan.counting.iep_depth;
             if (dep > 0)
                 out << emit_mg_adj(plan, dep);
             out << gen_indent(dep) << emit_read_adj(plan, dep);
@@ -177,21 +177,21 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                 out << gen_indent(dep) << op;
             }
 
-            for (size_t group_id = 0; group_id < plan.iep_groups.size(); group_id++) {
+            for (size_t group_id = 0; group_id < plan.counting.iep_groups.size(); group_id++) {
                 out << gen_indent(dep) << emit_iep(plan, group_id);
                 out << gen_indent(dep) << gen_comment_iep(plan, group_id);
             }
         }
         break;
     }
-    if (plan.iep_num <= 1) {
+    if (plan.counting.iep_num <= 1) {
         for (int dep = max_dep - 1; dep >= 0; dep--) {
             if (dep == 0)
                 out << gen_indent(0) << "handled+=1;\n";
             out << gen_indent(dep) << "} // loop-" << std::to_string(dep) << " end\n";
         }
     } else {
-        for (int dep = plan.iep_depth; dep >= 0; dep--) {
+        for (int dep = plan.counting.iep_depth; dep >= 0; dep--) {
             if (dep == 0)
                 out << gen_indent(0) << "handled+=1;\n";
             out << gen_indent(dep) << "} // loop-" << std::to_string(dep) << " end\n";

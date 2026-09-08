@@ -150,7 +150,7 @@ bool MiniGraphIR::computed(const VertexSetIR &vertices, const VertexSetIR &inter
 std::optional<VertexSetIR> PlanIR::get_parent_vset(const VertexSetIR &vset) const {
     std::optional<VertexSetIR> out;
     // vs is op bounded by id
-    for (const auto &op : set_ops.at(vset.loop_depth())) {
+    for (const auto &op : logical.set_ops.at(vset.loop_depth())) {
         if (op.is_superset_of(vset) && op.id != vset.id && op.edge_num() == vset.edge_num() &&
             vset.restrict_num() - op.restrict_num() == 1 && vset.is_restricted(vset.loop_depth()) &&
             !op.is_restricted(vset.loop_depth())) {
@@ -161,7 +161,7 @@ std::optional<VertexSetIR> PlanIR::get_parent_vset(const VertexSetIR &vset) cons
     }
     // op is vs parent prefix
     if (vset.loop_depth() > 0) { // looking for prefix vertex
-        const auto &ops = set_ops.at(vset.loop_depth() - 1);
+        const auto &ops = logical.set_ops.at(vset.loop_depth() - 1);
         for (const auto &op : ops) {
             if (op.is_superset_of(vset) && op.id != vset.id && (!out.has_value() || out->is_superset_of(op)))
                 out = op;
@@ -174,7 +174,7 @@ std::optional<VertexSetIR> PlanIR::get_parent_vset(const VertexSetIR &vset, size
     std::optional<VertexSetIR> out;
     // op is vset's parent prefix
     if (vset.loop_depth() > 0) { // looking for prefix vertex
-        const auto &ops = set_ops.at(dep);
+        const auto &ops = logical.set_ops.at(dep);
         for (const auto &op : ops) {
             if (op.is_superset_of(vset) && op.id != vset.id && (!out.has_value() || out->is_superset_of(op)))
                 out = op;
@@ -186,12 +186,12 @@ std::optional<MiniGraphIR> PlanIR::get_parent_mg(const VertexSetIR &intersect) c
     std::optional<MiniGraphIR> out;
     if (intersect.loop_depth() == 0)
         return out;
-    if (config.adjMatType != AdjMatType::VertexInduced && !intersect.is_edge(intersect.loop_depth()))
+    if (query.mode != AdjMatType::VertexInduced && !intersect.is_edge(intersect.loop_depth()))
         return out;
 
-    VertexSetIR vertices = iter_set.at(intersect.loop_depth() - 1);
+    VertexSetIR vertices = logical.iter_set.at(intersect.loop_depth() - 1);
     for (int dep = 0; dep < intersect.loop_depth(); ++dep) {
-        for (const auto &mg_op : mg_ops.at(dep)) {
+        for (const auto &mg_op : auxiliary.mg_ops.at(dep)) {
             if (!mg_op.is_superset_of(vertices, intersect))
                 continue;
             if (out.has_value() && out->is_superset_of(mg_op)) {
@@ -206,7 +206,7 @@ std::optional<MiniGraphIR> PlanIR::get_parent_mg(const VertexSetIR &intersect) c
 std::optional<MiniGraphIR> PlanIR::get_parent_mg(const MiniGraphIR &child) const {
     std::optional<MiniGraphIR> out;
     for (int dep = 0; dep <= child.loop_depth(); ++dep) {
-        for (const auto &parent : mg_ops.at(dep)) {
+        for (const auto &parent : auxiliary.mg_ops.at(dep)) {
             if (!parent.is_superset_of(child) || parent.id == child.id)
                 continue;
             if (is_bounded(parent) && !is_bounded(child))
@@ -220,11 +220,8 @@ std::optional<MiniGraphIR> PlanIR::get_parent_mg(const MiniGraphIR &child) const
     }
     return out;
 };
-bool PlanIR::is_bounded(const MiniGraphIR &mg) const { return mg_bounded.at(mg.id); };
+bool PlanIR::is_bounded(const MiniGraphIR &mg) const { return auxiliary.mg_bounded.at(mg.id); };
 bool PlanIR::is_bounded(const VertexSetIR &vset) const { return vset.is_restricted(vset.loop_depth()); };
-bool PlanIR::is_last_op(const VertexSetIR &op) const { return op.loop_depth() == p_size - 2; };
-
-bool PlanIR::is_par(const MiniGraphIR &mg) const { return false; }
 std::ostream &operator<<(std::ostream &out, const MiniGraphIR &mg) {
     VertexSetIR v = mg.m_vertices;
     out << "/* Vertices = VSet(" << v.id << ") In-Edges: ";

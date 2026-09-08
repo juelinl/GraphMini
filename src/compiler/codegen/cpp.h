@@ -7,13 +7,12 @@ namespace minigraph {
 class CppCodegen {
   public:
     CppCodegen(CodeGenConfig config, const ExecutionIR &execution)
-        : config_(config), profiling_(config.runnerType == RunnerType::Profiling),
+        : profiling_(config.runnerType == RunnerType::Profiling),
           execution_(execution) {}
     std::string emit_omp(PlanIR plan, CodeGenConfig config);
     std::string emit_nested(PlanIR plan, CodeGenConfig config);
 
   private:
-    const CodeGenConfig config_;
     const bool profiling_;
     const ExecutionIR &execution_;
     static std::string gen_indent(int dep) { return std::string(dep + 4, '\t'); }

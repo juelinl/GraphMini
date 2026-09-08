@@ -5,12 +5,13 @@
 
 namespace minigraph {
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
+    verify_representations(plan.logical, execution.domains, execution.representations);
     std::map<int, int> depths;
     std::set<int> graphs;
-    for (const auto &level : plan.set_ops)
+    for (const auto &level : plan.logical.set_ops)
         for (const auto &op : level)
             depths.emplace(op.id, op.loop_depth());
-    for (const auto &level : plan.mg_ops)
+    for (const auto &level : plan.auxiliary.mg_ops)
         for (const auto &mg : level)
             graphs.insert(mg.id);
     auto require = [](bool valid, const char *message) {
@@ -20,7 +21,7 @@ void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
     require(execution.sets.size() == depths.size(), "Execution set coverage mismatch");
     std::map<int, int> order;
     int position = 0;
-    for (const auto &level : plan.set_ops)
+    for (const auto &level : plan.logical.set_ops)
         for (const auto &op : level)
             order.emplace(op.id, position++);
     for (const auto &entry : execution.sets) {
@@ -88,7 +89,9 @@ void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
                 require(!factor.set_id || depths.count(*factor.set_id), "Invalid reuse factor");
         }
     }
-    require(execution.loops.size() == plan.set_ops.size(), "Loop coverage mismatch");
+    require(execution.loops.size() == plan.logical.set_ops.size(), "Loop coverage mismatch");
+    require(execution.serial_loop_boundary >= 1 && execution.serial_loop_boundary <= plan.logical.p_size,
+            "Invalid serial loop boundary");
     for (size_t depth = 0; depth < execution.loops.size(); ++depth) {
         const auto &loop = execution.loops[depth];
         for (int id : loop.captured_sets)
@@ -113,6 +116,7 @@ void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
 
 std::string dump_execution(const ExecutionIR &execution) {
     std::ostringstream out;
+    out << dump_domains(execution.domains, execution.representations);
     auto ref = [&](SetReference r) {
         switch (r.source) {
         case SetSource::Prefix:

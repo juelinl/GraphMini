@@ -58,22 +58,22 @@ int main(int argc, char **argv) {
     CodeGenConfig config;
     config.schedulerType = SchedulerType::GraphPi;
     auto vertex = compile_vertex_induced(patterns[1], config, meta);
-    const auto before = create_plan_mg(vertex, vertex.config);
+    const auto before = create_plan_mg(vertex, vertex.context.config);
     auto edge = compile_edge_induced(patterns[1], config, meta);
-    for (const auto &ops : vertex.set_ops)
+    for (const auto &ops : vertex.logical.set_ops)
         for (const auto &op : ops)
             if (op.adjMatType != VertexInduced || op.same_iep_computation(op))
                 throw std::runtime_error("Query mode leaked into existing vertex IR");
-    const auto after = create_plan_mg(vertex, vertex.config);
-    if (before.mg_ops != after.mg_ops)
+    const auto after = create_plan_mg(vertex, vertex.context.config);
+    if (before.auxiliary.mg_ops != after.auxiliary.mg_ops)
         throw std::runtime_error("Auxiliary planning is not isolated");
     auto iep = compile_edge_induced_iep(patterns[2], config, meta);
-    if (iep.iep_num <= 1 || iep.iep_set.empty())
+    if (iep.counting.iep_num <= 1 || iep.counting.iep_set.empty())
         throw std::runtime_error("IEP path was not exercised");
     for (auto scheduler : {SchedulerType::GraphPi, SchedulerType::GraphMini,
                            SchedulerType::GraphZero}) {
         config.schedulerType = scheduler;
-        if (compile_edge_induced_iep(patterns[2], config, meta).iep_redundancy != 2)
+        if (compile_edge_induced_iep(patterns[2], config, meta).counting.iep_redundancy != 2)
             throw std::runtime_error("Incorrect star IEP symmetry factor");
     }
     if (iep_redundancy(5, 3, {{1, 2}, {2, 3}, {3, 4}}) != 6 ||

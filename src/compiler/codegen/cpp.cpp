@@ -20,7 +20,7 @@ std::string CppCodegen::emit_read_adj(const PlanIR &plan, int dep) {
         out += gen_indent(dep);
     }
     if (dep > 0) {
-        const VertexSetIR &iter = plan.iter_set.at(dep - 1);
+        const VertexSetIR &iter = plan.logical.iter_set.at(dep - 1);
         out += fmt::format("const IdType i{dep}_id = s{iter_id}[i{dep}_idx];\n", fmt::arg("dep", dep),
                            fmt::arg("iter_id", iter.id));
     }
@@ -34,10 +34,10 @@ std::string CppCodegen::emit_read_adj(const PlanIR &plan, int dep) {
 }
 
 std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
-    if (dep >= plan.p_size - 2) {
+    if (dep >= plan.logical.p_size - 2) {
         return "";
     } else {
-        const auto &iter_set = plan.iter_set.at(dep);
+        const auto &iter_set = plan.logical.iter_set.at(dep);
         return fmt::format("for (size_t i{dep}_idx = 0; i{dep}_idx < s{iter_id}.size(); "
                            "i{dep}_idx++) {left} // loop-{dep} begin\n",
                            fmt::arg("left", "{"), fmt::arg("iter_id", iter_set.id),
@@ -117,9 +117,9 @@ std::string CppCodegen::emit_mg_adj(const PlanIR &plan, int dep, int indent_dep)
     if (dep == 0)
         return "";
     std::string indent = (indent_dep == -1) ? gen_indent(dep) : gen_indent_tbb(dep);
-    const VertexSetIR &iter = plan.iter_set.at(dep - 1);
+    const VertexSetIR &iter = plan.logical.iter_set.at(dep - 1);
     std::string out;
-    for (const auto &mg : plan.mg_used.at(dep)) {
+    for (const auto &mg : plan.auxiliary.mg_used.at(dep)) {
         const bool same_address = skip_build_indices(plan, mg, iter);
 
         if (same_address) {
@@ -142,7 +142,7 @@ bool CppCodegen::skip_build_indices(const PlanIR &, const MiniGraphIR &mg, const
 }
 
 std::string CppCodegen::emit_mg_indice(const PlanIR &plan, const MiniGraphIR &mg, int dep) {
-    const VertexSetIR &iter = plan.iter_set.at(dep);
+    const VertexSetIR &iter = plan.logical.iter_set.at(dep);
     if (skip_build_indices(plan, mg, iter))
         return fmt::format("//skip building indices for m{mg_id} because they can "
                            "be obtained directly\n",
@@ -195,9 +195,9 @@ std::string CppCodegen::emit_iep(const PlanIR &, size_t group_id) {
 }
 
 std::string CppCodegen::gen_comment_iep(const PlanIR &plan, size_t group_id) {
-    int val = plan.iep_vals.at(group_id);
+    int val = plan.counting.iep_vals.at(group_id);
     std::string group_str, comp_str;
-    const auto &group = plan.iep_groups.at(group_id);
+    const auto &group = plan.counting.iep_groups.at(group_id);
     size_t j = 0;
     for (const auto &set : group) {
         size_t i = 0;
@@ -205,7 +205,7 @@ std::string CppCodegen::gen_comment_iep(const PlanIR &plan, size_t group_id) {
         comp_str += "|";
         for (auto set_id : set) {
             group_str += std::to_string(set_id);
-            comp_str += fmt::format("VSet({})", plan.iep_set.at(set_id).id);
+            comp_str += fmt::format("VSet({})", plan.counting.iep_set.at(set_id).id);
             if (i++ != set.size() - 1) {
                 group_str += " ";
                 comp_str += " & ";

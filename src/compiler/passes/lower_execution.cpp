@@ -17,16 +17,18 @@ SetExecution lower_set(const PlanIR &plan, const VertexSetIR &op) {
     const int depth = op.loop_depth();
     SetExecution out{op.id, depth, adjacency(depth), {}};
     const auto parent = plan.get_parent_vset(op);
-    const auto mg = plan.config.pruningType == PruningType::None ? std::optional<MiniGraphIR>{}
+    const auto mg = plan.context.config.pruningType == PruningType::None ? std::optional<MiniGraphIR>{}
                                                                  : plan.get_parent_mg(op);
     const bool restricted = op.is_restricted(depth);
-    const bool vertex_induced = plan.config.adjMatType == AdjMatType::VertexInduced;
+    const bool vertex_induced = plan.query.mode == AdjMatType::VertexInduced;
+    // Preserve the current terminal-cardinality policy independently of set semantics.
+    const bool terminal = depth == plan.logical.p_size - 2;
     if (mg) {
         if (!parent)
             throw std::logic_error("MiniGraph operation has no prefix");
         const SetReference rhs{SetSource::MiniGraphAdjacency, mg->id};
-        if (mg->computed(plan.iter_set.at(depth - 1), op)) {
-            if (plan.is_last_op(op))
+        if (mg->computed(plan.logical.iter_set.at(depth - 1), op)) {
+            if (terminal)
                 throw std::logic_error("Terminal MiniGraph alias");
             out.input = rhs;
             if (restricted)
@@ -39,11 +41,11 @@ SetExecution lower_set(const PlanIR &plan, const VertexSetIR &op) {
             out.steps.push_back(
                 binary(op.is_edge(depth) ? SetOpcode::Intersect : SetOpcode::DifferenceExcludingOwner,
                        rhs, restricted));
-            if (plan.is_last_op(op))
+            if (terminal)
                 out.result = SetResult::Count;
             out.rules.push_back("minigraph-source: use selected auxiliary adjacency");
         }
-        out.guard_empty = !plan.is_last_op(op);
+        out.guard_empty = !terminal;
     } else if (parent) {
         out.input = prefix(parent->id);
         if (parent->loop_depth() == depth) {
@@ -61,7 +63,7 @@ SetExecution lower_set(const PlanIR &plan, const VertexSetIR &op) {
             else
                 out.steps.push_back(restricted ? bound(owner(adjacency(depth)))
                                                : remove(owner(adjacency(depth))));
-            if (plan.is_last_op(op))
+            if (terminal)
                 out.result = SetResult::Count;
             out.rules.push_back("prefix-reuse: extend previous-depth prefix");
         }
@@ -79,7 +81,7 @@ SetExecution lower_set(const PlanIR &plan, const VertexSetIR &op) {
                                                             : remove(owner(adjacency(prior))));
         }
         out.guard_empty = true;
-        if (plan.is_last_op(op))
+        if (terminal)
             out.result = SetResult::MaterializeThenCount;
         out.rules.push_back("adjacency-root: apply earlier-vertex constraints in order");
     }
@@ -91,19 +93,21 @@ SetExecution lower_set(const PlanIR &plan, const VertexSetIR &op) {
 
 ExecutionIR lower_execution(const PlanIR &plan) {
     ExecutionIR result;
-    for (const auto &level : plan.set_ops)
+    result.domains = analyze_domains(plan.logical);
+    result.representations = select_representations(plan.logical, result.domains);
+    for (const auto &level : plan.logical.set_ops)
         for (const auto &op : level)
             if (!result.sets.emplace(op.id, lower_set(plan, op)).second)
                 throw std::logic_error("Duplicate execution set ID");
-    for (size_t group = 0; plan.iep_num > 1 && group < plan.iep_groups.size(); ++group) {
-        IEPTerm term{plan.iep_vals.at(group), {}};
-        for (const auto &factor : plan.iep_groups.at(group)) {
+    for (size_t group = 0; plan.counting.iep_num > 1 && group < plan.counting.iep_groups.size(); ++group) {
+        IEPTerm term{plan.counting.iep_vals.at(group), {}};
+        for (const auto &factor : plan.counting.iep_groups.at(group)) {
             std::vector<int> ids;
             for (int index : factor)
-                ids.push_back(plan.iep_set.at(index).id);
+                ids.push_back(plan.counting.iep_set.at(index).id);
             // Preserve the established pair simplification, including logical
             // aliases.
-            if (factor.size() == 2 && plan.iep_set.at(factor[0]) == plan.iep_set.at(factor[1]))
+            if (factor.size() == 2 && plan.counting.iep_set.at(factor[0]) == plan.counting.iep_set.at(factor[1]))
                 ids.resize(1);
             term.factors.push_back(std::move(ids));
         }

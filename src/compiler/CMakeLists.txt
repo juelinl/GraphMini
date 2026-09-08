@@ -3,6 +3,7 @@ add_library(graphmini_codegen STATIC
     vertex_induced.cpp edge_induced.cpp edge_induced_iep.cpp
     passes/auxiliary_graphs.cpp passes/lower_execution.cpp passes/lower_minigraphs.cpp
     passes/lower_loops.cpp
+    passes/representation.cpp
     codegen/cpp.cpp codegen/openmp.cpp codegen/tbb.cpp)
 target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
 
@@ -21,6 +22,9 @@ if(GRAPHMINI_BUILD_TESTS)
     add_executable(execution_ir_regression ../../tests/execution_ir.cpp)
     target_link_libraries(execution_ir_regression PRIVATE graphmini_codegen)
     add_test(NAME execution_ir_regression COMMAND execution_ir_regression)
+    add_executable(representation_regression ../../tests/representation.cpp)
+    target_link_libraries(representation_regression PRIVATE graphmini_codegen)
+    add_test(NAME representation_regression COMMAND representation_regression)
     add_executable(compilation_benchmark ../../tests/compilation_benchmark.cpp)
     target_link_libraries(compilation_benchmark PRIVATE graphmini_codegen)
     foreach(runtime normal profile)

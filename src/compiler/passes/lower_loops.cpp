@@ -9,41 +9,45 @@ void capture(std::vector<int> &ids, int id) {
 }
 } // namespace
 void lower_loops(const PlanIR &plan, ExecutionIR &execution) {
-    execution.loops.resize(plan.set_ops.size());
+    // Scheduling policy belongs to lowering, not to the logical constraints.
+    execution.serial_loop_boundary = plan.counting.iep_num <= 1
+        ? std::max(1, plan.logical.p_size - 2)
+        : std::max(1, plan.logical.p_size - plan.counting.iep_num - 1);
+    execution.loops.resize(plan.logical.set_ops.size());
     for (size_t loop = 0; loop < execution.loops.size(); ++loop) {
         auto &out = execution.loops[loop];
-        out.read_adjacency = plan.config.pruningType == PruningType::None;
+        out.read_adjacency = plan.context.config.pruningType == PruningType::None;
         if (!out.read_adjacency)
-            for (const auto &op : plan.set_ops.at(loop))
+            for (const auto &op : plan.logical.set_ops.at(loop))
                 if (!plan.get_parent_mg(op))
                     out.read_adjacency = true;
-        out.spawn_nested = loop > 0 && static_cast<int>(loop) < plan.get_serial_loop() &&
-                           (plan.config.parType == ParallelType::Nested ||
-                            plan.config.parType == ParallelType::NestedRt);
-        out.runtime_threshold = plan.config.parType == ParallelType::NestedRt;
+        out.spawn_nested = loop > 0 && static_cast<int>(loop) < execution.serial_loop_boundary &&
+                           (plan.context.config.parType == ParallelType::Nested ||
+                            plan.context.config.parType == ParallelType::NestedRt);
+        out.runtime_threshold = plan.context.config.parType == ParallelType::NestedRt;
         // Keep the existing degree heuristic; empty graphs must not divide by zero.
-        out.average_degree = plan.meta.num_vertex ? plan.meta.num_edge / plan.meta.num_vertex : 0;
-        out.cap_threshold = out.average_degree > 0 && plan.meta.max_degree / out.average_degree > 100;
+        out.average_degree = plan.context.meta.num_vertex ? plan.context.meta.num_edge / plan.context.meta.num_vertex : 0;
+        out.cap_threshold = out.average_degree > 0 && plan.context.meta.max_degree / out.average_degree > 100;
         if (loop == 0)
             continue;
-        if (plan.config.pruningType != PruningType::None) {
-            for (int dep = loop; dep < plan.p_size - 1; ++dep)
-                for (const auto &mg : plan.mg_used.at(dep))
+        if (plan.context.config.pruningType != PruningType::None) {
+            for (int dep = loop; dep < plan.logical.p_size - 1; ++dep)
+                for (const auto &mg : plan.auxiliary.mg_used.at(dep))
                     if (mg.loop_depth() < static_cast<int>(loop))
                         capture(out.captured_minigraphs, mg.id);
-            for (const auto &mg : plan.mg_ops.at(loop)) {
+            for (const auto &mg : plan.auxiliary.mg_ops.at(loop)) {
                 const auto parent = plan.get_parent_mg(mg);
                 if (parent && parent->loop_depth() < static_cast<int>(loop))
                     capture(out.captured_minigraphs, parent->id);
             }
         }
-        for (const auto &op : plan.set_ops.at(loop)) {
+        for (const auto &op : plan.logical.set_ops.at(loop)) {
             const auto parent = plan.get_parent_vset(op, loop - 1);
-            if (parent && parent->id != plan.iter_set.at(loop - 1).id)
+            if (parent && parent->id != plan.logical.iter_set.at(loop - 1).id)
                 capture(out.captured_sets, parent->id);
         }
-        for (int depth = loop; depth < plan.p_size - 1; ++depth)
-            for (const auto &op : plan.set_ops.at(depth))
+        for (int depth = loop; depth < plan.logical.p_size - 1; ++depth)
+            for (const auto &op : plan.logical.set_ops.at(depth))
                 if (!plan.get_parent_vset(op, loop - 1))
                     for (size_t prior = 0; prior < loop; ++prior)
                         out.captured_adjacencies.insert(prior);

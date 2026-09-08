@@ -17,7 +17,7 @@ std::vector<MiniGraphIR> CppCodegen::gen_used_mg(const PlanIR &plan, const CodeG
     std::vector<MiniGraphIR> result;
     for (int id : execution_.loops.at(loop).captured_minigraphs) {
         const auto &physical = execution_.minigraphs.at(id);
-        for (const auto &mg : plan.mg_ops.at(physical.depth))
+        for (const auto &mg : plan.auxiliary.mg_ops.at(physical.depth))
             if (mg.id == id)
                 result.push_back(mg);
     }
@@ -28,7 +28,7 @@ std::vector<VertexSetIR> CppCodegen::gen_used_set(const PlanIR &plan, const Code
     std::vector<VertexSetIR> result;
     for (int id : execution_.loops.at(loop).captured_sets) {
         const auto &physical = execution_.sets.at(id);
-        for (const auto &set : plan.set_ops.at(physical.depth))
+        for (const auto &set : plan.logical.set_ops.at(physical.depth))
             if (set.id == id)
                 result.push_back(set);
     }
@@ -47,8 +47,8 @@ std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &c
     if (!physical.spawn_nested)
         return "";
     assert(loop > 0);
-    int iter_id = plan.iter_set.at(loop - 1).id;
-    const VertexSetIR &iter = plan.iter_set.at(loop - 1);
+    int iter_id = plan.logical.iter_set.at(loop - 1).id;
+    const VertexSetIR &iter = plan.logical.iter_set.at(loop - 1);
     std::vector<MiniGraphIR> used_mg = gen_used_mg(plan, config, loop);
     std::vector<VertexSetIR> used_set = gen_used_set(plan, config, loop);
     std::set<int> used_adj = gen_used_adj(plan, config, loop);
@@ -92,7 +92,7 @@ std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &c
     out << fmt::format(", s{}", iter_id);
 
     if (config.pruningType != PruningType::None) {
-        for (auto mg : plan.mg_used.at(loop)) {
+        for (auto mg : plan.auxiliary.mg_used.at(loop)) {
             if (!skip_build_indices(plan, mg, iter))
                 out << fmt::format(", m{}_s{}", mg.id, iter_id);
         }
@@ -112,8 +112,8 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     int iter_id = -1;
     VertexSetIR iter;
     if (loop > 0) {
-        iter_id = plan.iter_set.at(loop - 1).id;
-        iter = plan.iter_set.at(loop - 1);
+        iter_id = plan.logical.iter_set.at(loop - 1).id;
+        iter = plan.logical.iter_set.at(loop - 1);
     }
     std::vector<MiniGraphIR> used_mg = gen_used_mg(plan, config, loop);
     std::vector<VertexSetIR> used_set = gen_used_set(plan, config, loop);
@@ -141,9 +141,9 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
         out << "\t\t// Iterate Set\n" << fmt::format("\t\tVertexSet& s{};\n", iter_id);
 
     if (config.pruningType != PruningType::None) {
-        if (!plan.mg_used.at(loop).empty())
+        if (!plan.auxiliary.mg_used.at(loop).empty())
             out << "\t\t// MiniGraphs Indices\n";
-        for (auto mg : plan.mg_used.at(loop)) {
+        for (auto mg : plan.auxiliary.mg_used.at(loop)) {
             if (!skip_build_indices(plan, mg, iter))
                 out << fmt::format("\t\tManagedContainer& m{}_s{};\n", mg.id, iter_id);
         }
@@ -172,7 +172,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
         out << ", VertexSet& _s" << iter_id;
 
     if (config.pruningType != PruningType::None) {
-        for (auto mg : plan.mg_used.at(loop)) {
+        for (auto mg : plan.auxiliary.mg_used.at(loop)) {
             if (!skip_build_indices(plan, mg, iter))
                 out << fmt::format(", ManagedContainer& _m{}_s{}", mg.id, iter_id);
         }
@@ -199,7 +199,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
         out << fmt::format(", s{}", iter_id) << "{" << fmt::format("_s{}", iter_id) << "}";
 
     if (config.pruningType != PruningType::None) {
-        for (auto mg : plan.mg_used.at(loop)) {
+        for (auto mg : plan.auxiliary.mg_used.at(loop)) {
             if (!skip_build_indices(plan, mg, iter))
                 out << fmt::format(", m{}_s{}", mg.id, iter_id) << "{"
                     << fmt::format(" _m{}_s{}", mg.id, iter_id) << "}";
@@ -233,11 +233,11 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                            fmt::arg("loop", loop));
     }
     out << " { // loop-" << loop << "begin\n";
-    int max_dep = plan.p_size - 1;
-    const auto &set_ops = plan.set_ops;
+    int max_dep = plan.logical.p_size - 1;
+    const auto &set_ops = plan.logical.set_ops;
     switch (config.pruningType) {
     case (PruningType::None):
-        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.iep_num <= 1) {
+        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.counting.iep_num <= 1) {
             for (int dep = loop; dep < max_dep; dep++) {
                 int indent_dep = dep - loop;
                 // code for reading adj from the graph
@@ -249,7 +249,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                     out << gen_indent_tbb(indent_dep) << op;
                 }
                 // skip iterating next loop
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
 
                 // code for calling parallel nested loop
@@ -259,8 +259,8 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 out << gen_indent_tbb(indent_dep) << emit_iter(plan, dep);
             }
         } else {
-            assert(plan.iep_num + plan.iep_depth == plan.p_size - 1);
-            for (int dep = loop; dep < plan.iep_depth; dep++) {
+            assert(plan.counting.iep_num + plan.counting.iep_depth == plan.logical.p_size - 1);
+            for (int dep = loop; dep < plan.counting.iep_depth; dep++) {
                 int indent_dep = dep - loop;
 
                 // code for reading adj from the graph
@@ -273,7 +273,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 }
 
                 // code for iterating next loop
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
 
                 // code for calling parallel nested loop
@@ -282,7 +282,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 out << gen_indent_tbb(indent_dep) << emit_iter(plan, dep);
             }
             // Code for IEP
-            int dep = plan.iep_depth;
+            int dep = plan.counting.iep_depth;
             int indent_dep = dep - loop;
 
             out << gen_indent_tbb(indent_dep) << emit_read_adj(plan, dep);
@@ -293,7 +293,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 out << gen_indent_tbb(indent_dep) << op;
             }
 
-            for (size_t group_id = 0; group_id < plan.iep_groups.size(); group_id++) {
+            for (size_t group_id = 0; group_id < plan.counting.iep_groups.size(); group_id++) {
                 out << gen_indent_tbb(indent_dep) << emit_iep(plan, group_id);
                 out << gen_indent_tbb(indent_dep) << gen_comment_iep(plan, group_id);
             }
@@ -301,7 +301,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
         break;
 
     default: // enable pruning
-        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.iep_num <= 1) {
+        if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.counting.iep_num <= 1) {
             for (int dep = loop; dep < max_dep; dep++) {
                 // code for reading adj from the graph
                 int indent_dep = dep - loop;
@@ -314,17 +314,17 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                     out << gen_indent_tbb(indent_dep) << emit_mg_op(plan, op);
                     out << gen_indent_tbb(indent_dep) << op;
                 }
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
                 // code for building pruned graphs
-                const auto &mgs = plan.mg_ops.at(dep);
+                const auto &mgs = plan.auxiliary.mg_ops.at(dep);
                 for (const auto &mg : mgs) {
                     out << gen_indent_tbb(indent_dep) << emit_mg_init(plan, mg);
                     out << gen_indent_tbb(indent_dep) << mg;
                     out << gen_indent_tbb(indent_dep) << emit_mg_build(plan, mg);
                 }
 
-                for (const auto &mg : plan.mg_used.at(dep + 1)) {
+                for (const auto &mg : plan.auxiliary.mg_used.at(dep + 1)) {
                     out << gen_indent_tbb(indent_dep) << emit_mg_indice(plan, mg, dep);
                 }
 
@@ -335,8 +335,8 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 out << gen_indent_tbb(indent_dep) << emit_iter(plan, dep);
             }
         } else {
-            assert(plan.iep_num + plan.iep_depth == plan.p_size - 1);
-            for (int dep = loop; dep < plan.iep_depth; dep++) {
+            assert(plan.counting.iep_num + plan.counting.iep_depth == plan.logical.p_size - 1);
+            for (int dep = loop; dep < plan.counting.iep_depth; dep++) {
                 int indent_dep = dep - loop;
                 // code for reading adj from the graph
                 out << gen_indent_tbb(indent_dep) << emit_read_adj(plan, dep);
@@ -348,17 +348,17 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                     out << gen_indent_tbb(indent_dep) << emit_mg_op(plan, op);
                     out << gen_indent_tbb(indent_dep) << op;
                 }
-                if (dep == plan.p_size - 2)
+                if (dep == plan.logical.p_size - 2)
                     continue;
                 // code for building pruned graphs
-                const auto &mgs = plan.mg_ops.at(dep);
+                const auto &mgs = plan.auxiliary.mg_ops.at(dep);
                 for (const auto &mg : mgs) {
                     out << gen_indent_tbb(indent_dep) << emit_mg_init(plan, mg);
                     out << gen_indent_tbb(indent_dep) << mg;
                     out << gen_indent_tbb(indent_dep) << emit_mg_build(plan, mg);
                 }
 
-                for (const auto &mg : plan.mg_used.at(dep + 1)) {
+                for (const auto &mg : plan.auxiliary.mg_used.at(dep + 1)) {
                     out << gen_indent_tbb(indent_dep) << emit_mg_indice(plan, mg, dep);
                 }
 
@@ -368,7 +368,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 // code for iterating next loop
                 out << gen_indent_tbb(indent_dep) << emit_iter(plan, dep);
             }
-            int dep = plan.iep_depth;
+            int dep = plan.counting.iep_depth;
             int indent_dep = dep - loop;
             if (dep > 0)
                 out << emit_mg_adj(plan, dep, indent_dep);
@@ -380,14 +380,14 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                 out << gen_indent_tbb(indent_dep) << op;
             }
 
-            for (size_t group_id = 0; group_id < plan.iep_groups.size(); group_id++) {
+            for (size_t group_id = 0; group_id < plan.counting.iep_groups.size(); group_id++) {
                 out << gen_indent_tbb(indent_dep) << emit_iep(plan, group_id);
                 out << gen_indent_tbb(indent_dep) << gen_comment_iep(plan, group_id);
             }
         }
         break;
     }
-    if (plan.iep_num <= 1) {
+    if (plan.counting.iep_num <= 1) {
         for (int dep = max_dep - 1; dep >= loop; dep--) {
             int indent_dep = dep - loop;
             //                if (dep == 0 && loop == 0) out << gen_indent(dep) <<
@@ -395,7 +395,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
             out << gen_indent_tbb(indent_dep) << "} // loop-" << std::to_string(dep) << " end\n";
         }
     } else {
-        for (int dep = plan.iep_depth; dep >= loop; dep--) {
+        for (int dep = plan.counting.iep_depth; dep >= loop; dep--) {
             int indent_dep = dep - loop;
             //                if (dep == 0 && loop == 0) out << gen_indent(dep) <<
             //                "handled += 1;\n";
@@ -419,7 +419,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "#include \"plan.h\"\n";
     // out << "#include \"oneapi/tbb/parallel_for.h\"\n";
     out << "namespace minigraph {\n";
-    out << "\tuint64_t pattern_size() {return " << plan.p_size << ";}\n";
+    out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tstatic const Graph * graph;\n";
 
     switch (config.pruningType) {
@@ -438,7 +438,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     default:
         break;
     }
-    for (int loop = plan.get_serial_loop() - 1; loop >= 0; loop--) {
+    for (int loop = execution_.serial_loop_boundary - 1; loop >= 0; loop--) {
         out << emit_tbb_loop(plan, config, loop);
     }
     out << "\tvoid plan(const GraphType* _graph, Context& ctx){ // plan \n";
@@ -446,7 +446,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "\t\tVertexSet::profiler = ctx.profiler;\n";
     }
     out << "\t\tctx.tick_begin = tbb::tick_count::now();\n";
-    out << "\t\tctx.iep_redundency = " << plan.iep_redundancy << ";\n";
+    out << "\t\tctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
     out << "\t\tgraph = _graph;\n";
     if (config.pruningType != PruningType::None)
         out << "\t\tMiniGraphIF::DATA_GRAPH = graph;\n";

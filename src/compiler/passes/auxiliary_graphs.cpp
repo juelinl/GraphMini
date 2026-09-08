@@ -3,11 +3,11 @@
 namespace minigraph {
 PlanIR create_plan_mg(const PlanIR &_plan, const CodeGenConfig &_config) {
     PlanIR out = _plan;
-    int max_dep = std::min(out.p_size - 2, out.p_size - out.iep_num - 1);
-    out.mg_ops.resize(out.p_size);
+    int max_dep = std::min(out.logical.p_size - 2, out.logical.p_size - out.counting.iep_num - 1);
+    out.auxiliary.mg_ops.resize(out.logical.p_size);
     for (int comp_dep = max_dep; comp_dep >= 2; --comp_dep) {
-        const std::vector<VertexSetIR> &vset_vec = out.set_ops.at(comp_dep);
-        const VertexSetIR &iter = out.iter_set.at(comp_dep - 1);
+        const std::vector<VertexSetIR> &vset_vec = out.logical.set_ops.at(comp_dep);
+        const VertexSetIR &iter = out.logical.iter_set.at(comp_dep - 1);
         for (const VertexSetIR &vset : vset_vec) {
             if (_config.adjMatType != AdjMatType::VertexInduced && vset.is_edge(comp_dep) == false) {
                 continue; // EdgeInduced matching does not require set subtraction
@@ -19,15 +19,15 @@ PlanIR create_plan_mg(const PlanIR &_plan, const CodeGenConfig &_config) {
                 if (intersect.has_value() && vertices.has_value()) {
                     MiniGraphIR mg_op(vertices.value(), intersect.value());
                     if (_config.pruningType == PruningType::Static) {
-                        VertexSetIR next_vertices = out.iter_set.at(prune_dep); // next iteration
-                        for (const auto &next_intersect : out.set_ops.at(prune_dep + 1)) {
+                        VertexSetIR next_vertices = out.logical.iter_set.at(prune_dep); // next iteration
+                        for (const auto &next_intersect : out.logical.set_ops.at(prune_dep + 1)) {
                             if (mg_op.computed(next_vertices, next_intersect)) {
-                                out.mg_ops.at(prune_dep).push_back(mg_op);
+                                out.auxiliary.mg_ops.at(prune_dep).push_back(mg_op);
                                 break;
                             }
                         }
                     } else {
-                        out.mg_ops.at(prune_dep).push_back(mg_op);
+                        out.auxiliary.mg_ops.at(prune_dep).push_back(mg_op);
                     }
                 } // find a valid minigraph
             }
@@ -35,7 +35,7 @@ PlanIR create_plan_mg(const PlanIR &_plan, const CodeGenConfig &_config) {
     }
     // remove duplicates
     int next_id = 0;
-    for (auto &mg_op : out.mg_ops) {
+    for (auto &mg_op : out.auxiliary.mg_ops) {
         std::sort(mg_op.begin(), mg_op.end());
         mg_op.erase(std::unique(mg_op.begin(), mg_op.end()), mg_op.end());
         for (auto &mg : mg_op) {
@@ -43,11 +43,11 @@ PlanIR create_plan_mg(const PlanIR &_plan, const CodeGenConfig &_config) {
         }
     }
     std::vector<bool> IndeedUsed(next_id, false);
-    out.mg_used.resize(out.p_size);
-    out.mg_bounded.clear();
-    out.mg_bounded.resize(next_id, true);
+    out.auxiliary.mg_used.resize(out.logical.p_size);
+    out.auxiliary.mg_bounded.clear();
+    out.auxiliary.mg_bounded.resize(next_id, true);
     for (int dep = 1; dep <= max_dep; dep++) {
-        const auto &ops = out.set_ops.at(dep);
+        const auto &ops = out.logical.set_ops.at(dep);
         std::vector<MiniGraphIR> mg_used_vec;
         for (const VertexSetIR &op : ops) {
             std::optional<MiniGraphIR> mg_used = out.get_parent_mg(op);
@@ -60,27 +60,27 @@ PlanIR create_plan_mg(const PlanIR &_plan, const CodeGenConfig &_config) {
                 }
                 if (to_add) {
                     mg_used_vec.push_back(mg_used.value());
-                    out.mg_bounded.at(mg_used->id) =
-                        out.mg_bounded.at(mg_used->id) && op.is_restricted(op.loop_depth());
+                    out.auxiliary.mg_bounded.at(mg_used->id) =
+                        out.auxiliary.mg_bounded.at(mg_used->id) && op.is_restricted(op.loop_depth());
                 }
             }
         }
-        out.mg_used.at(dep) = mg_used_vec;
+        out.auxiliary.mg_used.at(dep) = mg_used_vec;
     }
 
     for (int dep = max_dep; dep >= 0; dep--) {
-        for (const MiniGraphIR &child : out.mg_ops.at(dep)) {
+        for (const MiniGraphIR &child : out.auxiliary.mg_ops.at(dep)) {
             if (IndeedUsed.at(child.id)) {
                 std::optional<MiniGraphIR> parent = out.get_parent_mg(child);
                 if (parent.has_value()) {
                     IndeedUsed.at(parent->id) = true;
-                    out.mg_bounded.at(parent->id) =
-                        out.mg_bounded.at(parent->id) && out.mg_bounded.at(child.id);
+                    out.auxiliary.mg_bounded.at(parent->id) =
+                        out.auxiliary.mg_bounded.at(parent->id) && out.auxiliary.mg_bounded.at(child.id);
                 }
             }
         }
     }
-    for (auto &mg_op : out.mg_ops) {
+    for (auto &mg_op : out.auxiliary.mg_ops) {
         mg_op.erase(std::remove_if(mg_op.begin(), mg_op.end(),
                                    [&IndeedUsed](const MiniGraphIR &mg) {
                                        return mg.id < 0 || static_cast<size_t>(mg.id) >= IndeedUsed.size() ||

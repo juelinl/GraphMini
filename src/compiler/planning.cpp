@@ -206,7 +206,11 @@ ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, Meta
     t.Reset();
     CompilationStage stage("base_ir");
     PlanIR out;
-    out.config = config;
+    out.context.config = config;
+    out.query = {_adj_mat, config.adjMatType == AdjMatType::VertexInduced
+                               ? AdjMatType::VertexInduced : AdjMatType::EdgeInduced};
+    out.logical.adjacency = schedule.adj_mat;
+    out.logical.matching_order = schedule.matching_order;
     int max_dep = p_size - 1;
     std::vector<EdgeIR> edge_ir_vec(p_size);
     std::vector<EdgeRestrictIR> res_ir_vec(p_size);
@@ -253,10 +257,10 @@ ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, Meta
         iter_set.at(dep) = iter_vs;
         CHECK(iter_vs.has_id()) << "Invalid VertexSetIR (id = -1)";
     }
-    out.p_size = p_size;
-    out.set_ops = set_ops;
-    out.iter_set = iter_set;
-    out.meta = meta;
+    out.logical.p_size = p_size;
+    out.logical.set_ops = set_ops;
+    out.logical.iter_set = iter_set;
+    out.context.meta = meta;
     return {std::move(out), std::move(schedule)};
 };
 

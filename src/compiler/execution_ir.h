@@ -1,5 +1,6 @@
 #pragma once
 #include "ir.h"
+#include "compiler/representation.h"
 #include <map>
 #include <optional>
 #include <set>
@@ -70,6 +71,9 @@ struct LoopExecution {
     std::set<int> captured_adjacencies;
 };
 struct ExecutionIR {
+    int serial_loop_boundary{1};
+    DomainAnalysis domains;
+    RepresentationPlan representations;
     std::map<int, SetExecution> sets;
     std::vector<IEPTerm> iep;
     std::map<int, MiniGraphExecution> minigraphs;
