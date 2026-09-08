@@ -2,8 +2,8 @@
 
 [Back to GraphMini](../README.md)
 
-Run all commands below from the repository root. For the recommended basic
-installation, start with the [quick start](../README.md#installation).
+Run all commands below from the repository root. The Conda environment below
+is the recommended installation method.
 
 ## Installation options
 
