@@ -39,6 +39,12 @@ int main() {
                     const auto code = gen_code(query, config, meta);
                     if (ir.bitmap_region->full_region) {
                         ++full;
+                        require(code.find("count_local<bitmap_words>") != std::string::npos &&
+                                code.find("materialize_local<bitmap_words>") != std::string::npos &&
+                                code.find("std::integral_constant<size_t, 0>") != std::string::npos &&
+                                code.find("std::integral_constant<size_t, 1>") != std::string::npos &&
+                                code.find("std::integral_constant<size_t, 2>") != std::string::npos,
+                                "Missing fixed-word region dispatch");
                         const auto start = code.find("// full bitmap region");
                         const auto body = code.substr(start, code.find("} else {", start)-start);
                         require(body.find("graph->N") == std::string::npos &&

@@ -44,6 +44,8 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
             const auto &region = *execution_.bitmap_region;
             auto slot = [&](int id) { return std::find(region.full_sets.begin(), region.full_sets.end(), id) - region.full_sets.begin(); };
             std::string out = "if (bitmap_region) { // full bitmap region\n";
+            out += "auto bitmap_execute = [&](auto bitmap_tag) {\n"
+                   "constexpr size_t bitmap_words = decltype(bitmap_tag)::value;\n";
             for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) {
                 out += fmt::format("for (auto bc{0} = bitmap_region->local_cursor({1}); bc{0}.valid(); bc{0}.advance()) {{ // bitmap local-index loop\n"
                                    "const auto bp{0} = bc{0}.position();\n", depth, slot(plan.logical.iter_set.at(depth-1).id));
@@ -54,12 +56,12 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
                     const bool bound_only = step.opcode == SetOpcode::Bound;
                     const bool bounded = bound_only || step.upper_bound.has_value();
                     if (op.result == SetResult::Count) {
-                        out += fmt::format("counter += bitmap_region->count_local({}, bp{}, {}, {});\n", slot(op.input.id), depth, subtract, bounded);
+                        out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {});\n", slot(op.input.id), depth, subtract, bounded);
                         if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
                     } else {
                         if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
                             out += fmt::format("const auto bn{} = ", op.id);
-                        out += fmt::format("bitmap_region->materialize_local({}, {}, bp{}, {}, {}, {});\n",
+                        out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {});\n",
                             slot(op.id), slot(op.input.id), depth, subtract, bounded, bound_only);
                         if (op.guard_empty) out += fmt::format("if (!bn{}) continue;\n", op.id);
                         if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
@@ -67,6 +69,10 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
                 }
             }
             for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) out += "}\n";
+            out += "};\n"
+                   "if (bitmap_region->universe_size() <= 64) bitmap_execute(std::integral_constant<size_t, 1>{});\n"
+                   "else if (bitmap_region->universe_size() <= 128) bitmap_execute(std::integral_constant<size_t, 2>{});\n"
+                   "else bitmap_execute(std::integral_constant<size_t, 0>{});\n";
             out += "} else {\n";
             return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n", dep+1, iter_set.id);
         }

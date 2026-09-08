@@ -1,4 +1,4 @@
-// Isolated experiment: no production dispatch or codegen changes.
+// Correctness and optional microbenchmark for production fixed-word kernels.
 #include "backend/bit_ops/bit_ops.h"
 #include <array>
 #include <atomic>
@@ -10,15 +10,7 @@
 using namespace minigraph::bit_ops;
 template<size_t Words, Binary Op, bool Write>
 inline size_t fixed(const Word *a, const Word *b, size_t bits, Word *out, size_t limit) {
-    const size_t active = std::min(bits, limit);
-    size_t result = 0;
-    for (size_t i = 0; i < Words; ++i) {
-        Word value = (Op == Binary::Intersection ? a[i] & b[i] : a[i] & ~b[i]);
-        value &= word_mask(i, active);
-        result += popcount(value);
-        if constexpr (Write) out[i] = value;
-    }
-    return result;
+    return combine_fixed<Words, Op, Write>(a, b, bits, out, limit);
 }
 struct Item { std::array<Word, 2> a, b; size_t bound; };
 template<Binary Op, bool Write> void verify(std::mt19937_64 &rng) {

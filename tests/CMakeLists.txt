@@ -10,6 +10,9 @@ add_test(NAME python_import
             $<TARGET_FILE:graphmini>)
 
 add_executable(bitmap_reuse_regression bitmap_reuse.cpp)
+add_executable(bit_fixed_regression bit_fixed_experiment.cpp)
+target_link_libraries(bit_fixed_regression PRIVATE graphmini_headers)
+add_test(NAME bit_fixed_regression COMMAND bit_fixed_regression)
 add_executable(bit_mark_regression bit_mark.cpp)
 target_link_libraries(bit_mark_regression PRIVATE graphmini_headers)
 add_test(NAME bit_mark_regression COMMAND bit_mark_regression)
