@@ -208,13 +208,15 @@ public:
                  std::string query_type,
                  std::string pruning_type,
                  std::string parallel_type,
-                 std::string scheduler)
+                 std::string scheduler,
+                 bool bitmap = false,
+                 bool bitmap_diagnostics = false)
             : graph_(std::move(graph)),
               query_adjmat_(std::move(query_adjmat)),
               query_type_(std::move(query_type)),
               pruning_type_(std::move(pruning_type)),
               parallel_type_(std::move(parallel_type)),
-              scheduler_(std::move(scheduler)) {
+              scheduler_(std::move(scheduler)), bitmap_(bitmap), bitmap_diagnostics_(bitmap_diagnostics) {
         compile();
     }
 
@@ -235,6 +237,8 @@ public:
         tbb::global_control tbb_thread_limit(tbb::global_control::max_allowed_parallelism, num_threads);
         const int context_capacity = std::max(num_threads, 256);
         Context ctx(context_capacity);
+        // Capacity accommodates TBB worker IDs; it is not the OpenMP team size.
+        ctx.num_threads = num_threads;
         module_.run(graph.get(), ctx);
 
         RunResult out;
@@ -288,6 +292,8 @@ private:
         config.parType = parse_parallel_type(parallel_type_);
         config.schedulerType = parse_scheduler_type(scheduler_);
         config.runnerType = RunnerType::Benchmark;
+        config.bitmap = bitmap_;
+        config.bitmapDiagnostics = bitmap_diagnostics_;
 
         meta = metadata_from_graph(*graph_);
         }
@@ -329,6 +335,8 @@ private:
     std::string pruning_type_;
     std::string parallel_type_;
     std::string scheduler_;
+    bool bitmap_;
+    bool bitmap_diagnostics_;
     std::string generated_code_;
     std::filesystem::path module_copy_path_;
     LoadedPlanModule module_;
@@ -385,20 +393,23 @@ PYBIND11_MODULE(graphmini, m) {
                              const std::string &query_type,
                              const std::string &pruning_type,
                              const std::string &parallel_type,
-                             const std::string &scheduler) {
+                             const std::string &scheduler,
+                             bool bitmap, bool bitmap_diagnostics) {
                      return CompiledPlan(graph.ptr(),
                                          query_adjmat,
                                          query_type,
                                          pruning_type,
                                          parallel_type,
-                                         scheduler);
+                                         scheduler, bitmap, bitmap_diagnostics);
                  }),
                  py::arg("graph"),
                  py::arg("query_adjmat"),
                  py::arg("query_type"),
                  py::arg("pruning_type") = "eager",
                  py::arg("parallel_type") = "nested_rt",
-                 py::arg("scheduler") = "graphpi")
+                 py::arg("scheduler") = "graphpi",
+                 py::arg("bitmap") = false,
+                 py::arg("bitmap_diagnostics") = false)
             .def("run", [](const CompiledPlan &self, const PyGraph &graph, int num_threads) {
                 py::gil_scoped_release release;
                 return self.run(graph.ptr(), num_threads);
@@ -421,19 +432,22 @@ PYBIND11_MODULE(graphmini, m) {
              const std::string &query_type,
              const std::string &pruning_type,
              const std::string &parallel_type,
-             const std::string &scheduler) {
+             const std::string &scheduler,
+             bool bitmap, bool bitmap_diagnostics) {
               py::gil_scoped_release release;
               return CompiledPlan(graph.ptr(),
                                   query_adjmat,
                                   query_type,
                                   pruning_type,
                                   parallel_type,
-                                  scheduler);
+                                  scheduler, bitmap, bitmap_diagnostics);
           },
           py::arg("graph"),
           py::arg("query_adjmat"),
           py::arg("query_type"),
           py::arg("pruning_type") = "eager",
           py::arg("parallel_type") = "nested_rt",
-          py::arg("scheduler") = "graphpi");
+          py::arg("scheduler") = "graphpi",
+          py::arg("bitmap") = false,
+          py::arg("bitmap_diagnostics") = false);
 }

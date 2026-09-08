@@ -1,4 +1,5 @@
 #include "backend/bitgraph.h"
+#include "backend/bitmap_count_region.h"
 #include "backend/set_ops/set_ops.h"
 #include "compiler/representation.h" // Runtime and compiler universe names must coexist.
 #include <iostream>
@@ -246,6 +247,20 @@ int main() {
     raw_kernels(rng);
     containers(rng);
     graphs(rng);
+    struct TestGraph {
+        std::vector<std::vector<uint32_t>> adjacency{{1, 2, 3}, {0, 2}, {0, 1}, {0}};
+        const std::vector<uint32_t> &N(uint32_t v) const { return adjacency.at(v); }
+    } graph;
+    const auto &neighbors = graph.N(0);
+    std::vector<const std::vector<uint32_t> *> inputs{&neighbors};
+    auto region = BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs);
+    require(region && region->row_count() == 3, "Terminal region construction");
+    require(region->count(0, 1, false) == 1, "Terminal intersection");
+    require(region->count(0, 1, true) == 1, "Terminal induced subtraction excludes owner");
+    require(region->count(0, 1, true, 3) == 0, "Terminal strict global bound");
+    require(!BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs, 0), "Budget fallback");
+    const std::vector<uint32_t> empty;
+    require(!BitmapCountRegion::build(graph, 0, neighbors, empty, inputs), "Empty row fallback");
     std::cout << "Validated bitmap kernels, universe/ownership contracts, array parity, and BitGraph "
                  "graph oracles\n";
 }

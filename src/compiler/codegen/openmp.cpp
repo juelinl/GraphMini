@@ -20,7 +20,14 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
         out << "#include \"plan_profile.h\"\n";
     else
         out << "#include \"plan.h\"\n";
+    if (config.bitmap) {
+        out << "// bitmap: " << execution_.bitmap_reason << '\n';
+        if (execution_.bitmap_region)
+            out << "#include \"backend/bitmap_count_region.h\"\n";
+    }
     out << "namespace minigraph {\n";
+    if (config.bitmapDiagnostics)
+        out << "static std::atomic<uint64_t> bitmap_counters[4]{};\n";
     out << "\tuint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
     out << "\tvoid plan(const GraphType* graph, Context& ctx){\n";
     if (profiling_)
@@ -45,6 +52,8 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     if (config.pruningType != PruningType::None)
         out << "\t\tMiniGraphIF::DATA_GRAPH = graph;\n";
     out << "\t\tinternal::VertexSetPool::configure_for_graph(graph->get_maxdeg());\n";
+    if (config.bitmapDiagnostics)
+        out << "for (auto& value : bitmap_counters) value.store(0, std::memory_order_relaxed);\n";
     out << "#pragma omp parallel num_threads(ctx.num_threads) default(none) "
            "shared(ctx, graph)\n\t\t{ // pragma parallel \n";
     out << "\t\t\tcc &counter = "
@@ -71,6 +80,7 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                     out << gen_indent(dep) << op;
                 }
                 // code for iterating next loop
+                out << emit_bitmap_build(dep);
                 if (dep == plan.logical.p_size - 2)
                     continue;
                 out << gen_indent(dep) << emit_iter(plan, dep);
@@ -203,6 +213,9 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     out << "\t\t} // pragma parallel\n";
     out << "\t} // plan\n";
     out << "} // namespace minigraph \n";
+    if (config.bitmapDiagnostics)
+        out << "extern \"C\" uint64_t graphmini_bitmap_counter(unsigned index) { "
+               "return index < 4 ? minigraph::bitmap_counters[index].load(std::memory_order_relaxed) : 0; }\n";
 
     out << "extern \"C\" uint64_t graphmini_pattern_size(){return "
            "minigraph::pattern_size();}\n";

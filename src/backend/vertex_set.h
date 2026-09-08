@@ -81,6 +81,7 @@ namespace minigraph {
         IdType *end() { return m_data + m_size; };
         bool pooled() const { return m_pool != nullptr; };
         const IdType *begin() const { return m_data; };
+        const IdType *data() const { return m_data; }
         const IdType *end() const { return m_data + m_size; };
 
         inline IdType &operator[](size_t i) {

@@ -6,6 +6,7 @@
 namespace minigraph {
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
     verify_representations(plan.logical, execution.domains, execution.representations);
+    verify_bitmap_region(plan, execution);
     std::map<int, int> depths;
     std::set<int> graphs;
     for (const auto &level : plan.logical.set_ops)
@@ -117,6 +118,16 @@ void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
 std::string dump_execution(const ExecutionIR &execution) {
     std::ostringstream out;
     out << dump_domains(execution.domains, execution.representations);
+    out << "bitmap: " << execution.bitmap_reason << '\n';
+    if (execution.bitmap_region) {
+        const auto &region = *execution.bitmap_region;
+        out << "bitmap-region @depth" << region.entry_depth << " anchor=" << region.anchor_depth
+            << " rows=set" << region.row_set << " live-ins:";
+        for (int id : region.live_ins) out << " set" << id;
+        out << " counts:";
+        for (int id : region.count_ops) out << " set" << id;
+        out << '\n';
+    }
     auto ref = [&](SetReference r) {
         switch (r.source) {
         case SetSource::Prefix:

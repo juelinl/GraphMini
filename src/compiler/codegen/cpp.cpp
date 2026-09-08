@@ -93,6 +93,22 @@ std::string set_expression(const SetExecution &op) {
 
 std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
     const auto &op = execution_.sets.at(logical.id);
+    if (execution_.bitmap_region) {
+        const auto &region = *execution_.bitmap_region;
+        if (std::find(region.count_ops.begin(), region.count_ops.end(), op.id) != region.count_ops.end()) {
+            const auto &step = op.steps.front();
+            const auto input = std::find(region.live_ins.begin(), region.live_ins.end(), op.input.id)
+                               - region.live_ins.begin();
+            const std::string bound = step.upper_bound ? ", " + vertex_name(*step.upper_bound) : "";
+            const std::string diagnostics = bitmap_diagnostics_
+                ? "if (bitmap_region) bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n" + gen_indent(op.depth)
+                : "";
+            return diagnostics + fmt::format("counter += bitmap_region ? bitmap_region->count({}, i{}_id, {}{}) : {};\n",
+                               input, step.rhs->id,
+                               step.opcode == SetOpcode::DifferenceExcludingOwner, bound,
+                               set_expression(op));
+        }
+    }
     std::string out =
         op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
     out += set_expression(op) + ";\n";
@@ -100,6 +116,27 @@ std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
         out += gen_indent(op.depth) + fmt::format("if (s{}.size() == 0) continue;\n", op.id);
     if (op.result == SetResult::MaterializeThenCount)
         out += fmt::format("counter += s{}.size();\n", op.id);
+    return out;
+}
+
+std::string CppCodegen::emit_bitmap_build(int dep) {
+    if (!execution_.bitmap_region || execution_.bitmap_region->entry_depth != dep)
+        return "";
+    const auto &region = *execution_.bitmap_region;
+    std::string inputs;
+    for (int id : region.live_ins) {
+        if (!inputs.empty()) inputs += ", ";
+        inputs += fmt::format("&s{}", id);
+    }
+    std::string out = gen_indent(dep) + fmt::format(
+        "auto bitmap_region = BitmapCountRegion::build(*graph, i{0}_id, graph->N(i{0}_id), "
+        "s{1}, std::vector<const VertexSet*>{{{2}}}); // bitmap-region build once\n",
+        region.anchor_depth, region.row_set, inputs);
+    if (bitmap_diagnostics_)
+        out += gen_indent(dep) + fmt::format(
+            "if (bitmap_region) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "
+            "bitmap_counters[1].fetch_add(bitmap_region->row_count(), std::memory_order_relaxed); "
+            "bitmap_counters[2].fetch_add({}, std::memory_order_relaxed); }}\n", region.live_ins.size());
     return out;
 }
 

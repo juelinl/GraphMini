@@ -70,6 +70,12 @@ struct LoopExecution {
     std::vector<int> captured_sets, captured_minigraphs;
     std::set<int> captured_adjacencies;
 };
+// Array live-ins remain available for memory-budget fallback. Bitmap copies and
+// restricted rows are owned by this region, outside the terminal matching loop.
+struct BitmapRegionExecution {
+    int entry_depth, anchor_depth, row_set;
+    std::vector<int> live_ins, count_ops;
+};
 struct ExecutionIR {
     int serial_loop_boundary{1};
     DomainAnalysis domains;
@@ -78,11 +84,15 @@ struct ExecutionIR {
     std::vector<IEPTerm> iep;
     std::map<int, MiniGraphExecution> minigraphs;
     std::vector<LoopExecution> loops;
+    std::optional<BitmapRegionExecution> bitmap_region;
+    std::string bitmap_reason;
 };
 
 ExecutionIR lower_execution(const PlanIR &plan);
 void lower_minigraphs(const PlanIR &plan, ExecutionIR &execution);
 void lower_loops(const PlanIR &plan, ExecutionIR &execution);
+void lower_bitmap_region(const PlanIR &plan, ExecutionIR &execution);
+void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &execution);
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan);
 std::string dump_execution(const ExecutionIR &execution);
 } // namespace minigraph

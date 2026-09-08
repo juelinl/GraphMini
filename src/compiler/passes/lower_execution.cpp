@@ -115,6 +115,7 @@ ExecutionIR lower_execution(const PlanIR &plan) {
     }
     lower_minigraphs(plan, result);
     lower_loops(plan, result);
+    lower_bitmap_region(plan, result);
     verify_execution(result, plan);
     return result;
 }

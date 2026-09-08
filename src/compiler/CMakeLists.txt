@@ -3,11 +3,15 @@ add_library(graphmini_codegen STATIC
     vertex_induced.cpp edge_induced.cpp edge_induced_iep.cpp
     passes/auxiliary_graphs.cpp passes/lower_execution.cpp passes/lower_minigraphs.cpp
     passes/lower_loops.cpp
+    passes/lower_bitmap.cpp
     passes/representation.cpp
     codegen/cpp.cpp codegen/openmp.cpp codegen/tbb.cpp)
 target_link_libraries(graphmini_codegen PRIVATE common graphpi_scheduler graphmini_scheduler fmt::fmt)
 
 if(GRAPHMINI_BUILD_TESTS)
+    add_executable(bitmap_ir_regression ../../tests/bitmap_ir.cpp)
+    target_link_libraries(bitmap_ir_regression PRIVATE graphmini_codegen)
+    add_test(NAME bitmap_ir_regression COMMAND bitmap_ir_regression)
     add_executable(bitmap_regression ../../tests/bitmap.cpp)
     add_test(NAME bitmap_regression COMMAND bitmap_regression)
     add_executable(bitmap_portable_regression ../../tests/bitmap.cpp)

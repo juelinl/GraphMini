@@ -43,6 +43,8 @@ namespace minigraph {
         PruningType pruningType = PruningType::Eager;
         ParallelType parType = ParallelType::NestedRt;
         RunnerType runnerType = RunnerType::Benchmark;
+        bool bitmap = false; // Experimental terminal-region lowering; arrays remain the default.
+        bool bitmapDiagnostics = false; // Instrument only explicit verification runs.
     };
 
 
