@@ -138,6 +138,21 @@ class Bitmap {
     const NeighborhoodUniverse &universe() const { return universe_; }
     const std::vector<bit_ops::Word> &words() const { return words_; }
     size_t count() const { return cardinality_; }
+    // Internal-region operation: fixed universe, preallocated destination.
+    // Exact source/destination alias is supported by bit_ops.
+    void assign_local(const Bitmap &source, const bit_ops::Word *row, bool subtract,
+                      size_t limit, std::optional<uint32_t> excluded = {}) {
+        if (!universe_.compatible(source.universe_))
+            throw std::invalid_argument("Incompatible bitmap assignment");
+        const size_t bits = universe_.size();
+        cardinality_ = subtract
+            ? bit_ops::difference_write(source.words_.data(), row, bits, words_.data(), limit)
+            : bit_ops::intersection_write(source.words_.data(), row, bits, words_.data(), limit);
+        if (excluded && bit_ops::test(words_.data(), bits, *excluded)) {
+            bit_ops::clear(words_.data(), bits, *excluded);
+            --cardinality_;
+        }
+    }
     void reset() {
         std::fill(words_.begin(), words_.end(), 0);
         cardinality_ = 0;

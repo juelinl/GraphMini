@@ -7,6 +7,40 @@ namespace {
 bool contains(const std::vector<int> &values, int value) {
     return std::find(values.begin(), values.end(), value) != values.end();
 }
+void extend_full_region(const PlanIR &plan, const ExecutionIR &ir, BitmapRegionExecution &region) {
+    // Conservative all-or-nothing extension: prefix operands, local row/bound,
+    // one lowered step. No ad hoc global-ID conversion inside the region.
+    // SSA definitions keep each active ancestor cursor's backing slot intact.
+    std::vector<int> slots, inputs;
+    auto use = [&](int id) {
+        if (!contains(ir.domains.sets.at(id).neighborhood_anchors, region.anchor_depth)) return false;
+        if (!contains(slots, id)) slots.push_back(id);
+        if (ir.sets.at(id).depth <= region.entry_depth && !contains(inputs, id)) inputs.push_back(id);
+        return true;
+    };
+    for (int depth = region.entry_depth + 1; depth <= plan.logical.p_size - 2; ++depth) {
+        if (!use(plan.logical.iter_set.at(depth - 1).id)) return;
+        for (const auto &logical : plan.logical.set_ops.at(depth)) {
+            const auto &op = ir.sets.at(logical.id);
+            if (op.input.source != SetSource::Prefix || op.steps.size() != 1 || !use(op.input.id)) return;
+            const auto &step = op.steps.front();
+            auto local = [&](const VertexReference &v) {
+                return v.adjacency ? v.adjacency->source == SetSource::GraphAdjacency && v.adjacency->id == depth
+                                   : v.depth == depth;
+            };
+            if (step.opcode == SetOpcode::Bound) {
+                if (!step.vertex || !local(*step.vertex) || op.result == SetResult::Count) return;
+            } else if (step.opcode == SetOpcode::Intersect || step.opcode == SetOpcode::DifferenceExcludingOwner) {
+                if (!step.rhs || step.rhs->source != SetSource::GraphAdjacency || step.rhs->id != depth ||
+                    (step.upper_bound && !local(*step.upper_bound))) return;
+            } else return;
+            if (op.result != SetResult::Count && !use(op.id)) return;
+        }
+    }
+    region.full_region = true;
+    region.full_sets = std::move(slots);
+    region.full_live_ins = std::move(inputs);
+}
 std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const ExecutionIR &ir,
                                                std::string &reason) {
     const auto &config = plan.context.config;
@@ -63,6 +97,7 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             out.iterator_set = plan.logical.iter_set.at(conversion).id;
             if (!contains(out.live_ins, out.iterator_set))
                 out.live_ins.push_back(out.iterator_set);
+            extend_full_region(plan, ir, out);
             reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
             return out;
         }
@@ -84,7 +119,9 @@ void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &ir) {
     const auto &actual = *ir.bitmap_region;
     if (actual.entry_depth != expected->entry_depth || actual.anchor_depth != expected->anchor_depth ||
         actual.conversion_depth != expected->conversion_depth || actual.live_ins != expected->live_ins ||
-        actual.count_ops != expected->count_ops || actual.iterator_set != expected->iterator_set)
+        actual.count_ops != expected->count_ops || actual.iterator_set != expected->iterator_set ||
+        actual.full_region != expected->full_region || actual.full_sets != expected->full_sets ||
+        actual.full_live_ins != expected->full_live_ins)
         throw std::logic_error("Invalid bitmap scope, identity, rows, or live-ins");
 }
 } // namespace minigraph

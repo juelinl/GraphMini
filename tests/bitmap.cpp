@@ -314,6 +314,29 @@ int main() {
         const std::vector<uint32_t> &N(uint32_t v) const { return adjacency.at(v); }
     } graph;
     const auto &neighbors = graph.N(0);
+    auto full = BitmapCountRegion::build(graph, 0, neighbors, neighbors, 3);
+    full->bind_input(0, neighbors);
+    const auto *slot_storage = full->input_view(1).data();
+    for (uint32_t pos = 0; pos < neighbors.size(); ++pos)
+        for (bool subtract : {false, true})
+            for (bool bounded : {false, true}) {
+                const auto count = full->materialize_local(1, 0, pos, subtract, bounded);
+                require(count == full->count_local(0, pos, subtract, bounded), "Full materialization parity");
+                require(full->input_view(1).data() == slot_storage, "Full region allocated in inner loop");
+                size_t expected = 0;
+                for (auto cursor = full->local_cursor(1); cursor.valid(); cursor.advance()) {
+                    const auto selected = cursor.position();
+                    expected += full->count_local(1, selected, false, true);
+                    require(full->materialize_local(2, 1, selected, false, true) ==
+                            full->count_local(1, selected, false, true), "Nested materialization parity");
+                }
+                (void)expected;
+                require(full->input_view(0).count() == neighbors.size(), "Descendant overwrote ancestor");
+            }
+    for (uint32_t pos = 0; pos < neighbors.size(); ++pos)
+        require(full->materialize_local(1, 0, pos, false, true, true) == pos, "Local bound-only parity");
+    rejects([&] { full->materialize_local(3, 0, 0, false, false); });
+    rejects([&] { full->materialize_local(1, 0, 3, false, false); });
     std::vector<const std::vector<uint32_t> *> inputs{&neighbors};
     auto region = BitmapCountRegion::build(graph, 0, neighbors, neighbors, inputs.size());
     region->bind_inputs(inputs);

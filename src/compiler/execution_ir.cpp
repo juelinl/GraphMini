@@ -127,6 +127,10 @@ std::string dump_execution(const ExecutionIR &execution) {
         out << " counts:";
         for (int id : region.count_ops) out << " set" << id;
         out << " local-iterator=set" << region.iterator_set;
+        out << " full-region=" << region.full_region << " slots=";
+        for (int id : region.full_sets) out << id << ',';
+        out << " boundary-inputs=";
+        for (int id : region.full_live_ins) out << id << ',';
         out << '\n';
     }
     auto ref = [&](SetReference r) {

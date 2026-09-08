@@ -87,7 +87,7 @@ for size in range(4, 8):
                             assert counter(0) == counter(3) == 0, "C4 has no universal root anchor"
                         if expected and "// bitmap-region build once" in plan.generated_code:
                             assert "// bitmap local-index loop" in plan.generated_code
-                            assert "->counting_view(" in plan.generated_code
+                            assert "->counting_view(" in plan.generated_code or "// full bitmap region" in plan.generated_code
                             assert "bitmap_region ?" not in plan.generated_code
                             assert counter(0) > 0 and counter(3) > 0, "Eligible positive case used no bitmaps"
                             assert counter(1) >= counter(0), "Constructed an empty BitGraph"

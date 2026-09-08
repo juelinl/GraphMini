@@ -39,7 +39,38 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
         return "";
     } else {
         const auto &iter_set = plan.logical.iter_set.at(dep);
-        if (execution_.bitmap_region && dep == execution_.bitmap_region->conversion_depth) {
+        if (execution_.bitmap_region && execution_.bitmap_region->full_region &&
+            dep == execution_.bitmap_region->entry_depth) {
+            const auto &region = *execution_.bitmap_region;
+            auto slot = [&](int id) { return std::find(region.full_sets.begin(), region.full_sets.end(), id) - region.full_sets.begin(); };
+            std::string out = "if (bitmap_region) { // full bitmap region\n";
+            for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) {
+                out += fmt::format("for (auto bc{0} = bitmap_region->local_cursor({1}); bc{0}.valid(); bc{0}.advance()) {{ // bitmap local-index loop\n"
+                                   "const auto bp{0} = bc{0}.position();\n", depth, slot(plan.logical.iter_set.at(depth-1).id));
+                for (const auto &logical : plan.logical.set_ops.at(depth)) {
+                    const auto &op = execution_.sets.at(logical.id);
+                    const auto &step = op.steps.front();
+                    const bool subtract = step.opcode == SetOpcode::DifferenceExcludingOwner;
+                    const bool bound_only = step.opcode == SetOpcode::Bound;
+                    const bool bounded = bound_only || step.upper_bound.has_value();
+                    if (op.result == SetResult::Count) {
+                        out += fmt::format("counter += bitmap_region->count_local({}, bp{}, {}, {});\n", slot(op.input.id), depth, subtract, bounded);
+                        if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
+                    } else {
+                        if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
+                            out += fmt::format("const auto bn{} = ", op.id);
+                        out += fmt::format("bitmap_region->materialize_local({}, {}, bp{}, {}, {}, {});\n",
+                            slot(op.id), slot(op.input.id), depth, subtract, bounded, bound_only);
+                        if (op.guard_empty) out += fmt::format("if (!bn{}) continue;\n", op.id);
+                        if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
+                    }
+                }
+            }
+            for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) out += "}\n";
+            out += "} else {\n";
+            return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n", dep+1, iter_set.id);
+        }
+        if (execution_.bitmap_region && !execution_.bitmap_region->full_region && dep == execution_.bitmap_region->conversion_depth) {
             const auto &region = *execution_.bitmap_region;
             const auto input = std::find(region.live_ins.begin(), region.live_ins.end(), region.iterator_set)
                                - region.live_ins.begin();
@@ -146,6 +177,9 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
     if (!execution_.bitmap_region)
         return "";
     const auto &region = *execution_.bitmap_region;
+    const auto &slots = region.full_region ? region.full_sets : region.live_ins;
+    const auto &bindings = region.full_region ? region.full_live_ins : region.live_ins;
+    if (region.full_region && dep != region.entry_depth) return "";
     if (dep < region.entry_depth || dep > region.conversion_depth)
         return "";
     std::string out;
@@ -153,14 +187,14 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
         out = gen_indent(dep) + fmt::format(
             "auto bitmap_neighbors = graph->N(i{0}_id);\n"
             "auto bitmap_region = BitmapCountRegion::build(*graph, i{0}_id, bitmap_neighbors, "
-            "bitmap_neighbors, {1}); // bitmap-region build once\n", region.anchor_depth, region.live_ins.size());
+            "bitmap_neighbors, {1}); // bitmap-region build once\n", region.anchor_depth, slots.size());
         if (bitmap_diagnostics_)
             out += gen_indent(dep) + fmt::format(
                 "if (bitmap_region) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "
                 "bitmap_counters[1].fetch_add(bitmap_region->row_count(), std::memory_order_relaxed); }}\n");
     }
-    for (size_t index = 0; index < region.live_ins.size(); ++index) {
-        const int id = region.live_ins[index];
+    for (int id : bindings) {
+        const auto index = std::find(slots.begin(), slots.end(), id) - slots.begin();
         // SSA set IDs and their definition depths determine the lifetime. An
         // outer set is bound when the region is created; inner sets on every
         // definition, after guards, before consumers. Never cache addresses.

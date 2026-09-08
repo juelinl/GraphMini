@@ -2,6 +2,7 @@
 #include "compiler/planning.h"
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 
 using namespace minigraph;
 void require(bool value, const char *message) {
@@ -10,7 +11,7 @@ void require(bool value, const char *message) {
 }
 int main() {
     const MetaData meta(100, 1000, 600, 30, 20, 60);
-    size_t selected = 0;
+    size_t selected = 0, full = 0;
     for (int n = 4; n <= 7; ++n) {
         for (int missing = 0; missing < 4; ++missing) {
             std::string query(n * n, '1');
@@ -36,19 +37,30 @@ int main() {
                 if (ir.bitmap_region) {
                     ++selected;
                     const auto code = gen_code(query, config, meta);
+                    if (ir.bitmap_region->full_region) {
+                        ++full;
+                        const auto start = code.find("// full bitmap region");
+                        const auto body = code.substr(start, code.find("} else {", start)-start);
+                        require(body.find("graph->N") == std::string::npos &&
+                                body.find("bind_input") == std::string::npos,
+                                "Array adjacency or conversion inside full bitmap region");
+                    }
                     require(code.find("bitmap_region ?") == std::string::npos,
                             "Mixed bitmap/array hot loop");
-                    require(code.find("->counting_view(") != std::string::npos &&
+                    require(code.find(ir.bitmap_region->full_region ? "// full bitmap region" : "->counting_view(") != std::string::npos &&
                             code.find("} // array fallback") != std::string::npos,
                             "Missing prepared count or fallback scope");
-                    for (size_t index = 0; index < ir.bitmap_region->live_ins.size(); ++index) {
+                    const auto &slots = ir.bitmap_region->full_region ? ir.bitmap_region->full_sets : ir.bitmap_region->live_ins;
+                    const auto &inputs = ir.bitmap_region->full_region ? ir.bitmap_region->full_live_ins : ir.bitmap_region->live_ins;
+                    for (int id : inputs) {
+                        const auto index = std::find(slots.begin(), slots.end(), id) - slots.begin();
                         const auto binding = "->bind_input(" + std::to_string(index) + ", s" +
-                            std::to_string(ir.bitmap_region->live_ins[index]) + ");";
+                            std::to_string(id) + ");";
                         const auto first = code.find(binding);
                         require(first != std::string::npos && code.find(binding, first+1) == std::string::npos,
                                 "Missing or duplicate generated binding");
                     }
-                    for (int mutation = 0; mutation < 6; ++mutation) {
+                    for (int mutation = 0; mutation < 9; ++mutation) {
                         auto bad = ir;
                         auto &r = *bad.bitmap_region;
                         if (mutation == 0)
@@ -63,6 +75,9 @@ int main() {
                             r.count_ops.clear();
                         if (mutation == 5)
                             r.iterator_set = -1;
+                        if (mutation == 6) r.full_region = !r.full_region;
+                        if (mutation == 7) r.full_sets.push_back(-1);
+                        if (mutation == 8) r.full_live_ins.push_back(-1);
                         bool rejected = false;
                         try {
                             verify_execution(bad, plan);
@@ -87,5 +102,6 @@ int main() {
         }
     }
     require(selected > 0, "No bitmap plans exercised");
-    std::cout << "Validated 48 bitmap planning cases; selected " << selected << " regions\n";
+    require(full > 0, "No full bitmap regions exercised");
+    std::cout << "Validated 48 bitmap planning cases; selected " << selected << " regions, " << full << " full\n";
 }

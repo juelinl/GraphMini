@@ -203,7 +203,8 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
             if (dep == 0)
                 out << gen_indent(0) << "handled+=1;\n";
             out << gen_indent(dep) << "} // loop-" << std::to_string(dep) << " end\n";
-            if (execution_.bitmap_region && dep == execution_.bitmap_region->conversion_depth + 1)
+            if (execution_.bitmap_region && dep == (execution_.bitmap_region->full_region
+                ? execution_.bitmap_region->entry_depth : execution_.bitmap_region->conversion_depth) + 1)
                 out << "} // array fallback\n";
         }
     } else {

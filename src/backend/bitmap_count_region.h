@@ -5,8 +5,8 @@
 #include <memory>
 
 namespace minigraph {
-// Initial terminal-count specialization. Own everything borrowed by the final
-// loop; the original array prefixes remain available if the budget rejects it.
+// Own rows and reusable candidate slots for terminal-only or full-region bitmap
+// execution. Boundary arrays remain available if the budget rejects the region.
 class BitmapCountRegion {
     BitGraph graph_;
     std::vector<Bitmap> inputs_;
@@ -53,6 +53,16 @@ class BitmapCountRegion {
     CountingView counting_view(size_t) const && = delete;
     template<class Set> void bind_input(size_t index, const Set &input) {
         inputs_.at(index).assign_sorted(input.data(), input.size());
+    }
+    size_t materialize_local(size_t destination, size_t source, uint32_t position,
+                             bool subtract, bool bounded, bool bound_only = false) {
+        if (!graph_.has_universe_rows()) throw std::logic_error("Requires universe rows");
+        const auto *row = graph_.row_data_at(position);
+        const auto &input = inputs_.at(source);
+        inputs_.at(destination).assign_local(input, bound_only ? input.words().data() : row,
+            subtract, bounded ? position : graph_.universe().size(),
+            subtract ? std::optional<uint32_t>(position) : std::nullopt);
+        return inputs_[destination].count();
     }
     // Includes persistent row words, candidate words, ID mappings and object
     // storage plus one construction scratch bitmap. Allocator overhead is not
