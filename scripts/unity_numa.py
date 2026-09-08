@@ -22,10 +22,22 @@ def choose_domain(allowed, online, nodes, threads):
     return sorted(candidates, key=lambda pair: (-len(pair[1]), pair[0]))[0]
 
 
+def physical_cpus(cpus, topology):
+    """One logical CPU per physical (socket, core), keeping SMT out of timings."""
+    selected = {}
+    for cpu in sorted(cpus):
+        selected.setdefault(topology[cpu], cpu)
+    return sorted(selected.values())
+
+
+def benchmark_command(command, threads):
+    return [arg.replace('{numa_threads}', str(threads)) for arg in command]
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--metadata', required=True)
-    parser.add_argument('--threads', type=int, default=12)
+    parser.add_argument('--threads', type=int, help='Default: every physical core in the selected NUMA domain')
     parser.add_argument('command', nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if not os.environ.get('SLURM_JOB_ID'):
@@ -35,9 +47,21 @@ def main():
     nodes = []
     for node in Path('/sys/devices/system/node').glob('node[0-9]*'):
         nodes.append((int(node.name[4:]), cpu_list((node / 'cpulist').read_text())))
-    node, cpus = choose_domain(allowed, online, nodes, args.threads)
+    if args.threads is not None and args.threads < 1:
+        parser.error('--threads must be positive')
+    node, cpus = choose_domain(allowed, online, nodes, args.threads or 1)
+    topology = {}
+    for cpu in cpus:
+        path = Path(f'/sys/devices/system/cpu/cpu{cpu}/topology')
+        topology[cpu] = tuple(int((path / name).read_text())
+                              for name in ('physical_package_id', 'core_id'))
+    binding = physical_cpus(cpus, topology)
+    threads = args.threads or len(binding)
+    if threads > len(binding):
+        raise RuntimeError('Requested threads exceed the physical cores in the owned NUMA domain')
     metadata = dict(hostname=os.uname().nodename, numa_node=node, numa_cpus=cpus,
-                    allocated_affinity=sorted(allowed), matching_threads=args.threads,
+                    allocated_affinity=sorted(allowed), matching_threads=threads,
+                    physical_core_cpus=binding, baseline='unity-only',
                     slurm_job=os.environ['SLURM_JOB_ID'],
                     topology=subprocess.check_output(['lscpu', '--json'], text=True),
                     slurm_allocation=subprocess.check_output(['scontrol', 'show', 'job', os.environ['SLURM_JOB_ID']], text=True))
@@ -45,8 +69,9 @@ def main():
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     if not command:
         raise RuntimeError('Missing command')
-    print(f'Owned NUMA domain {node}: {cpus}; {args.threads} matching threads', flush=True)
-    os.execvp('numactl', ['numactl', '--physcpubind=' + ','.join(map(str, cpus)),
+    command = benchmark_command(command, threads)
+    print(f'Owned NUMA domain {node}: {cpus}; {threads} matching threads', flush=True)
+    os.execvp('numactl', ['numactl', '--physcpubind=' + ','.join(map(str, binding)),
                          f'--membind={node}', *command])
 
 

@@ -2,10 +2,21 @@ import sys
 from pathlib import Path
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
-from unity_numa import cpu_list, choose_domain
+from unity_numa import cpu_list, choose_domain, physical_cpus, benchmark_command
 
 
 class NumaTest(unittest.TestCase):
+    def test_physical_cores_exclude_smt(self):
+        self.assertEqual(physical_cpus([0, 1, 2, 3],
+                         {0: (0, 0), 1: (0, 1), 2: (0, 0), 3: (0, 1)}), [0, 1])
+
+    def test_socket_ids_disambiguate_cores(self):
+        self.assertEqual(physical_cpus([0, 1], {0: (0, 0), 1: (1, 0)}), [0, 1])
+
+    def test_full_domain_thread_argument(self):
+        self.assertEqual(benchmark_command(['python', 'run.py', '--threads', '{numa_threads}'], 64),
+                         ['python', 'run.py', '--threads', '64'])
+
     def test_parse(self):
         self.assertEqual(cpu_list('0-3,8,10-11\n'), {0, 1, 2, 3, 8, 10, 11})
 

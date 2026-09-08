@@ -29,10 +29,10 @@ if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
 else
     atlas_ids=117,158,207,208
     # Exercise a real native cutoff before allowing the full array to start.
-    python scripts/unity_numa.py --metadata "$job_dir/timeout-topology.json" --threads 12 -- \
+    python scripts/unity_numa.py --metadata "$job_dir/timeout-topology.json" -- \
         python tests/benchmark_atlas_runtime.py --corpus "$root/atlas6-corpus.json" \
         --output "$job_dir/timeout-check" --real-dir "$root/data" --atlas-ids 117 \
-        --parallel nested_rt --threads 12 --execution-budget 0.5 --preparation-budget 600
+        --parallel nested_rt --threads '{numa_threads}' --execution-budget 0.5 --preparation-budget 600
     python - "$job_dir/timeout-check/results.jsonl" <<'PY'
 import json, sys
 rows = [json.loads(line) for line in open(sys.argv[1])]
@@ -44,7 +44,7 @@ for row in rows:
 print('Native timeout snapshots verified for both backends')
 PY
 fi
-python scripts/unity_numa.py --metadata "$job_dir/topology.json" --threads 12 -- \
+python scripts/unity_numa.py --metadata "$job_dir/topology.json" -- \
     python tests/benchmark_atlas_runtime.py --corpus "$root/atlas6-corpus.json" \
     --output "$job_dir/results" --real-dir "$root/data" --atlas-ids "$atlas_ids" \
-    --parallel nested_rt --threads 12 --execution-budget 300 --preparation-budget 600
+    --parallel nested_rt --threads '{numa_threads}' --execution-budget 300 --preparation-budget 600
