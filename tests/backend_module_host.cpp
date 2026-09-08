@@ -4,6 +4,12 @@
 void backend_host_configure_pool() {
     minigraph::internal::VertexSetPool::configure_for_graph(15);
     minigraph::internal::VertexSetPool::TOTAL_ALLOCATED = 0;
+    minigraph::MiniGraphPool::TOTAL_ALLOCATED = 0;
+}
+
+bool backend_host_check_container(const minigraph::ManagedContainer& c) {
+    return c.size() == 8 && c[7] == 7 && c.capacity() >= 2049 &&
+           minigraph::MiniGraphPool::TOTAL_ALLOCATED >= 4096;
 }
 
 bool backend_host_check(const minigraph::Graph& graph, const minigraph::Context& context) {
