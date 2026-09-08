@@ -15,7 +15,6 @@
 // These counters model scalar merge work, not hardware SIMD instructions.
 namespace minigraph {
     using IdType = uint32_t;    // support up to 4-billion number of vertexes (2^64-1 edges)
-//    using IdType = uint64_t; // support up to 2^64-1 number of vertexes (2^64-1 edges)
     constexpr IdType INVALID_ID = static_cast<IdType>(-1);
 
     class VertexSet {
