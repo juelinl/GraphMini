@@ -1,4 +1,4 @@
-"""Execute only when the Slurm allocation contains a complete NUMA domain."""
+"""Bind benchmarks to allocated physical cores within one NUMA domain."""
 import argparse
 import json
 import os
@@ -19,7 +19,7 @@ def choose_domain(allowed, online, nodes, threads, allow_shared=False):
                   if len(cpus & online & allowed) >= threads
                   and (allow_shared or (cpus & online) <= allowed)]
     if not candidates:
-        raise RuntimeError(f'Allocation {sorted(allowed)} does not own an entire NUMA domain; refusing benchmark')
+        raise RuntimeError(f'Allocation {sorted(allowed)} has no eligible NUMA domain with at least {threads} CPUs (shared={allow_shared}); refusing benchmark')
     return sorted(candidates, key=lambda pair: (-len(pair[1]), pair[0]))[0]
 
 
@@ -38,7 +38,9 @@ def benchmark_command(command, threads):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--metadata', required=True)
-    parser.add_argument('--threads', type=int, help='Default: every physical core in the selected NUMA domain')
+    parser.add_argument('--threads', type=int,
+                        default=int(os.environ['GRAPHMINI_MATCH_THREADS']) if 'GRAPHMINI_MATCH_THREADS' in os.environ else None,
+                        help='Default: GRAPHMINI_MATCH_THREADS or every physical core in the selected NUMA domain')
     parser.add_argument('--node', type=int, default=int(os.environ['GRAPHMINI_NUMA_NODE']) if 'GRAPHMINI_NUMA_NODE' in os.environ else None)
     parser.add_argument('--allow-shared', action='store_true', default=os.environ.get('GRAPHMINI_SHARED_NUMA') == '1',
                         help='Use allocated cores within a NUMA domain shared with other jobs')

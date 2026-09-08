@@ -7,6 +7,11 @@ from unity_node import partition_patterns
 
 
 class NumaTest(unittest.TestCase):
+    def test_shared_domain_requires_requested_threads(self):
+        with self.assertRaises(RuntimeError):
+            choose_domain(set(range(8)) | set(range(32, 40)), set(range(64)),
+                          [(0, set(range(32))), (1, set(range(32, 64)))], 16, True)
+
     def test_shared_domain_selects_allocated_subset(self):
         nodes = [(0, set(range(32))), (1, set(range(32, 64)))]
         self.assertEqual(choose_domain(set(range(24, 56)), set(range(64)), nodes, 1, True),
