@@ -27,3 +27,10 @@ venv
 .idea
 .cache
 __pycache__/
+
+# Local-only compiler guides, development notes, and experiment reports.
+/REFACTOR_PLAN.md
+/docs/development.md
+/docs/experiments.md
+/src/compiler/README.md
+/tests/benchmarks/*.md
