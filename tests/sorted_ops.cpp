@@ -64,6 +64,37 @@ void check(std::vector<uint32_t> a, std::vector<uint32_t> b) {
     for (size_t i = 0; i < na; ++i) require(identity[i] == i);
 }
 int main() {
+#ifdef GRAPHMINI_PROFILE_RUNTIME
+    VertexSet::profiler = std::make_shared<Profiler>(8, 32);
+#endif
+    {
+        Graph graph;
+        graph.num_vertex = 32; graph.num_edge = 32 * 31;
+        graph.m_indptr = new uint64_t[33];
+        graph.m_indices = new uint32_t[32 * 31];
+        std::vector<uint32_t> ids(32);
+        size_t p = 0;
+        for (size_t i = 0; i < 32; ++i) {
+            ids[i] = i; graph.m_indptr[i] = p;
+            for (size_t j = 0; j < 32; ++j) if (i != j) graph.m_indices[p++] = j;
+        }
+        graph.m_indptr[32] = p;
+        MiniGraphIF::DATA_GRAPH = &graph;
+        VertexSet vertices(0, ids.data(), ids.size());
+        for (auto subset : {std::vector<uint32_t>{}, std::vector<uint32_t>{0, 1}, std::vector<uint32_t>{31}}) {
+            VertexSet iter(0, subset.empty() ? nullptr : subset.data(), subset.size());
+            MiniGraphCostModel parent, child;
+            parent.build(vertices, vertices, iter);
+            child.build(&parent, vertices, vertices, iter);
+            for (auto* mg : {&parent, &child}) for (size_t i = 0; i < 32; ++i) {
+                auto neighbors = mg->N(i);
+                require(neighbors.size() == 31);
+                size_t k = 0;
+                for (size_t j = 0; j < 32; ++j) if (i != j) require(neighbors[k++] == j);
+            }
+        }
+        MiniGraphIF::DATA_GRAPH = nullptr;
+    }
     size_t cases = 0;
     for (unsigned a = 0; a < 64; ++a) for (unsigned b = 0; b < 64; ++b) {
         std::vector<uint32_t> x, y;
