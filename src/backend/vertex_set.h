@@ -19,26 +19,31 @@ namespace minigraph {
 
     class VertexSet {
     private:
-        IdType *m_data{nullptr};
-        IdType m_vid{INVALID_ID};
-        uint64_t m_size{0};
         internal::VertexSetPool* m_pool{nullptr};
+        IdType *m_data{nullptr};
+        IdType m_size{0};
+        IdType m_vid{INVALID_ID};
 
-
+        static IdType checked_size(uint64_t size) {
+            if (size > std::numeric_limits<IdType>::max())
+                throw std::length_error("VertexSet size exceeds IdType range");
+            return static_cast<IdType>(size);
+        }
     public:
         inline static uint64_t MAX_DEGREE{0};
         inline static std::atomic_uint64_t TOTAL_ALLOCATED{0};
         VertexSet() = default;
 
         VertexSet(IdType _vid, IdType *_data, uint64_t _size) :
-                m_data{_data}, m_vid{_vid},
-                m_size{_size}, m_pool{nullptr} {};
+                m_data{_data}, m_size{checked_size(_size)}, m_vid{_vid} {};
 
         VertexSet(size_t capacity) {
             // Keep the existing graph-level configuration/API. The constructor
             // request is also honored, even for standalone sets larger than a graph.
             const uint64_t max_capacity = std::numeric_limits<size_t>::max() / sizeof(IdType);
-            if (MAX_DEGREE >= max_capacity || capacity > max_capacity)
+            if (MAX_DEGREE >= max_capacity || capacity > max_capacity ||
+                MAX_DEGREE > std::numeric_limits<IdType>::max() ||
+                capacity > std::numeric_limits<IdType>::max())
                 throw std::length_error("VertexSet capacity overflow");
             const size_t required = std::max(capacity, static_cast<size_t>(MAX_DEGREE + 1));
             m_pool = &internal::VertexSetPool::for_capacity(required, TOTAL_ALLOCATED);
@@ -80,6 +85,7 @@ namespace minigraph {
             return *this;
         };
 
+        // Preserve the public arithmetic type; only the stored count is narrowed.
         uint64_t size() const { return m_size; };
         IdType vid() const { return m_vid; };
         IdType *begin() { return m_data; };
@@ -98,7 +104,7 @@ namespace minigraph {
             return m_data[i];
         };
 
-        void set_size(size_t _size) {m_size = _size;};
+        void set_size(size_t _size) { m_size = checked_size(_size); };
 
         inline VertexSet intersect(const VertexSet &other, IdType upper) const;
         inline VertexSet intersect(const VertexSet &other) const;

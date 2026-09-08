@@ -7,12 +7,38 @@
 #include <thread>
 
 using namespace minigraph;
+static_assert(sizeof(void*) != 8 || sizeof(VertexSet) == 24,
+              "VertexSet should contain two pointers and two 32-bit fields");
 void require(bool b) { if (!b) throw std::runtime_error("VertexSetPool regression"); }
 void fill(VertexSet& set, size_t n, uint32_t offset = 0) {
     set.set_size(n);
     for (size_t i = 0; i < n; ++i) set[i] = offset + i;
 }
 int main() {
+    const uint64_t max_size = std::numeric_limits<IdType>::max();
+    // Metadata-only boundary checks: never dereference these synthetic views.
+    VertexSet boundary(0, nullptr, max_size);
+    require(boundary.size() == max_size);
+    bool overflow_rejected = false;
+    try { VertexSet invalid(0, nullptr, max_size + 1); }
+    catch (const std::length_error&) { overflow_rejected = true; }
+    require(overflow_rejected);
+    if constexpr (sizeof(size_t) > sizeof(IdType)) {
+        overflow_rejected = false;
+        try { boundary.set_size(static_cast<size_t>(max_size + 1)); }
+        catch (const std::length_error&) { overflow_rejected = true; }
+        require(overflow_rejected && boundary.size() == max_size);
+        overflow_rejected = false;
+        try { VertexSet invalid(static_cast<size_t>(max_size + 1)); }
+        catch (const std::length_error&) { overflow_rejected = true; }
+        require(overflow_rejected);
+    }
+    VertexSet::MAX_DEGREE = max_size + 1;
+    overflow_rejected = false;
+    try { VertexSet invalid(0); }
+    catch (const std::length_error&) { overflow_rejected = true; }
+    require(overflow_rejected);
+    VertexSet::MAX_DEGREE = 0;
     std::atomic_uint64_t allocated{0};
     {
         internal::VertexSetPool pool(17, allocated);
@@ -80,5 +106,6 @@ int main() {
     };
     std::thread a(worker), b(worker);
     a.join(); b.join();
-    std::cout << "Fixed-capacity reuse, overlapping owners, growth/shrink, moves/views and workers passed\n";
+    std::cout << "VertexSet size: " << sizeof(VertexSet)
+              << " bytes; size boundaries, pool reuse, growth/shrink, moves/views and workers passed\n";
 }
