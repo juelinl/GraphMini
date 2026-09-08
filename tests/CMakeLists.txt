@@ -1,6 +1,8 @@
 add_executable(common_types_regression common_types.cpp)
 target_link_libraries(common_types_regression PRIVATE graphmini_headers)
 add_test(NAME common_types_regression COMMAND common_types_regression)
+add_test(NAME bitmap_benchmark_analysis
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test_bitmap_benchmark_analysis.py)
 add_test(NAME install_toolchain COMMAND ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/install_toolchain.py)
 add_test(NAME python_import
     COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:graphmini>"
@@ -47,6 +49,9 @@ target_compile_definitions(bitmap_portable_regression PRIVATE GRAPHMINI_BIT_OPS_
 add_test(NAME bitmap_portable_regression COMMAND bitmap_portable_regression)
 add_executable(bitmap_benchmark bitmap_benchmark.cpp)
 target_link_libraries(bitmap_benchmark PRIVATE graphmini_headers)
+add_executable(bitmap_region_benchmark bitmap_region_benchmark.cpp)
+target_link_libraries(bitmap_region_benchmark PRIVATE graphmini_headers)
+target_compile_definitions(bitmap_region_benchmark PRIVATE GRAPHMINI_LOCAL_BITMAP)
 add_executable(bit_ops_benchmark bit_ops_benchmark.cpp)
 target_link_libraries(bit_ops_benchmark PRIVATE graphmini_headers)
 add_executable(bitmap_scalar_regression bitmap.cpp)
