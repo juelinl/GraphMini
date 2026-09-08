@@ -559,6 +559,9 @@ thread-confinement and cache-retention limitations.
 VertexSet uses two pointers and two 32-bit fields (24 bytes on the supported
 64-bit targets); sizes beyond UINT32_MAX are rejected rather than truncated.
 
+MiniGraph's normal and profiling backends also share a variable-capacity pool
+and move-only scratch container. See [MiniGraph storage design and tests](tests/benchmarks/minigraph-pool.md).
+
 ### Tooling
 
 1. CMake >= 3.20

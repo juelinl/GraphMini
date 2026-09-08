@@ -72,8 +72,8 @@ change, not a promise of binary compatibility with previously built consumers.
 
 ## How MiniGraph compares
 
-MiniGraph already has a dedicated, non-nested MiniGraphPool class, currently
-defined in `src/backend/minigraph.h` and duplicated in the profiling backend.
+MiniGraph has a dedicated, non-nested MiniGraphPool class, now shared between
+normal and profiling backends in `src/backend/minigraph_pool.h`.
 Its Get() returns a thread-local pool. ManagedContainer owns allocations and
 returns them to that pool.
 
@@ -82,8 +82,8 @@ small requests use 4 KB buffers, larger buffers carry their capacities and are
 reused by capacity. Resize grows storage and copies existing contents. That
 design is useful for auxiliary adjacency storage whose required size varies.
 
-MiniGraphPool was inspected but not changed or consolidated in this refactor.
-Its thread/lifetime behavior is not strengthened by extracting VertexSetPool.
+It was consolidated in a subsequent refactor; see [MiniGraph pool](minigraph-pool.md)
+for ownership safety changes and its dedicated regression tests.
 
 ## Validation
 

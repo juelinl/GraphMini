@@ -18,6 +18,48 @@ template<class F> void rejects(F f) {
     try { f(); } catch (const std::length_error&) { rejected = true; }
     require(rejected);
 }
+#ifndef GRAPHMINI_POOL_STANDALONE
+template<class MiniGraph> void check_graph_rebuilds() {
+    for (bool bounded : {false, true}) {
+        MiniGraph parent(bounded), child(bounded);
+        for (size_t n : {32, 128, 8, 256, 16}) {
+            Graph graph;
+            graph.num_vertex = n;
+            graph.num_edge = n * (n - 1);
+            graph.m_indptr = new uint64_t[n + 1];
+            graph.m_offset = new uint64_t[n];
+            graph.m_indices = new IdType[graph.num_edge];
+            std::vector<IdType> all(n), even;
+            size_t pos = 0;
+            for (size_t i = 0; i < n; ++i) {
+                all[i] = i;
+                if (i % 2 == 0) even.push_back(i);
+                graph.m_indptr[i] = pos;
+                graph.m_offset[i] = i;
+                for (size_t j = 0; j < n; ++j) if (i != j) graph.m_indices[pos++] = j;
+            }
+            graph.m_indptr[n] = pos;
+            MiniGraphIF::DATA_GRAPH = &graph;
+            VertexSet vertices(0, all.data(), all.size()), subset(0, even.data(), even.size());
+            parent.build(vertices, vertices, vertices);
+            child.build(&parent, subset, subset, subset);
+            auto check = [&](MiniGraph& mg, const std::vector<IdType>& ids) {
+                for (size_t i = 0; i < ids.size(); ++i) {
+                    auto neighbors = mg.N(i); // borrowed adjacency, inspected while owner is live
+                    size_t k = 0;
+                    for (auto id : ids) if (id != ids[i] && (!bounded || id < ids[i])) {
+                        require(k < neighbors.size() && neighbors[k++] == id);
+                    }
+                    require(k == neighbors.size());
+                }
+            };
+            check(parent, all);
+            check(child, even);
+        }
+    }
+    MiniGraphIF::DATA_GRAPH = nullptr;
+}
+#endif
 int main() {
     {
         MiniGraphPool pool;
@@ -95,5 +137,15 @@ int main() {
     };
     std::thread a(worker), b(worker);
     a.join(); b.join();
+#ifndef GRAPHMINI_POOL_STANDALONE
+#ifdef GRAPHMINI_PROFILE_RUNTIME
+    VertexSet::profiler = std::make_shared<Profiler>(8, 256);
+#endif
+    check_graph_rebuilds<MiniGraphEager>();
+    check_graph_rebuilds<MiniGraphLazy>();
+    check_graph_rebuilds<MiniGraphOnline>();
+    check_graph_rebuilds<MiniGraphCostModel>();
+    require(pool.checked_out() == 0);
+#endif
     std::cout << "MiniGraph pool reuse, growth, moves, bounds, accounting and workers passed\n";
 }

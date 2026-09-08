@@ -115,3 +115,11 @@ and remains unchanged. See `tests/benchmarks/vertex-set-pool.md`.
 VertexSet layout is now compacted to two pointers followed by IdType-sized
 count/vertex fields (24 bytes on 64-bit targets). Wide input sizes are checked
 before narrowing; the public size() arithmetic type and codegen remain unchanged.
+
+## Shared MiniGraphPool and ManagedContainer
+
+Extracted shared variable-capacity storage headers for both runtimes. Containers
+retain their originating pool; growth is exception-safe, pool Resize is growth-only,
+and bounds/overflow checks protect size and allocation requests. Scratch writes
+beyond logical size remain supported. Pruning policies/codegen are unchanged.
+See `tests/benchmarks/minigraph-pool.md` for ownership limits and regression tests.
