@@ -94,3 +94,11 @@ code generation are unchanged. See `tests/benchmarks/simd-set-operations.md`.
 Next candidates are representative end-to-end runtime benchmarks, dispatch
 threshold tuning, and subtraction kernels. Bitmap MiniGraphs and galloping
 remain separate experiments rather than implicit parts of this change.
+
+### Subtraction follow-up
+
+Added SIMD subtraction and subtraction counts using the same NEON/AVX2 block
+comparison helpers as intersection. Masks accumulate until the left block can
+be finalized and survive scalar-tail handling. Upper bounds, other.m_vid
+exclusion, exact-size stores, and the profiling backend's scalar counters are
+preserved. See `tests/benchmarks/simd-subtraction.md` for validation and measurements.
