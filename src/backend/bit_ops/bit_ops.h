@@ -67,6 +67,16 @@ template <Binary Op, bool Write, bool Simd = true>
 inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nullptr,
                       size_t limit = unlimited) {
     const size_t active_bits = std::min(bits, limit);
+    // Terminal counts often fit in one word. Bypass loop/vector dispatch
+    // entirely, including when a bound narrows a larger universe to one word.
+    if constexpr (!Write) {
+        if (active_bits <= word_bits) {
+            if (!active_bits)
+                return 0;
+            const Word value = Op == Binary::Intersection ? a[0] & b[0] : a[0] & ~b[0];
+            return popcount(value & low_mask(active_bits));
+        }
+    }
     const size_t active_words = word_count(active_bits);
     size_t count = 0;
     size_t processed = 0;
