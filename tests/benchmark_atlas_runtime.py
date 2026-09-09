@@ -77,9 +77,14 @@ def worker(args):
                            pruning_type="none", parallel_type=job["parallel"],
                            bitmap=job["backend"] == "bitmap",
                            bitmap_direct=job.get("bitmap_direct", False))
-    assert plan.run(small, num_threads=1).number_of_matches == expected
     source = plan.generated_code
     state.with_name("plan.cpp").write_text(source)
+    if job.get("skip_array_fallback", False) and job["backend"] == "bitmap" and "// bitmap-region build once" not in source:
+        record.update(status="skipped_array_fallback", bitmap_selected=False,
+                      code_sha256=hashlib.sha256(source.encode()).hexdigest())
+        save(state, record)
+        return
+    assert plan.run(small, num_threads=1).number_of_matches == expected
     record.update(graph_metadata=graph_meta, oracle_calibration_count=expected,
                   compilation=plan.compilation_profile,
                   code_sha256=hashlib.sha256(source.encode()).hexdigest(),
@@ -166,7 +171,7 @@ def run_job(command, directory, execution_budget, preparation_budget):
     record = json.loads(state.read_text()) if state.exists() else {}
     if timeout:
         record["status"] = timeout
-    elif process.returncode != 0 or record.get("status") != "complete":
+    elif process.returncode != 0 or record.get("status") not in ("complete", "skipped_array_fallback"):
         record["status"] = "error"
     record.update(returncode=process.returncode, job_wall_seconds=time.monotonic() - started)
     if record.get("execution_started") is not None:
@@ -193,6 +198,8 @@ def main():
     parser.add_argument("--backends", choices=["array,bitmap", "array", "bitmap"], default="array,bitmap")
     parser.add_argument("--bitmap-direct", action="store_true",
                         help="Opt in to supported shared-projection bitmap live-ins")
+    parser.add_argument("--skip-array-fallback", action="store_true",
+                        help="Record bitmap plans without a selected region as skipped, without executing them")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--execution-budget", type=float, default=300)
     parser.add_argument("--preparation-budget", type=float, default=300)
@@ -227,6 +234,7 @@ def main():
                     corpus_sha256=hashlib.sha256(corpus).hexdigest(), threads=args.threads,
                     trials=args.trials, parallel=args.parallel, backends=args.backends,
                     bitmap_direct=args.bitmap_direct,
+                    skip_array_fallback=args.skip_array_fallback,
                     bitmap_task_policy=os.environ.get("GRAPHMINI_BITMAP_TASK_POLICY", "baseline"),
                     execution_budget=args.execution_budget,
                     preparation_budget=args.preparation_budget, atlas_ids=args.atlas_ids,
@@ -250,11 +258,12 @@ def main():
                 directory = output / f'{pattern["atlas_id"]}-{backend}'
                 directory.mkdir(exist_ok=True)
                 job = dict(pattern, backend=backend, threads=args.threads, trials=args.trials, parallel=args.parallel,
-                           bitmap_direct=args.bitmap_direct and backend == "bitmap")
+                           bitmap_direct=args.bitmap_direct and backend == "bitmap",
+                           skip_array_fallback=args.skip_array_fallback)
                 save(directory / "job.json", job)
                 state = directory / "state.json"
                 record = json.loads(state.read_text()) if state.exists() else {}
-                if record.get("status") not in ("complete", "execution_timeout", "preparation_timeout", "error"):
+                if record.get("status") not in ("complete", "execution_timeout", "preparation_timeout", "error", "skipped_array_fallback"):
                     # Discard only this interrupted job's stale watchdog timestamp.
                     save(state, dict(job, status="queued"))
                     record = run_job([sys.executable, str(Path(__file__).resolve()),

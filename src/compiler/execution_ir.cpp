@@ -150,6 +150,13 @@ std::string dump_execution(const ExecutionIR &execution) {
         out << " boundary-inputs=";
         for (int id : region.full_live_ins) out << id << ',';
         out << '\n';
+        out << "bitmap-slots:";
+        for (const auto &[id, slot] : region.slots) out << " set" << id << "=slot" << slot;
+        out << '\n';
+        for (const auto &binding : region.bindings)
+            out << "bitmap-bind set" << binding.set_id << " -> slot" << binding.slot
+                << " @depth" << binding.depth
+                << (region.projection_pair ? " projected" : " array") << '\n';
     }
     auto ref = [&](SetReference r) {
         switch (r.source) {

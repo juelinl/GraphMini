@@ -1,5 +1,6 @@
 #include "compiler/execution_ir.h"
 #include <algorithm>
+#include <set>
 #include <stdexcept>
 
 namespace minigraph {
@@ -60,7 +61,9 @@ std::optional<BitmapProjectionPair> projected_partition(const PlanIR &plan, cons
     // the original expressions remain available in its array fallback.
     for (int depth = 0; depth < region.entry_depth; ++depth)
         if (contains(pair.fallback_sets, plan.logical.iter_set.at(depth).id)) return {};
-    for (const auto &[id, op] : ir.sets) {
+    for (const auto &entry : ir.sets) {
+        const int id = entry.first;
+        const auto &op = entry.second;
         auto safe = [&](const SetReference &ref) {
             return ref.source != SetSource::Prefix || !contains(pair.fallback_sets, ref.id) ||
                    contains(pair.fallback_sets, id) || op.depth > region.entry_depth;
@@ -174,6 +177,7 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             if ((config.parType != ParallelType::OpenMP || plan.query.mode == EdgeInduced || unary_terminal) && !out.full_region)
                 continue; // Task capture currently requires a fully local region.
             reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
+            lower_bitmap_bindings(ir, out);
             return out;
         }
     }
@@ -181,6 +185,48 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
     return {};
 }
 } // namespace
+void lower_bitmap_bindings(const ExecutionIR &ir, BitmapRegionExecution &region) {
+    const auto &sets = region.full_region ? region.full_sets : region.live_ins;
+    const auto &inputs = region.full_region ? region.full_live_ins : region.live_ins;
+    region.slots.clear();
+    region.bindings.clear();
+    for (size_t slot = 0; slot < sets.size(); ++slot)
+        region.slots.emplace(sets[slot], static_cast<int>(slot));
+    for (int id : inputs)
+        region.bindings.push_back({id, region.slots.at(id), std::max(region.entry_depth, ir.sets.at(id).depth)});
+    verify_bitmap_bindings(ir, region);
+}
+
+void verify_bitmap_bindings(const ExecutionIR &ir, const BitmapRegionExecution &region) {
+    if (region.build_depth < 0 || region.build_depth > region.entry_depth ||
+        region.entry_depth > region.conversion_depth)
+        throw std::logic_error("Invalid bitmap binding scope");
+    const auto &sets = region.full_region ? region.full_sets : region.live_ins;
+    const auto &inputs = region.full_region ? region.full_live_ins : region.live_ins;
+    if (sets.empty() || inputs.empty() || region.slots.size() != sets.size() || region.bindings.size() != inputs.size())
+        throw std::logic_error("Incomplete bitmap slots or bindings");
+    for (size_t slot = 0; slot < sets.size(); ++slot) {
+        const auto found = region.slots.find(sets[slot]);
+        if (found == region.slots.end() || found->second != static_cast<int>(slot) ||
+            ir.sets.at(sets[slot]).result == SetResult::Count)
+            throw std::logic_error("Invalid bitmap slot identity");
+    }
+    std::set<int> bound;
+    for (size_t i = 0; i < inputs.size(); ++i) {
+        const auto &binding = region.bindings[i];
+        if (binding.set_id != inputs[i] || !bound.insert(binding.set_id).second ||
+            binding.slot != region.slots.at(binding.set_id))
+            throw std::logic_error("Invalid bitmap live-in binding");
+        const int definition = ir.sets.at(binding.set_id).depth;
+        // No delayed or hoisted address capture: once candidate state exists,
+        // bind exactly at the definition (or entry for an older definition).
+        if (binding.depth < region.entry_depth || binding.depth < definition ||
+            (binding.depth != region.entry_depth && binding.depth != definition) ||
+            binding.depth > region.conversion_depth || (region.full_region && binding.depth != region.entry_depth))
+            throw std::logic_error("Invalid bitmap binding lifetime");
+    }
+}
+
 void lower_bitmap_region(const PlanIR &plan, ExecutionIR &ir) {
     ir.bitmap_region = candidate(plan, ir, ir.bitmap_reason);
 }
@@ -201,5 +247,6 @@ void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &ir) {
         actual.projection_pair.has_value() != expected->projection_pair.has_value() ||
         (actual.projection_pair && !(*actual.projection_pair == *expected->projection_pair)))
         throw std::logic_error("Invalid bitmap scope, identity, rows, or live-ins");
+    verify_bitmap_bindings(ir, actual);
 }
 } // namespace minigraph

@@ -58,6 +58,28 @@ std::string check_count_only_emission() {
     region.full_sets.clear();
     region.full_live_ins.clear();
     region.projection_pair.reset();
+    lower_bitmap_bindings(ir, region);
+    verify_bitmap_bindings(ir, region);
+    bool late_binding = false;
+    for (const auto &binding : region.bindings) {
+        late_binding |= binding.depth > region.entry_depth;
+        if (binding.depth != ir.sets.at(binding.set_id).depth)
+            throw std::runtime_error("Count-only fixture lost definition-scoped binding");
+    }
+    if (!late_binding) throw std::runtime_error("Missing delayed-binding coverage");
+    for (int mutation = 0; mutation < 6; ++mutation) {
+        auto bad = region;
+        if (mutation == 0) bad.bindings.front().depth = bad.entry_depth;
+        if (mutation == 1) ++bad.bindings.front().depth;
+        if (mutation == 2) bad.bindings.front().slot = -1;
+        if (mutation == 3) bad.bindings.clear();
+        if (mutation == 4) bad.slots.erase(bad.bindings.front().set_id);
+        if (mutation == 5) { bad.live_ins.clear(); bad.slots.clear(); bad.bindings.clear(); }
+        bool rejected = false;
+        try { verify_bitmap_bindings(ir, bad); }
+        catch (const std::logic_error &) { rejected = true; }
+        if (!rejected) throw std::runtime_error("Accepted invalid count-only binding lifetime");
+    }
     CppCodegen writer(config, ir);
     const auto code = writer.emit_omp(plan, config);
     const auto build = code.find("BitmapCountRegion::build_rows");

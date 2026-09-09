@@ -129,7 +129,9 @@ int main() {
                     require(ir.bitmap_region->build_depth == ir.bitmap_region->anchor_depth &&
                             ir.bitmap_region->build_depth <= ir.bitmap_region->entry_depth,
                             "Rows not hoisted to their dependency scope");
-                    for (int mutation = 0; mutation < 10; ++mutation) {
+                    require(dump_execution(ir).find("bitmap-bind set") != std::string::npos,
+                            "Missing binding metadata in IR dump");
+                    for (int mutation = 0; mutation < 19; ++mutation) {
                         auto bad = ir;
                         auto &r = *bad.bitmap_region;
                         if (mutation == 0)
@@ -148,6 +150,15 @@ int main() {
                         if (mutation == 7) r.full_sets.push_back(-1);
                         if (mutation == 8) r.full_live_ins.push_back(-1);
                         if (mutation == 9) ++r.build_depth;
+                        if (mutation == 10) r.slots.clear();
+                        if (mutation == 11) ++r.slots.begin()->second;
+                        if (mutation == 12) r.slots.emplace(-1, 0);
+                        if (mutation == 13) r.bindings.clear();
+                        if (mutation == 14) r.bindings.push_back(r.bindings.front());
+                        if (mutation == 15) r.bindings.front().set_id = -1;
+                        if (mutation == 16) r.bindings.front().slot = -1;
+                        if (mutation == 17) --r.bindings.front().depth;
+                        if (mutation == 18) ++r.bindings.front().depth;
                         bool rejected = false;
                         try {
                             verify_execution(bad, plan);
@@ -199,7 +210,7 @@ int main() {
         const auto code = gen_code(query, config, meta);
         require(code.find("bind_projected_partition") != std::string::npos &&
                 code.find("->bind_input(") == std::string::npos, "Direct variant still converts live-in arrays");
-        for (int mutation = 0; mutation < 6; ++mutation) {
+        for (int mutation = 0; mutation < 9; ++mutation) {
             auto bad = ir;
             auto &p = bad.bitmap_region->projection_pair;
             if (mutation == 0) ++p->positive;
@@ -208,6 +219,9 @@ int main() {
             if (mutation == 3) ++p->external_depth;
             if (mutation == 4) p->fallback_sets.clear();
             if (mutation == 5) p.reset();
+            if (mutation == 6) bad.bitmap_region->slots.erase(p->positive);
+            if (mutation == 7) ++bad.bitmap_region->bindings.front().depth;
+            if (mutation == 8) bad.bitmap_region->bindings.front().slot = -1;
             bool rejected = false;
             try { verify_execution(bad, plan); } catch (const std::logic_error &) { rejected = true; }
             require(rejected, "Accepted invalid projected partition");

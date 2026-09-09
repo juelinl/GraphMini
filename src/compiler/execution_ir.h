@@ -90,6 +90,13 @@ struct BitmapProjectionPair {
                fallback_sets == other.fallback_sets;
     }
 };
+struct BitmapBinding {
+    int set_id;
+    int slot;
+    // Initialize after this depth's set definitions/guards, on every visit.
+    // Older live-ins bind at region entry; newly defined inputs bind in-scope.
+    int depth;
+};
 struct BitmapRegionExecution {
     int entry_depth, conversion_depth, anchor_depth;
     // Immutable rows depend only on the anchor's full graph neighborhood.
@@ -102,6 +109,10 @@ struct BitmapRegionExecution {
     bool full_region{false};
     std::vector<int> full_sets, full_live_ins; // fixed slots and boundary conversions
     std::optional<BitmapProjectionPair> projection_pair;
+    // Resolved physical layout, preserving full_sets/live_ins ordering.
+    std::map<int, int> slots; // set ID -> candidate slot, including private outputs
+    // Live-in destinations initialized from arrays, or jointly by projection_pair.
+    std::vector<BitmapBinding> bindings;
 };
 struct ExecutionIR {
     int serial_loop_boundary{1};
@@ -120,6 +131,9 @@ ExecutionIR lower_execution(const PlanIR &plan);
 void lower_minigraphs(const PlanIR &plan, ExecutionIR &execution);
 void lower_loops(const PlanIR &plan, ExecutionIR &execution);
 void lower_bitmap_region(const PlanIR &plan, ExecutionIR &execution);
+// Resolve physical slots and initialization scopes after selecting a region.
+void lower_bitmap_bindings(const ExecutionIR &execution, BitmapRegionExecution &region);
+void verify_bitmap_bindings(const ExecutionIR &execution, const BitmapRegionExecution &region);
 std::optional<IEPBitmapExecution> plan_iep_bitmap(const PlanIR &plan, const ExecutionIR &execution);
 void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &execution);
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan);
