@@ -46,7 +46,7 @@ std::string CppCodegen::emit_read_adj(const PlanIR &plan, int dep) {
     }
 
     if (execution_.loops.at(dep).read_adjacency) {
-        out += fmt::format("VertexSet {} = graph->N({});\n", codegen_names::adjacency(dep), codegen_names::vertex(dep));
+        out += fmt::format("VertexSet {} = {}->N({});\n", codegen_names::adjacency(dep), graph_name_, codegen_names::vertex(dep));
     }
     return out;
 }
@@ -90,11 +90,7 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
             }
             for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) out += "}\n";
             out += "};\n"
-                   "if (bitmap_region->universe_size() <= 64) bitmap_execute(std::integral_constant<size_t, 1>{});\n"
-                   "else if (bitmap_region->universe_size() <= 128) bitmap_execute(std::integral_constant<size_t, 2>{});\n"
-                   "else if (bitmap_region->universe_size() <= 256) bitmap_execute(std::integral_constant<size_t, 4>{});\n"
-                   "else if (bitmap_region->universe_size() <= 512) bitmap_execute(std::integral_constant<size_t, 8>{});\n"
-                   "else bitmap_execute(std::integral_constant<size_t, 0>{});\n";
+                   "dispatch_bitmap_words(bitmap_region->universe_size(), bitmap_execute);\n";
             out += "} else {\n";
             return out + fmt::format("for (size_t {0} = 0; {0} < s{1}.size(); ++{0}) {{\n", codegen_names::index(dep+1), iter_set.id);
         }
@@ -135,6 +131,7 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
     const auto &region = *execution_.bitmap_region;
     auto slot = [&](int id) { return std::find(region.full_sets.begin(), region.full_sets.end(), id) - region.full_sets.begin(); };
     std::string out = "if (bitmap_region) { // full bitmap region\n"
+                      "auto& progress = query.progress;\n"
                       "auto bitmap_execute = [&](auto bitmap_tag) {\n"
                       "constexpr size_t bitmap_words = decltype(bitmap_tag)::value;\n";
     for (int depth = plan.logical.p_size - 2; depth > dep; --depth) {
@@ -151,7 +148,7 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
         }
         out += fmt::format("auto bitmap_level{0} = [&](BitmapCountRegion& state) -> uint64_t {{\n"
                            "return bitmap_for_each(state, {1}, {2}, [&](BitmapCountRegion& task_state, uint32_t {3}) -> uint64_t {{ // bitmap local-index loop\n"
-                           "auto* bitmap_region = &task_state;\nuint64_t counter = 0;\n", depth, input, parallel, codegen_names::bit_index(depth));
+                           "uint64_t counter = 0;\n", depth, input, parallel, codegen_names::bit_index(depth));
         for (const auto &logical : plan.logical.set_ops.at(depth)) {
             const auto &op = execution_.sets.at(logical.id);
             const auto &step = op.steps.front();
@@ -160,12 +157,12 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
             const bool remove_only = step.opcode == SetOpcode::Remove;
             const bool bounded = bound || step.upper_bound.has_value();
             if (op.result == SetResult::Count) {
-                out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, {}, {}, {}, {}, {});\n", slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
+                out += fmt::format("counter += task_state.count_local<bitmap_words>({}, {}, {}, {}, {}, {});\n", slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
                 if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
             } else {
                 if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
                     out += fmt::format("const auto bn{} = ", op.id);
-                out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, {}, {}, {}, {}, {});\n",
+                out += fmt::format("task_state.materialize_local<bitmap_words>({}, {}, {}, {}, {}, {}, {});\n",
                     slot(op.id), slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
                 if (op.guard_empty) out += fmt::format("if (!bn{}) return counter;\n", op.id);
                 if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
@@ -174,16 +171,12 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
         if (depth < plan.logical.p_size - 2)
             out += fmt::format("counter += bitmap_level{}(task_state);\n", depth+1);
         else
-            out += "benchmark_progress->add_bitmap_matches(counter);\n";
+            out += "progress.add_bitmap_matches(counter);\n";
         out += fmt::format("return counter;\n}}, bitmap_task_policy, {});\n}};\n", depth-dep-1);
     }
     out += fmt::format("return bitmap_level{}(*bitmap_region);\n", dep+1);
     out += "};\n"
-           "if (bitmap_region->universe_size() <= 64) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 1>{}));\n"
-           "else if (bitmap_region->universe_size() <= 128) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 2>{}));\n"
-           "else if (bitmap_region->universe_size() <= 256) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 4>{}));\n"
-           "else if (bitmap_region->universe_size() <= 512) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 8>{}));\n"
-           "else counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 0>{}));\n"
+           "counter.add_without_progress(dispatch_bitmap_words(bitmap_region->universe_size(), bitmap_execute));\n"
            "} else {\n";
     out += emit_tbb_call(plan, plan.context.config, dep+1);
     return out + fmt::format("for (size_t {0} = 0; {0} < s{1}.size(); ++{0}) {{\n",
@@ -274,10 +267,10 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
         const bool reuse_adjacency = dep == region.anchor_depth && execution_.loops.at(dep).read_adjacency;
         const auto neighbors = reuse_adjacency ? codegen_names::adjacency(dep) : "bitmap_neighbors";
         if (!reuse_adjacency)
-            out += fmt::format("auto bitmap_neighbors = graph->N({});\n", codegen_names::vertex(region.anchor_depth));
+            out += fmt::format("auto bitmap_neighbors = {}->N({});\n", graph_name_, codegen_names::vertex(region.anchor_depth));
         out += fmt::format(
-            "auto bitmap_rows = BitmapCountRegion::build_rows(*graph, {0}, {1}, "
-            "{1}, {2}); // bitmap-region build once per anchor\n", codegen_names::vertex(region.anchor_depth), neighbors, slots.size());
+            "auto bitmap_rows = BitmapCountRegion::build_rows(*{3}, {0}, {1}, "
+            "{1}, {2}); // bitmap-region build once per anchor\n", codegen_names::vertex(region.anchor_depth), neighbors, slots.size(), graph_name_);
         if (bitmap_diagnostics_)
             out += fmt::format(
                 "if (bitmap_rows) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "

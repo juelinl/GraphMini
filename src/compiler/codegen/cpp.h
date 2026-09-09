@@ -10,7 +10,8 @@ class CppCodegen {
   public:
     CppCodegen(CodeGenConfig config, const ExecutionIR &execution)
         : profiling_(config.runnerType == RunnerType::Profiling),
-          execution_(execution), bitmap_diagnostics_(config.bitmapDiagnostics) {}
+          execution_(execution), bitmap_diagnostics_(config.bitmapDiagnostics),
+          graph_name_(config.parType == ParallelType::OpenMP ? "graph" : "query.graph") {}
     std::string emit_omp(PlanIR plan, CodeGenConfig config);
     std::string emit_nested(PlanIR plan, CodeGenConfig config);
 
@@ -18,6 +19,7 @@ class CppCodegen {
     const bool profiling_;
     const ExecutionIR &execution_;
     const bool bitmap_diagnostics_;
+    const char *const graph_name_;
     bool uses_selected_vertex(int dep) const;
     std::string emit_read_adj(const PlanIR &plan, int dep);
     std::string emit_iter(const PlanIR &plan, int dep);

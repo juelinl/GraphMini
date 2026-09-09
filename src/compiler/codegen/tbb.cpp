@@ -77,7 +77,7 @@ std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &c
                            fmt::arg("grain_size", grain_size), fmt::arg("iter_id", iter_id),
                            fmt::arg("dep", loop));
     // Args
-    out << "(ctx";
+    out << "(query";
     for (int dep : used_adj) {
         out << fmt::format(", {}", codegen_names::adjacency(dep));
     }
@@ -120,7 +120,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
 
     // Private Variables
     out << "private:\n";
-    out << "Context& ctx;\n";
+    out << "const QueryContext& query;\n";
 
     if (!used_adj.empty())
         out << "// Adjacent Lists\n";
@@ -155,7 +155,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     out << "public:\n";
     // Constructor
     // Args
-    out << "Loop" << loop << "(Context& _ctx";
+    out << "Loop" << loop << "(const QueryContext& _query";
 
     for (int dep : used_adj) {
         out << fmt::format(", VertexSet& _{}", codegen_names::adjacency(dep));
@@ -182,7 +182,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     out << ")";
 
     // Initialization
-    out << ":ctx{_ctx}";
+    out << ":query{_query}";
 
     for (int dep : used_adj) {
         out << fmt::format(", {}", codegen_names::adjacency(dep)) << "{" << fmt::format("_{}", codegen_names::adjacency(dep)) << "}";
@@ -210,6 +210,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
 
     // Operator
     out << "void operator()(const tbb::blocked_range<size_t> &r) const {\n";
+    out << "auto& ctx = query.ctx;\n";
     out << "const int worker_id = "
            "tbb::this_task_arena::current_thread_index();\n";
     out << "cc& counter = ctx.per_thread_result.at(worker_id);\n";
@@ -224,7 +225,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     }
     out << " { // loop-" << loop << "begin\n";
     if (loop == 0 && !profiling_)
-        out << fmt::format("BenchmarkRootProgress root_progress(benchmark_progress->root({}));\n", codegen_names::vertex(0));
+        out << fmt::format("BenchmarkRootProgress root_progress(query.progress.root({}));\n", codegen_names::vertex(0));
     int max_dep = plan.logical.p_size - 1;
     const auto &set_ops = plan.logical.set_ops;
     switch (config.pruningType) {
@@ -397,14 +398,20 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "#include \"plan.h\"\n";
     if (!profiling_) out << "#include \"backend/benchmark_progress.h\"\n";
     if (execution_.bitmap_region) out << "#include \"backend/bitmap_tasks.h\"\n";
+    if (execution_.bitmap_region && execution_.bitmap_region->full_region)
+        out << "#include \"backend/bitmap_dispatch.h\"\n";
     // out << "#include \"oneapi/tbb/parallel_for.h\"\n";
     out << "namespace minigraph {\n";
-    if (!profiling_) out << "static BenchmarkProgress* benchmark_progress = nullptr;\n";
+    out << "// Borrowed per-query state; all task joins complete before plan returns.\n"
+           "struct QueryContext {\n"
+           "const Graph* const graph;\n"
+           "Context& ctx;\n";
+    if (!profiling_) out << "BenchmarkProgress& progress;\n";
+    out << "};\n";
     if (execution_.bitmap_region)
         out << "static const auto bitmap_task_policy = BitmapTaskPolicy::from_environment();\n";
     if (config.bitmapDiagnostics) out << "static std::atomic<uint64_t> bitmap_counters[7]{};\n";
     out << "uint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
-    out << "static const Graph * graph;\n";
 
     const bool needs_minigraph_alias = std::any_of(execution_.minigraphs.begin(), execution_.minigraphs.end(),
         [](const auto &entry) { return !entry.second.eager; });
@@ -431,7 +438,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
             out << CppCodegen(config, arrays).emit_tbb_loop(plan, config, loop);
         } else out << emit_tbb_loop(plan, config, loop);
     }
-    out << "void plan(const GraphType* _graph, Context& ctx){\n";
+    out << "void plan(const GraphType* graph, Context& ctx){\n";
     if (profiling_) {
         out << "VertexSet::profiler = ctx.profiler;\n";
     }
@@ -441,14 +448,14 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
                "bitmap_counters[4].store(ctx.num_threads, std::memory_order_relaxed);\n";
     out << "ctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
     if (!profiling_)
-        out << "BenchmarkProgress progress(ctx, _graph->get_vnum()); benchmark_progress = &progress;\n";
-    out << "graph = _graph;\n";
+        out << "BenchmarkProgress progress(ctx, graph->get_vnum());\n";
+    out << "const QueryContext query{graph, ctx" << (profiling_ ? "" : ", progress") << "};\n";
     if (config.pruningType != PruningType::None)
         out << "MiniGraphIF::DATA_GRAPH = graph;\n";
     out << "internal::VertexSetPool::configure_for_graph(graph->get_maxdeg())"
            ";\n";
     out << "tbb::parallel_for(tbb::blocked_range<size_t>(0, "
-           "graph->get_vnum()), Loop0(ctx), tbb::simple_partitioner());\n";
+           "graph->get_vnum()), Loop0(query), tbb::simple_partitioner());\n";
     out << "}\n";
     out << "} // minigraph\n";
     if (config.bitmapDiagnostics)

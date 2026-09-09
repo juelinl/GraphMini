@@ -26,6 +26,8 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
         out << "// bitmap: " << execution_.bitmap_reason << '\n';
         if (execution_.bitmap_region)
             out << "#include \"backend/bitmap_count_region.h\"\n";
+        if (execution_.bitmap_region && execution_.bitmap_region->full_region)
+            out << "#include \"backend/bitmap_dispatch.h\"\n";
     }
     out << "namespace minigraph {\n";
     if (config.bitmapDiagnostics)

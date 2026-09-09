@@ -18,6 +18,38 @@ void require_bitmap_names(const std::string &code) {
     require(std::regex_search(code, bit_index), "Missing depth-specific bitmap index");
     require(!std::regex_search(code, old_names), "Legacy bitmap vertex name");
 }
+void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan, const ExecutionIR &ir) {
+    const auto &region = *ir.bitmap_region;
+    const auto compact = std::regex_replace(code, std::regex(R"(\s+)"), "");
+    require(compact.find("auto*bitmap_region=&task_state") == std::string::npos,
+            "Redundant task state pointer alias");
+    size_t calls = 0, offset = 0;
+    while ((offset = compact.find("bitmap_for_each(", offset)) != std::string::npos) {
+        ++calls;
+        ++offset;
+    }
+    require(calls == static_cast<size_t>(plan.logical.p_size - 2 - region.entry_depth),
+            "Changed the number of bitmap task boundaries");
+    for (int depth = region.entry_depth + 1; depth <= plan.logical.p_size - 2; ++depth) {
+        const auto &loop = ir.loops.at(depth);
+        const int iter = plan.logical.iter_set.at(depth - 1).id;
+        const auto input = std::find(region.full_sets.begin(), region.full_sets.end(), iter) - region.full_sets.begin();
+        std::string parallel = loop.spawn_nested ? "true" : "false";
+        if (loop.spawn_nested && loop.runtime_threshold) {
+            int threshold = loop.threshold_factor * loop.average_degree;
+            if (loop.cap_threshold) threshold = std::min(threshold, 100);
+            parallel = "state.input_size(" + std::to_string(input) + ")>" + std::to_string(threshold);
+        }
+        const auto call = "bitmap_for_each(state," + std::to_string(input) + "," + parallel +
+            ",[&](BitmapCountRegion&task_state,uint32_tv" + std::to_string(depth) + "_bit_idx)->uint64_t{";
+        require(compact.find(call) != std::string::npos, "Changed bitmap task input, threshold or captures");
+        const auto policy = "},bitmap_task_policy," + std::to_string(depth - region.entry_depth - 1) + ");";
+        require(compact.find(policy) != std::string::npos, "Changed bitmap task policy or level");
+        const auto body = "autobitmap_level" + std::to_string(depth) +
+            "=[&](BitmapCountRegion&state)->uint64_t{";
+        require(compact.find(body) != std::string::npos, "Missing synchronous level wrapper");
+    }
+}
 size_t require_bitmap_temporaries(const std::string &code, const ExecutionIR &ir) {
     const auto &region = *ir.bitmap_region;
     if (region.build_depth == region.anchor_depth && ir.loops.at(region.anchor_depth).read_adjacency)
@@ -67,11 +99,11 @@ int main() {
                     omitted_counts += require_bitmap_temporaries(code, ir);
                     if (ir.bitmap_region->full_region) {
                         ++full;
+                        const auto compact = std::regex_replace(code, std::regex(R"(\s+)"), "");
                         require(code.find("count_local<bitmap_words>") != std::string::npos &&
                                 code.find("materialize_local<bitmap_words>") != std::string::npos &&
-                                code.find("std::integral_constant<size_t, 0>") != std::string::npos &&
-                                code.find("std::integral_constant<size_t, 1>") != std::string::npos &&
-                                code.find("std::integral_constant<size_t, 2>") != std::string::npos,
+                                compact.find("dispatch_bitmap_words(bitmap_region->universe_size(),bitmap_execute)") != std::string::npos &&
+                                code.find("#include \"backend/bitmap_dispatch.h\"") != std::string::npos,
                                 "Missing fixed-word region dispatch");
                         const auto start = code.find("// full bitmap region");
                         const auto body = code.substr(start, code.find("} else {", start)-start);
@@ -133,17 +165,20 @@ int main() {
                 unsupported.context.config.runnerType = RunnerType::Profiling;
                 require(!lower_execution(unsupported).bitmap_region,
                         "Unsupported profiling accepted");
-                auto nested = plan;
-                nested.context.config.parType = ParallelType::NestedRt;
-                const auto nested_ir = lower_execution(nested);
-                if (ir.bitmap_region && ir.bitmap_region->full_region) {
-                    require(nested_ir.bitmap_region.has_value(), "Missing TBB full region");
-                    const auto code = gen_code(query, nested.context.config, meta);
-                    require_bitmap_names(code);
-                    omitted_counts += require_bitmap_temporaries(code, nested_ir);
-                    require(code.find("bitmap_for_each") != std::string::npos &&
-                            code.find("} // array fallback") != std::string::npos,
-                            "Missing task-local bitmap execution");
+                for (auto parallel : {ParallelType::TbbTop, ParallelType::Nested, ParallelType::NestedRt}) {
+                    auto nested = plan;
+                    nested.context.config.parType = parallel;
+                    const auto nested_ir = lower_execution(nested);
+                    if (ir.bitmap_region && ir.bitmap_region->full_region) {
+                        require(nested_ir.bitmap_region.has_value(), "Missing TBB full region");
+                        const auto code = gen_code(query, nested.context.config, meta);
+                        require_bitmap_names(code);
+                        omitted_counts += require_bitmap_temporaries(code, nested_ir);
+                        require_bitmap_task_boundaries(code, nested, nested_ir);
+                        require(code.find("bitmap_for_each") != std::string::npos &&
+                                code.find("} // array fallback") != std::string::npos,
+                                "Missing task-local bitmap execution");
+                    }
                 }
             }
         }
