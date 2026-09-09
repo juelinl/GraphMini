@@ -83,7 +83,11 @@ struct LoopExecution {
 // inputs are converted. Both use one immutable, full-universe row store.
 struct BitmapRegionExecution {
     int entry_depth, conversion_depth, anchor_depth;
-    // Rows cover the full universe, so every later selected vertex has a row.
+    // Immutable rows depend only on the anchor's full graph neighborhood.
+    // Their lifetime is independent of the legal bitmap execution boundary.
+    int build_depth{-1};
+    // Rows cover the full universe, so every vertex selected inside the bitmap
+    // suffix has a row. Vertices between build and entry may lie outside it.
     std::vector<int> live_ins, count_ops;
     int iterator_set{-1}; // Bitmap live-in traversed by the last explicit matching loop.
     bool full_region{false};

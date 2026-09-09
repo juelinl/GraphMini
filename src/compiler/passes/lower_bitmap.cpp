@@ -56,8 +56,8 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
     }
     const int latest_entry = plan.logical.p_size - 4;
     const int conversion = plan.logical.p_size - 3;
-    // Prefer the earliest legal scope in this forced experiment: building at
-    // a fixed late depth needlessly repeats identical anchor-universe rows.
+    // Prefer the earliest legal execution scope. Immutable construction has
+    // its own dependency scope and need not wait for the bitmap-only suffix.
     // Profitability remains separate; the array backend is still the default.
     for (const auto &region : ir.domains.regions) {
         const int entry = region.entry_depth;
@@ -66,7 +66,7 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
         if (!contains(ir.domains.sets.at(plan.logical.iter_set.at(conversion).id).neighborhood_anchors,
                       region.anchor_depth))
             continue;
-        BitmapRegionExecution out{entry, conversion, region.anchor_depth, {}, {}};
+        BitmapRegionExecution out{entry, conversion, region.anchor_depth, region.anchor_depth, {}, {}};
         bool valid = true;
         for (const auto &logical : plan.logical.set_ops.at(conversion + 1)) {
             const auto &op = ir.sets.at(logical.id);
@@ -128,6 +128,7 @@ void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &ir) {
         return;
     const auto &actual = *ir.bitmap_region;
     if (actual.entry_depth != expected->entry_depth || actual.anchor_depth != expected->anchor_depth ||
+        actual.build_depth != expected->build_depth ||
         actual.conversion_depth != expected->conversion_depth || actual.live_ins != expected->live_ins ||
         actual.count_ops != expected->count_ops || actual.iterator_set != expected->iterator_set ||
         actual.full_region != expected->full_region || actual.full_sets != expected->full_sets ||

@@ -1,5 +1,6 @@
 #include "backend/bitmap_tasks.h"
 #include <oneapi/tbb/global_control.h>
+#include <oneapi/tbb/parallel_for.h>
 #include <atomic>
 #include <numeric>
 #include <stdexcept>
@@ -16,7 +17,24 @@ int main() {
         } graph;
         graph.ids.resize(n);
         std::iota(graph.ids.begin(), graph.ids.end(), 10);
-        auto region = BitmapCountRegion::build(graph, 9, graph.ids, graph.ids, 2);
+        auto rows = BitmapCountRegion::build_rows(graph, 9, graph.ids, graph.ids, 2);
+        auto region = BitmapCountRegion::from_rows(rows, 2);
+        // Independent prefix entries share rows, never candidate words. Keep a
+        // state alive after releasing the original row-store handle as well.
+        tbb::parallel_for(size_t{0}, size_t{32}, [&](size_t prefix) {
+            auto state = BitmapCountRegion::from_rows(rows, 2);
+            const std::vector<uint32_t> input(graph.ids.begin(), graph.ids.begin() + prefix % (n + 1));
+            state->bind_input(0, input);
+            require(state->input_size(0) == input.size());
+            require(state->input_view(0).universe().compatible(region->input_view(0).universe()));
+            require(state->input_view(0).data() != region->input_view(0).data());
+            require(region->input_size(0) == 0);
+        });
+        require(graph.reads == n);
+        rows.reset();
+        require(!BitmapCountRegion::from_rows({}, 2));
+        require(!BitmapCountRegion::build_rows(graph, 9, graph.ids, graph.ids, 2, 0));
+        require(graph.reads == n); // Budget rejection does not read any rows.
         region->bind_input(0, graph.ids);
         region->bind_input(1, graph.ids);
         auto copy = region->fork();

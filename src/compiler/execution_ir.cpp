@@ -134,6 +134,7 @@ std::string dump_execution(const ExecutionIR &execution) {
     if (execution.bitmap_region) {
         const auto &region = *execution.bitmap_region;
         out << "bitmap-region @depth" << region.entry_depth << " anchor=" << region.anchor_depth
+            << " build@depth" << region.build_depth
             << " rows=universe conversions@depth" << region.conversion_depth << " live-ins:";
         for (int id : region.live_ins) out << " set" << id;
         out << " counts:";

@@ -4,6 +4,7 @@
 #include "bitgraph.h"
 #include <memory>
 #include <type_traits>
+#include <utility>
 
 namespace minigraph {
 // Own rows and reusable candidate slots for terminal-only or full-region bitmap
@@ -13,13 +14,8 @@ class BitmapCountRegion {
     std::vector<Bitmap> inputs_;
     size_t input_count_;
 
-    template <class Graph, class Set>
-    BitmapCountRegion(const Graph &graph, uint32_t anchor, const Set &neighbors, const Set &rows,
-                      size_t input_count)
-        : graph_(std::make_shared<BitGraph>(NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
-                 std::vector<uint32_t>(rows.data(), rows.data() + rows.size()),
-                 [&](uint32_t vertex) { return graph.N(vertex); })),
-          input_count_(input_count) {
+    BitmapCountRegion(std::shared_ptr<const BitGraph> graph, size_t input_count)
+        : graph_(std::move(graph)), input_count_(input_count) {
         inputs_.reserve(input_count);
         for (size_t i = 0; i < input_count; ++i)
             inputs_.emplace_back(graph_->universe());
@@ -79,10 +75,12 @@ class BitmapCountRegion {
     }
     // Includes persistent row words, candidate words, ID mappings and object
     // storage plus one construction scratch bitmap. Allocator overhead is not
-    // an exact resident-memory guarantee. Zero budget forces array fallback.
+    // an exact resident-memory guarantee. Reserves room for one candidate state;
+    // concurrent task forks have additional private storage, as before.
+    // Zero budget forces array fallback. Rows can outlive any candidate state.
     template <class Graph, class Set>
-    static std::unique_ptr<BitmapCountRegion>
-    build(const Graph &graph, uint32_t anchor, const Set &neighbors, const Set &rows, size_t input_count,
+    static std::shared_ptr<const BitGraph>
+    build_rows(const Graph &graph, uint32_t anchor, const Set &neighbors, const Set &rows, size_t input_count,
           size_t budget = 32 * 1024 * 1024) {
         if (!rows.size() || !neighbors.size())
             return {};
@@ -98,8 +96,23 @@ class BitmapCountRegion {
             !charge(rows.size(), sizeof(uint32_t)) || !charge(rows.size(), stride) ||
             !charge(input_count, stride) || !charge(input_count, sizeof(Bitmap)) || !charge(1, stride))
             return {};
-        return std::unique_ptr<BitmapCountRegion>(
-            new BitmapCountRegion(graph, anchor, neighbors, rows, input_count));
+        return std::make_shared<BitGraph>(
+            NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
+            std::vector<uint32_t>(rows.data(), rows.data() + rows.size()),
+            [&](uint32_t vertex) { return graph.N(vertex); });
+    }
+    // Fresh private masks over shared immutable rows. A rejected row build
+    // propagates the existing array fallback without allocating candidate state.
+    static std::unique_ptr<BitmapCountRegion>
+    from_rows(std::shared_ptr<const BitGraph> rows, size_t input_count) {
+        if (!rows) return {};
+        return std::unique_ptr<BitmapCountRegion>(new BitmapCountRegion(std::move(rows), input_count));
+    }
+    template <class Graph, class Set>
+    static std::unique_ptr<BitmapCountRegion>
+    build(const Graph &graph, uint32_t anchor, const Set &neighbors, const Set &rows, size_t input_count,
+          size_t budget = 32 * 1024 * 1024) {
+        return from_rows(build_rows(graph, anchor, neighbors, rows, input_count, budget), input_count);
     }
     // Called once per penultimate prefix binding. Rows retain their original
     // universe and are reused across these bindings; no nested BitGraph.

@@ -66,7 +66,10 @@ int main() {
                         require(first != std::string::npos && code.find(binding, first+1) == std::string::npos,
                                 "Missing or duplicate generated binding");
                     }
-                    for (int mutation = 0; mutation < 9; ++mutation) {
+                    require(ir.bitmap_region->build_depth == ir.bitmap_region->anchor_depth &&
+                            ir.bitmap_region->build_depth <= ir.bitmap_region->entry_depth,
+                            "Rows not hoisted to their dependency scope");
+                    for (int mutation = 0; mutation < 10; ++mutation) {
                         auto bad = ir;
                         auto &r = *bad.bitmap_region;
                         if (mutation == 0)
@@ -84,6 +87,7 @@ int main() {
                         if (mutation == 6) r.full_region = !r.full_region;
                         if (mutation == 7) r.full_sets.push_back(-1);
                         if (mutation == 8) r.full_live_ins.push_back(-1);
+                        if (mutation == 9) ++r.build_depth;
                         bool rejected = false;
                         try {
                             verify_execution(bad, plan);
@@ -116,5 +120,33 @@ int main() {
     }
     require(selected > 0, "No bitmap plans exercised");
     require(full > 0, "No full bitmap regions exercised");
+    // No universal query root: execution starts at depth 2, but immutable rows
+    // depend only on anchor 0 (octahedron) or anchor 1 (atlas 145).
+    for (const auto &[query, anchor] : std::vector<std::pair<std::string, int>>{
+             {"011011101101110110011011101101110110", 0},
+             {"011011101000110101001010100100101000", 1}}) {
+        for (auto parallel : {ParallelType::OpenMP, ParallelType::NestedRt}) {
+            CodeGenConfig config;
+            config.pruningType = PruningType::None;
+            config.schedulerType = SchedulerType::Outgoing;
+            config.parType = parallel;
+            config.bitmap = true;
+            const auto ir = lower_execution(compile_vertex_induced(query, config, meta));
+            require(ir.bitmap_region && ir.bitmap_region->full_region, "Missing late-entry test region");
+            require(ir.bitmap_region->build_depth == anchor && ir.bitmap_region->entry_depth == 2,
+                    "Conflated row construction with execution scope");
+            const auto code = gen_code(query, config, meta);
+            const auto build = code.find("BitmapCountRegion::build_rows");
+            const auto enter = code.find("BitmapCountRegion::from_rows");
+            const auto root_body = parallel == ParallelType::OpenMP ? code.find("// loop-0 begin")
+                                                                  : code.find("// loop-0begin");
+            const auto next_loop = code.find("for (size_t i" + std::to_string(anchor + 1) + "_idx", root_body);
+            require(build != std::string::npos && next_loop != std::string::npos &&
+                    build < next_loop && next_loop < enter,
+                    "Generated construction was not moved outside descendant loops");
+            require(code.find("BitmapCountRegion::build_rows", build + 1) == std::string::npos,
+                    "Duplicate immutable row construction site");
+        }
+    }
     std::cout << "Validated 48 bitmap planning cases; selected " << selected << " regions, " << full << " full\n";
 }

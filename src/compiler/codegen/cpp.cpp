@@ -237,24 +237,26 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
     const auto &region = *execution_.bitmap_region;
     const auto &slots = region.full_region ? region.full_sets : region.live_ins;
     const auto &bindings = region.full_region ? region.full_live_ins : region.live_ins;
-    if (region.full_region && dep != region.entry_depth) return "";
-    if (dep < region.entry_depth || dep > region.conversion_depth)
+    if (dep < region.build_depth || dep > region.conversion_depth)
         return "";
     std::string out;
-    if (dep == region.entry_depth) {
+    if (dep == region.build_depth) {
         out = gen_indent(dep) + fmt::format(
             "auto bitmap_neighbors = graph->N(i{0}_id);\n"
-            "auto bitmap_region = BitmapCountRegion::build(*graph, i{0}_id, bitmap_neighbors, "
-            "bitmap_neighbors, {1}); // bitmap-region build once\n", region.anchor_depth, slots.size());
+            "auto bitmap_rows = BitmapCountRegion::build_rows(*graph, i{0}_id, bitmap_neighbors, "
+            "bitmap_neighbors, {1}); // bitmap-region build once per anchor\n", region.anchor_depth, slots.size());
         if (bitmap_diagnostics_)
             out += gen_indent(dep) + fmt::format(
-                "if (bitmap_region) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "
-                "bitmap_counters[1].fetch_add(bitmap_region->row_count(), std::memory_order_relaxed); }}\n");
+                "if (bitmap_rows) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "
+                "bitmap_counters[1].fetch_add(bitmap_rows->row_count(), std::memory_order_relaxed); }}\n");
     }
+    if (dep == region.entry_depth)
+        out += fmt::format("auto bitmap_region = BitmapCountRegion::from_rows(bitmap_rows, {}); // private candidate state\n", slots.size());
+    if (dep < region.entry_depth || (region.full_region && dep != region.entry_depth)) return out;
     for (int id : bindings) {
         const auto index = std::find(slots.begin(), slots.end(), id) - slots.begin();
         // SSA set IDs and their definition depths determine the lifetime. An
-        // outer set is bound when the region is created; inner sets on every
+        // outer set is bound when candidate state is created; inner sets on every
         // definition, after guards, before consumers. Never cache addresses.
         if (dep != std::max(region.entry_depth, execution_.sets.at(id).depth)) continue;
         out += fmt::format("if (bitmap_region) {{ bitmap_region->bind_input({}, s{});", index, id);
