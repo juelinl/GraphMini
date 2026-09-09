@@ -1,2 +1,6 @@
 add_library(graphmini_backend INTERFACE)
 target_link_libraries(graphmini_backend INTERFACE graphmini_headers OpenMP::OpenMP_CXX TBB::tbb TBB::tbbmalloc)
+option(GRAPHMINI_BUILD_METAL "Build experimental Apple Metal clique backend" OFF)
+if(GRAPHMINI_BUILD_METAL)
+    add_subdirectory(metal)
+endif()

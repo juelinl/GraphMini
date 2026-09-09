@@ -13,6 +13,7 @@ build-profile-backend
 build-inline-*
 build-noinline-*
 build-macos-clang/
+build-metal/
 build-linux-gcc/
 build-windows-msvc/
 build-custom/
