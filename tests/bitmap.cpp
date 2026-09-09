@@ -335,6 +335,37 @@ int main() {
             }
     for (uint32_t pos = 0; pos < neighbors.size(); ++pos)
         require(full->materialize_local(1, 0, pos, false, true, true) == pos, "Local bound-only parity");
+    // Edge-induced nonedges filter only the selected vertex, not its neighbors.
+    for (size_t bits : {1, 63, 64, 65, 127, 128, 129}) {
+        struct UnaryGraph {
+            std::vector<uint32_t> ids;
+            const std::vector<uint32_t> &N(uint32_t) const { return ids; }
+        } unary_graph;
+        for (size_t i = 0; i < bits; ++i) unary_graph.ids.push_back(i * 3 + 1);
+        auto unary = BitmapCountRegion::build(unary_graph, 0, unary_graph.ids, unary_graph.ids, 2);
+        std::vector<uint32_t> candidates;
+        for (size_t i = 0; i < bits; i += 2) candidates.push_back(unary_graph.ids[i]);
+        unary->bind_input(0, candidates);
+        for (uint32_t pos = 0; pos < bits; ++pos) {
+            const size_t remaining = candidates.size() - (pos % 2 == 0);
+            require(unary->count_local(0, pos, false, false, true, true) == remaining,
+                    "Remove-only cardinality");
+            require(unary->materialize_local(1, 0, pos, false, false, true, true) == remaining,
+                    "Remove-only materialization");
+            const auto ids = unary->input_view(1).vertices();
+            require(std::find(ids.begin(), ids.end(), unary_graph.ids[pos]) == ids.end(),
+                    "Remove-only injectivity");
+            const size_t bounded = (pos + 1) / 2;
+            require(unary->count_local(0, pos, false, true, true) == bounded,
+                    "Bound-only cardinality");
+            if (bits <= 64)
+                require(unary->count_local<1>(0, pos, false, false, true, true) == remaining,
+                        "Fixed one-word removal");
+            else if (bits <= 128)
+                require(unary->count_local<2>(0, pos, false, false, true, true) == remaining,
+                        "Fixed two-word removal");
+        }
+    }
     rejects([&] { full->materialize_local(3, 0, 0, false, false); });
     rejects([&] { full->materialize_local(1, 0, 3, false, false); });
     std::vector<const std::vector<uint32_t> *> inputs{&neighbors};

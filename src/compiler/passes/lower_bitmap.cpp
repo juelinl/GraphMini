@@ -28,8 +28,8 @@ void extend_full_region(const PlanIR &plan, const ExecutionIR &ir, BitmapRegionE
                 return v.adjacency ? v.adjacency->source == SetSource::GraphAdjacency && v.adjacency->id == depth
                                    : v.depth == depth;
             };
-            if (step.opcode == SetOpcode::Bound) {
-                if (!step.vertex || !local(*step.vertex) || op.result == SetResult::Count) return;
+            if (step.opcode == SetOpcode::Bound || step.opcode == SetOpcode::Remove) {
+                if (!step.vertex || !local(*step.vertex)) return;
             } else if (step.opcode == SetOpcode::Intersect || step.opcode == SetOpcode::DifferenceExcludingOwner) {
                 if (!step.rhs || step.rhs->source != SetSource::GraphAdjacency || step.rhs->id != depth ||
                     (step.upper_bound && !local(*step.upper_bound))) return;
@@ -48,10 +48,10 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
         reason = "disabled";
         return {};
     }
-    if (plan.query.mode != VertexInduced || config.pruningType != PruningType::None ||
+    if (config.adjMatType == EdgeInducedIEP || config.pruningType != PruningType::None ||
         config.runnerType != RunnerType::Benchmark ||
         plan.logical.p_size < 4) {
-        reason = "requires vertex-induced, no MiniGraph, benchmark, and at least four vertices";
+        reason = "requires non-IEP matching, no MiniGraph, benchmark, and at least four vertices";
         return {};
     }
     const int latest_entry = plan.logical.p_size - 4;
@@ -76,15 +76,19 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
                 break;
             }
             const auto &step = op.steps.front();
+            const bool unary = step.opcode == SetOpcode::Bound || step.opcode == SetOpcode::Remove;
+            const bool local_unary = unary && step.vertex &&
+                (step.vertex->adjacency ? step.vertex->adjacency->source == SetSource::GraphAdjacency &&
+                 step.vertex->adjacency->id == conversion + 1 : step.vertex->depth == conversion + 1);
             const bool local_bound = !step.upper_bound ||
                 (step.upper_bound->adjacency &&
                  step.upper_bound->adjacency->source == SetSource::GraphAdjacency &&
                  step.upper_bound->adjacency->id == conversion + 1) ||
                 (!step.upper_bound->adjacency && step.upper_bound->depth == conversion + 1);
-            if ((step.opcode != SetOpcode::Intersect &&
+            if ((!local_unary && ((step.opcode != SetOpcode::Intersect &&
                  step.opcode != SetOpcode::DifferenceExcludingOwner) ||
                 !step.rhs || step.rhs->source != SetSource::GraphAdjacency ||
-                step.rhs->id != conversion + 1 || !local_bound ||
+                step.rhs->id != conversion + 1)) || !local_bound ||
                 !contains(ir.domains.sets.at(op.input.id).neighborhood_anchors, region.anchor_depth)) {
                 valid = false;
                 break;
@@ -98,7 +102,11 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             if (!contains(out.live_ins, out.iterator_set))
                 out.live_ins.push_back(out.iterator_set);
             extend_full_region(plan, ir, out);
-            if (config.parType != ParallelType::OpenMP && !out.full_region)
+            const bool unary_terminal = std::any_of(out.count_ops.begin(), out.count_ops.end(), [&](int id) {
+                const auto opcode = ir.sets.at(id).steps.front().opcode;
+                return opcode == SetOpcode::Bound || opcode == SetOpcode::Remove;
+            });
+            if ((config.parType != ParallelType::OpenMP || plan.query.mode == EdgeInduced || unary_terminal) && !out.full_region)
                 continue; // Task capture currently requires a fully local region.
             reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
             return out;

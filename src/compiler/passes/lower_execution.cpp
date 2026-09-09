@@ -114,6 +114,7 @@ ExecutionIR lower_execution(const PlanIR &plan) {
         result.iep.push_back(std::move(term));
     }
     lower_minigraphs(plan, result);
+    result.iep_bitmap = plan_iep_bitmap(plan, result);
     lower_loops(plan, result);
     lower_bitmap_region(plan, result);
     verify_execution(result, plan);

@@ -30,6 +30,15 @@ void lower_loops(const PlanIR &plan, ExecutionIR &execution) {
         out.cap_threshold = out.average_degree > 0 && plan.context.meta.max_degree / out.average_degree > 100;
         if (loop == 0)
             continue;
+        if (execution.iep_bitmap && static_cast<int>(loop) <= plan.counting.iep_depth) {
+            const auto &bitmap = *execution.iep_bitmap;
+            if (bitmap.universe_set) {
+                if (execution.sets.at(*bitmap.universe_set).depth < static_cast<int>(loop) &&
+                    *bitmap.universe_set != plan.logical.iter_set.at(loop - 1).id)
+                    capture(out.captured_sets, *bitmap.universe_set);
+            } else if (bitmap.anchor_depth < static_cast<int>(loop))
+                out.captured_adjacencies.insert(bitmap.anchor_depth);
+        }
         if (plan.context.config.pruningType != PruningType::None) {
             for (int dep = loop; dep < plan.logical.p_size - 1; ++dep)
                 for (const auto &mg : plan.auxiliary.mg_used.at(dep))

@@ -68,13 +68,13 @@ class BitmapCountRegion {
     // Fixed Words must match this region; generated code dispatches once.
     template<size_t Words = 0>
     size_t materialize_local(size_t destination, size_t source, uint32_t position,
-                             bool subtract, bool bounded, bool bound_only = false) {
+                             bool subtract, bool bounded, bool bound_only = false, bool remove_only = false) {
         if (!graph_->has_universe_rows()) throw std::logic_error("Requires universe rows");
         const auto *row = graph_->row_data_at(position);
         const auto &input = inputs_.at(source);
         inputs_.at(destination).assign_local<Words>(input, bound_only ? input.words().data() : row,
             subtract, bounded ? position : graph_->universe().size(),
-            subtract ? std::optional<uint32_t>(position) : std::nullopt);
+            (subtract || remove_only) ? std::optional<uint32_t>(position) : std::nullopt);
         return inputs_[destination].count();
     }
     // Includes persistent row words, candidate words, ID mappings and object
@@ -126,13 +126,19 @@ class BitmapCountRegion {
     // Canonicality against the selected local vertex is order-preserving because
     // universe IDs are sorted. Exclusion also stays entirely in local coordinates.
     template<size_t Words = 0>
-    size_t count_local(size_t input, uint32_t position, bool subtract, bool bounded = false) const {
+    size_t count_local(size_t input, uint32_t position, bool subtract, bool bounded = false,
+                       bool unary = false, bool remove_only = false) const {
         if (!graph_->has_universe_rows())
             throw std::logic_error("Local counting requires universe-indexed rows");
         const auto *source = inputs_.at(input).words().data();
         const auto *row = graph_->row_data_at(position);
         const auto bits = graph_->universe().size();
         const size_t limit = bounded ? position : bits;
+        if (unary) {
+            auto count = bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, false>(source, source, bits, nullptr, limit);
+            if (remove_only && position < limit && bit_ops::test(source, bits, position)) --count;
+            return count;
+        }
         if (!subtract)
             return bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, false>(source, row, bits, nullptr, limit);
         size_t count = bit_ops::combine_fixed<Words, bit_ops::Binary::Difference, false>(source, row, bits, nullptr, limit);

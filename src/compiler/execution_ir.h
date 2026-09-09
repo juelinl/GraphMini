@@ -41,6 +41,14 @@ struct IEPTerm {
     // Each factor is the cardinality of the intersection of these prefix sets.
     std::vector<std::vector<int>> factors;
 };
+// Convert only IEP factor inputs, not a full graph. Each factor shares one
+// proven neighborhood universe; cardinalities are reused across IEP terms.
+struct IEPBitmapExecution {
+    int anchor_depth;
+    std::vector<int> inputs;
+    std::vector<std::vector<int>> factors;
+    std::optional<int> universe_set; // Common materialized ancestor, otherwise N(anchor).
+};
 struct VisitFactor {
     std::optional<int> set_id;
     double scale;
@@ -87,6 +95,7 @@ struct ExecutionIR {
     RepresentationPlan representations;
     std::map<int, SetExecution> sets;
     std::vector<IEPTerm> iep;
+    std::optional<IEPBitmapExecution> iep_bitmap;
     std::map<int, MiniGraphExecution> minigraphs;
     std::vector<LoopExecution> loops;
     std::optional<BitmapRegionExecution> bitmap_region;
@@ -97,6 +106,7 @@ ExecutionIR lower_execution(const PlanIR &plan);
 void lower_minigraphs(const PlanIR &plan, ExecutionIR &execution);
 void lower_loops(const PlanIR &plan, ExecutionIR &execution);
 void lower_bitmap_region(const PlanIR &plan, ExecutionIR &execution);
+std::optional<IEPBitmapExecution> plan_iep_bitmap(const PlanIR &plan, const ExecutionIR &execution);
 void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &execution);
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan);
 std::string dump_execution(const ExecutionIR &execution);

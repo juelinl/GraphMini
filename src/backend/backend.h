@@ -8,6 +8,7 @@
 #include "vertex_set.h"
 #include "graph.h"
 #include "minigraph.h"
+#include "iep_bitmap.h"
 #include <omp.h>
 #ifdef GRAPHMINI_USE_TBB_MODULE
 import tbb;

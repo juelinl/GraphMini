@@ -17,6 +17,7 @@ export namespace minigraph {
     }
     using ::minigraph::IdType;
     using ::minigraph::VertexSet;
+    using ::minigraph::IEPBitmap;
     using ::minigraph::Graph;
     using ::minigraph::Context;
     using ::minigraph::cc;

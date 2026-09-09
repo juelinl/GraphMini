@@ -56,15 +56,16 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
                     const auto &step = op.steps.front();
                     const bool subtract = step.opcode == SetOpcode::DifferenceExcludingOwner;
                     const bool bound_only = step.opcode == SetOpcode::Bound;
+                    const bool remove_only = step.opcode == SetOpcode::Remove;
                     const bool bounded = bound_only || step.upper_bound.has_value();
                     if (op.result == SetResult::Count) {
-                        out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {});\n", slot(op.input.id), depth, subtract, bounded);
+                        out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {}, {}, {});\n", slot(op.input.id), depth, subtract, bounded, bound_only || remove_only, remove_only);
                         if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
                     } else {
                         if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
                             out += fmt::format("const auto bn{} = ", op.id);
-                        out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {});\n",
-                            slot(op.id), slot(op.input.id), depth, subtract, bounded, bound_only);
+                        out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {}, {});\n",
+                            slot(op.id), slot(op.input.id), depth, subtract, bounded, bound_only || remove_only, remove_only);
                         if (op.guard_empty) out += fmt::format("if (!bn{}) continue;\n", op.id);
                         if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
                     }
@@ -137,13 +138,14 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
             const auto &step = op.steps.front();
             const bool subtract = step.opcode == SetOpcode::DifferenceExcludingOwner;
             const bool bound = step.opcode == SetOpcode::Bound;
+            const bool remove_only = step.opcode == SetOpcode::Remove;
             const bool bounded = bound || step.upper_bound.has_value();
             if (op.result == SetResult::Count) {
-                out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {});\n", slot(op.input.id), depth, subtract, bounded);
+                out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {}, {}, {});\n", slot(op.input.id), depth, subtract, bounded, bound || remove_only, remove_only);
                 if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
             } else {
-                out += fmt::format("const auto bn{} = bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {});\n",
-                    op.id, slot(op.id), slot(op.input.id), depth, subtract, bounded, bound);
+                out += fmt::format("const auto bn{} = bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {}, {});\n",
+                    op.id, slot(op.id), slot(op.input.id), depth, subtract, bounded, bound || remove_only, remove_only);
                 if (op.guard_empty) out += fmt::format("if (!bn{}) return counter;\n", op.id);
                 if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
             }
@@ -341,14 +343,41 @@ std::string CppCodegen::emit_mg_op(const PlanIR &plan, const VertexSetIR &op) {
 
 std::string CppCodegen::emit_iep(const PlanIR &, size_t group_id) {
     const auto &term = execution_.iep.at(group_id);
-    std::string out = fmt::format("counter += {}ll", term.coefficient);
-    for (const auto &factor : term.factors) {
-        out += fmt::format(" * s{}", factor.at(0));
-        if (factor.size() == 1)
-            out += ".size()";
+    auto array_count = [](const std::vector<int> &factor) {
+        std::string result = fmt::format("s{}", factor.at(0));
+        if (factor.size() == 1) result += ".size()";
         for (size_t i = 1; i < factor.size(); ++i)
-            out += fmt::format(".{}(s{})", i + 1 == factor.size() ? "intersect_cnt" : "intersect",
-                               factor[i]);
+            result += fmt::format(".{}(s{})", i + 1 == factor.size() ? "intersect_cnt" : "intersect", factor[i]);
+        return result;
+    };
+    std::string out;
+    if (execution_.iep_bitmap && group_id == 0) {
+        const auto &bitmap = *execution_.iep_bitmap;
+        out = "// bitmap-backed IEP: shared-universe factor cardinalities\n";
+        const auto universe = bitmap.universe_set ? fmt::format("s{}", *bitmap.universe_set)
+                                                 : fmt::format("i{}_adj", bitmap.anchor_depth);
+        out += fmt::format("IEPBitmap iep_bitmap({}, {{", universe);
+        for (size_t i = 0; i < bitmap.inputs.size(); ++i)
+            out += fmt::format("{}&s{}", i ? ", " : "", bitmap.inputs[i]);
+        out += "});\n";
+        for (size_t i = 0; i < bitmap.factors.size(); ++i) {
+            out += fmt::format("const auto iep_factor{} = iep_bitmap.enabled() ? iep_bitmap.intersection_count({{", i);
+            for (size_t j = 0; j < bitmap.factors[i].size(); ++j) {
+                auto slot = std::find(bitmap.inputs.begin(), bitmap.inputs.end(), bitmap.factors[i][j]) - bitmap.inputs.begin();
+                out += fmt::format("{}{}", j ? ", " : "", slot);
+            }
+            out += "}) : " + array_count(bitmap.factors[i]) + ";\n";
+        }
+    }
+    out += fmt::format("counter += {}ll", term.coefficient);
+    for (const auto &factor : term.factors) {
+        auto key = factor;
+        std::sort(key.begin(), key.end());
+        key.erase(std::unique(key.begin(), key.end()), key.end());
+        if (execution_.iep_bitmap && key.size() > 1) {
+            const auto &factors = execution_.iep_bitmap->factors;
+            out += fmt::format(" * iep_factor{}", std::find(factors.begin(), factors.end(), key) - factors.begin());
+        } else out += " * " + array_count(factor);
     }
     return out + ";\n";
 }

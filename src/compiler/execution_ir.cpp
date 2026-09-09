@@ -7,6 +7,13 @@ namespace minigraph {
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan) {
     verify_representations(plan.logical, execution.domains, execution.representations);
     verify_bitmap_region(plan, execution);
+    const auto expected_iep = plan_iep_bitmap(plan, execution);
+    if (expected_iep.has_value() != execution.iep_bitmap.has_value() ||
+        (expected_iep && (expected_iep->anchor_depth != execution.iep_bitmap->anchor_depth ||
+                          expected_iep->inputs != execution.iep_bitmap->inputs ||
+                          expected_iep->universe_set != execution.iep_bitmap->universe_set ||
+                          expected_iep->factors != execution.iep_bitmap->factors)))
+        throw std::logic_error("Unproved IEP bitmap plan");
     std::map<int, int> depths;
     std::set<int> graphs;
     for (const auto &level : plan.logical.set_ops)
@@ -119,6 +126,11 @@ std::string dump_execution(const ExecutionIR &execution) {
     std::ostringstream out;
     out << dump_domains(execution.domains, execution.representations);
     out << "bitmap: " << execution.bitmap_reason << '\n';
+    if (execution.iep_bitmap)
+        out << "iep-bitmap anchor=" << execution.iep_bitmap->anchor_depth
+            << " universe-set=" << execution.iep_bitmap->universe_set.value_or(-1)
+            << " inputs=" << execution.iep_bitmap->inputs.size()
+            << " cached-factors=" << execution.iep_bitmap->factors.size() << '\n';
     if (execution.bitmap_region) {
         const auto &region = *execution.bitmap_region;
         out << "bitmap-region @depth" << region.entry_depth << " anchor=" << region.anchor_depth
