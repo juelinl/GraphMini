@@ -1,6 +1,7 @@
 #include "common/meta.h"
 #include "compiler/compilation_profile.h"
 #include "compiler/codegen/cpp.h"
+#include "compiler/codegen/names.h"
 #include "compiler/codegen/format.h"
 #include "compiler/planning.h"
 #include <stdexcept>
@@ -36,11 +37,11 @@ std::string gen_code(const std::string &query, CodeGenConfig config, MetaData me
     CppCodegen writer(config, execution);
     switch (config.parType) {
     case ParallelType::OpenMP:
-        return format_generated_cpp(writer.emit_omp(plan, config));
+        return format_generated_cpp(codegen_names::guide + writer.emit_omp(plan, config));
     case ParallelType::TbbTop:
     case ParallelType::Nested:
     case ParallelType::NestedRt:
-        return format_generated_cpp((config.bitmap ? "// bitmap: " + execution.bitmap_reason + "\n" : "") +
+        return format_generated_cpp(std::string(codegen_names::guide) + (config.bitmap ? "// bitmap: " + execution.bitmap_reason + "\n" : "") +
                writer.emit_nested(plan, config));
     default:
         throw std::invalid_argument("Unsupported parallel type");

@@ -18,8 +18,7 @@ class CppCodegen {
     const bool profiling_;
     const ExecutionIR &execution_;
     const bool bitmap_diagnostics_;
-    static std::string gen_indent(int dep) { return std::string(dep + 4, '\t'); }
-    static std::string gen_indent_tbb(int dep) { return gen_indent(dep); }
+    bool uses_selected_vertex(int dep) const;
     std::string emit_read_adj(const PlanIR &plan, int dep);
     std::string emit_iter(const PlanIR &plan, int dep);
     std::string emit_op(const PlanIR &plan, const VertexSetIR &op);
@@ -27,7 +26,7 @@ class CppCodegen {
     std::string emit_bitmap_tasks(const PlanIR &plan, int dep);
     std::string gen_mg_type(const PlanIR &plan, const MiniGraphIR &mg);
     std::string emit_mg_init(const PlanIR &plan, const MiniGraphIR &mg);
-    std::string emit_mg_adj(const PlanIR &plan, int dep, int indent_dep = -1);
+    std::string emit_mg_adj(const PlanIR &plan, int dep);
     bool skip_build_indices(const PlanIR &plan, const MiniGraphIR &mg, const VertexSetIR &iter);
     std::string emit_mg_indice(const PlanIR &plan, const MiniGraphIR &mg, int dep);
     std::string emit_mg_build(const PlanIR &plan, const MiniGraphIR &mg);
@@ -37,7 +36,7 @@ class CppCodegen {
     std::vector<MiniGraphIR> gen_used_mg(const PlanIR &plan, const CodeGenConfig &config, int loop);
     std::vector<VertexSetIR> gen_used_set(const PlanIR &plan, const CodeGenConfig &config, int loop);
     std::set<int> gen_used_adj(const PlanIR &plan, const CodeGenConfig &config, int loop);
-    std::string emit_tbb_call(const PlanIR &plan, const CodeGenConfig &config, int loop, int indent_dep);
+    std::string emit_tbb_call(const PlanIR &plan, const CodeGenConfig &config, int loop);
     std::string emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &config, int loop);
 };
 } // namespace minigraph

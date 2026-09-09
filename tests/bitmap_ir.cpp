@@ -3,15 +3,41 @@
 #include <iostream>
 #include <stdexcept>
 #include <algorithm>
+#include <regex>
 
 using namespace minigraph;
 void require(bool value, const char *message) {
     if (!value)
         throw std::runtime_error(message);
 }
+void require_bitmap_names(const std::string &code) {
+    static const std::regex bit_index(R"(\bv[0-9]+_bit_idx\b)");
+    static const std::regex old_names(R"(\b_?i[0-9]+_(id|idx|adj)\b|\bbp[0-9]+\b|\bbitmap_position\b)");
+    require(code.find("// Naming (D is matching depth; N is an IR set ID):") == 0,
+            "Missing bitmap naming guide");
+    require(std::regex_search(code, bit_index), "Missing depth-specific bitmap index");
+    require(!std::regex_search(code, old_names), "Legacy bitmap vertex name");
+}
+size_t require_bitmap_temporaries(const std::string &code, const ExecutionIR &ir) {
+    const auto &region = *ir.bitmap_region;
+    if (region.build_depth == region.anchor_depth && ir.loops.at(region.anchor_depth).read_adjacency)
+        require(code.find("auto bitmap_neighbors =") == std::string::npos,
+                "Duplicated an available full adjacency view");
+    if (!region.full_region) return 0;
+    size_t omitted = 0;
+    for (const auto &[id, op] : ir.sets) {
+        if (op.depth <= region.entry_depth || op.result == SetResult::Count) continue;
+        const bool needs_count = op.guard_empty || op.result == SetResult::MaterializeThenCount;
+        const auto declaration = "const auto bn" + std::to_string(id) + " =";
+        require((code.find(declaration) != std::string::npos) == needs_count,
+                "Bitmap materialization count must be declared exactly when consumed");
+        if (!needs_count) ++omitted;
+    }
+    return omitted;
+}
 int main() {
     const MetaData meta(100, 1000, 600, 30, 20, 60);
-    size_t selected = 0, full = 0;
+    size_t selected = 0, full = 0, omitted_counts = 0;
     for (int n = 4; n <= 7; ++n) {
         for (int missing = 0; missing < 4; ++missing) {
             std::string query(n * n, '1');
@@ -37,6 +63,8 @@ int main() {
                 if (ir.bitmap_region) {
                     ++selected;
                     const auto code = gen_code(query, config, meta);
+                    require_bitmap_names(code);
+                    omitted_counts += require_bitmap_temporaries(code, ir);
                     if (ir.bitmap_region->full_region) {
                         ++full;
                         require(code.find("count_local<bitmap_words>") != std::string::npos &&
@@ -111,6 +139,8 @@ int main() {
                 if (ir.bitmap_region && ir.bitmap_region->full_region) {
                     require(nested_ir.bitmap_region.has_value(), "Missing TBB full region");
                     const auto code = gen_code(query, nested.context.config, meta);
+                    require_bitmap_names(code);
+                    omitted_counts += require_bitmap_temporaries(code, nested_ir);
                     require(code.find("bitmap_for_each") != std::string::npos &&
                             code.find("} // array fallback") != std::string::npos,
                             "Missing task-local bitmap execution");
@@ -120,6 +150,7 @@ int main() {
     }
     require(selected > 0, "No bitmap plans exercised");
     require(full > 0, "No full bitmap regions exercised");
+    require(omitted_counts > 0, "Unused bitmap count elimination was not exercised");
     {
         CodeGenConfig config;
         config.pruningType = PruningType::None;
@@ -179,7 +210,7 @@ int main() {
             const auto enter = code.find("BitmapCountRegion::from_rows");
             const auto root_body = parallel == ParallelType::OpenMP ? code.find("// loop-0 begin")
                                                                   : code.find("// loop-0begin");
-            const auto next_loop = code.find("for (size_t i" + std::to_string(anchor + 1) + "_idx", root_body);
+            const auto next_loop = code.find("for (size_t v" + std::to_string(anchor + 1) + "_idx", root_body);
             require(build != std::string::npos && next_loop != std::string::npos &&
                     build < next_loop && next_loop < enter,
                     "Generated construction was not moved outside descendant loops");

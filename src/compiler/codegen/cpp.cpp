@@ -5,6 +5,7 @@
 #include "common/timer.h"
 
 #include "compiler/codegen/cpp.h"
+#include "compiler/codegen/names.h"
 #include "compiler/config.h"
 #include <algorithm>
 #include <cmath>
@@ -14,22 +15,38 @@
 #include <sstream>
 #include <utility>
 namespace minigraph {
+bool CppCodegen::uses_selected_vertex(int dep) const {
+    if (execution_.loops.at(dep).read_adjacency)
+        return true;
+    const auto selected = [dep](const std::optional<VertexReference> &ref) {
+        return ref && !ref->adjacency && ref->depth == dep;
+    };
+    for (const auto &[id, op] : execution_.sets)
+        for (const auto &step : op.steps)
+            if (selected(step.vertex) || selected(step.upper_bound))
+                return true;
+    if (execution_.bitmap_region) {
+        const auto &region = *execution_.bitmap_region;
+        if (region.anchor_depth == dep ||
+            (region.projection_pair && region.projection_pair->local_depth == dep))
+            return true;
+    }
+    return false;
+}
+
 std::string CppCodegen::emit_read_adj(const PlanIR &plan, int dep) {
     std::string out;
     if (profiling_) {
         out += fmt::format("ctx.profiler->set_cur_loop({dep});\n", fmt::arg("dep", dep));
-        out += gen_indent(dep);
     }
-    if (dep > 0) {
+    if (dep > 0 && uses_selected_vertex(dep)) {
         const VertexSetIR &iter = plan.logical.iter_set.at(dep - 1);
-        out += fmt::format("const IdType i{dep}_id = s{iter_id}[i{dep}_idx];\n", fmt::arg("dep", dep),
-                           fmt::arg("iter_id", iter.id));
+        out += fmt::format("const IdType {} = s{}[{}];\n", codegen_names::vertex(dep),
+                           iter.id, codegen_names::index(dep));
     }
 
     if (execution_.loops.at(dep).read_adjacency) {
-        if (dep > 0)
-            out += gen_indent(dep);
-        out += fmt::format("VertexSet i{dep}_adj = graph->N(i{dep}_id);\n", fmt::arg("dep", dep));
+        out += fmt::format("VertexSet {} = graph->N({});\n", codegen_names::adjacency(dep), codegen_names::vertex(dep));
     }
     return out;
 }
@@ -50,7 +67,7 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
                    "constexpr size_t bitmap_words = decltype(bitmap_tag)::value;\n";
             for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) {
                 out += fmt::format("for (auto bc{0} = bitmap_region->local_cursor({1}); bc{0}.valid(); bc{0}.advance()) {{ // bitmap local-index loop\n"
-                                   "const auto bp{0} = bc{0}.position();\n", depth, slot(plan.logical.iter_set.at(depth-1).id));
+                                   "const auto {2} = bc{0}.position();\n", depth, slot(plan.logical.iter_set.at(depth-1).id), codegen_names::bit_index(depth));
                 for (const auto &logical : plan.logical.set_ops.at(depth)) {
                     const auto &op = execution_.sets.at(logical.id);
                     const auto &step = op.steps.front();
@@ -59,13 +76,13 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
                     const bool remove_only = step.opcode == SetOpcode::Remove;
                     const bool bounded = bound_only || step.upper_bound.has_value();
                     if (op.result == SetResult::Count) {
-                        out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {}, {}, {});\n", slot(op.input.id), depth, subtract, bounded, bound_only || remove_only, remove_only);
+                        out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, {}, {}, {}, {}, {});\n", slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound_only || remove_only, remove_only);
                         if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
                     } else {
                         if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
                             out += fmt::format("const auto bn{} = ", op.id);
-                        out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {}, {});\n",
-                            slot(op.id), slot(op.input.id), depth, subtract, bounded, bound_only || remove_only, remove_only);
+                        out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, {}, {}, {}, {}, {});\n",
+                            slot(op.id), slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound_only || remove_only, remove_only);
                         if (op.guard_empty) out += fmt::format("if (!bn{}) continue;\n", op.id);
                         if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
                     }
@@ -79,7 +96,7 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
                    "else if (bitmap_region->universe_size() <= 512) bitmap_execute(std::integral_constant<size_t, 8>{});\n"
                    "else bitmap_execute(std::integral_constant<size_t, 0>{});\n";
             out += "} else {\n";
-            return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n", dep+1, iter_set.id);
+            return out + fmt::format("for (size_t {0} = 0; {0} < s{1}.size(); ++{0}) {{\n", codegen_names::index(dep+1), iter_set.id);
         }
         if (execution_.bitmap_region && !execution_.bitmap_region->full_region && dep == execution_.bitmap_region->conversion_depth) {
             const auto &region = *execution_.bitmap_region;
@@ -94,23 +111,23 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
             }
             out += fmt::format("for (auto bitmap_cursor = bitmap_region->local_cursor({}); "
                                "bitmap_cursor.valid(); bitmap_cursor.advance()) {{ // bitmap local-index loop\n"
-                               "const auto bitmap_position = bitmap_cursor.position();\n", input);
+                               "const auto {1} = bitmap_cursor.position();\n", input, codegen_names::bit_index(dep + 1));
             for (int id : region.count_ops) {
                 const auto &step = execution_.sets.at(id).steps.front();
-                out += fmt::format("counter += bitmap_count_{}.count(bitmap_position, {}, {});\n", id,
+                out += fmt::format("counter += bitmap_count_{}.count({}, {}, {});\n", id, codegen_names::bit_index(dep + 1),
                     step.opcode == SetOpcode::DifferenceExcludingOwner, step.upper_bound.has_value());
                 if (bitmap_diagnostics_)
                     out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
             }
             out += "}\n} else {\n";
-            out += fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n",
-                               dep + 1, iter_set.id);
+            out += fmt::format("for (size_t {0} = 0; {0} < s{1}.size(); ++{0}) {{\n",
+                               codegen_names::index(dep + 1), iter_set.id);
             return out;
         }
-        return fmt::format("for (size_t i{dep}_idx = 0; i{dep}_idx < s{iter_id}.size(); "
-                           "i{dep}_idx++) {left} // loop-{dep} begin\n",
+        return fmt::format("for (size_t {idx} = 0; {idx} < s{iter_id}.size(); "
+                           "{idx}++) {left} // loop-{dep} begin\n",
                            fmt::arg("left", "{"), fmt::arg("iter_id", iter_set.id),
-                           fmt::arg("dep", dep + 1));
+                           fmt::arg("dep", dep + 1), fmt::arg("idx", codegen_names::index(dep + 1)));
     }
 }
 
@@ -133,8 +150,8 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
             }
         }
         out += fmt::format("auto bitmap_level{0} = [&](BitmapCountRegion& state) -> uint64_t {{\n"
-                           "return bitmap_for_each(state, {1}, {2}, [&](BitmapCountRegion& task_state, uint32_t bp{0}) -> uint64_t {{ // bitmap local-index loop\n"
-                           "auto* bitmap_region = &task_state;\nuint64_t counter = 0;\n", depth, input, parallel);
+                           "return bitmap_for_each(state, {1}, {2}, [&](BitmapCountRegion& task_state, uint32_t {3}) -> uint64_t {{ // bitmap local-index loop\n"
+                           "auto* bitmap_region = &task_state;\nuint64_t counter = 0;\n", depth, input, parallel, codegen_names::bit_index(depth));
         for (const auto &logical : plan.logical.set_ops.at(depth)) {
             const auto &op = execution_.sets.at(logical.id);
             const auto &step = op.steps.front();
@@ -143,11 +160,13 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
             const bool remove_only = step.opcode == SetOpcode::Remove;
             const bool bounded = bound || step.upper_bound.has_value();
             if (op.result == SetResult::Count) {
-                out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, bp{}, {}, {}, {}, {});\n", slot(op.input.id), depth, subtract, bounded, bound || remove_only, remove_only);
+                out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, {}, {}, {}, {}, {});\n", slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
                 if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
             } else {
-                out += fmt::format("const auto bn{} = bitmap_region->materialize_local<bitmap_words>({}, {}, bp{}, {}, {}, {}, {});\n",
-                    op.id, slot(op.id), slot(op.input.id), depth, subtract, bounded, bound || remove_only, remove_only);
+                if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
+                    out += fmt::format("const auto bn{} = ", op.id);
+                out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, {}, {}, {}, {}, {});\n",
+                    slot(op.id), slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
                 if (op.guard_empty) out += fmt::format("if (!bn{}) return counter;\n", op.id);
                 if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
             }
@@ -166,9 +185,9 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
            "else if (bitmap_region->universe_size() <= 512) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 8>{}));\n"
            "else counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 0>{}));\n"
            "} else {\n";
-    out += emit_tbb_call(plan, plan.context.config, dep+1, dep);
-    return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n",
-                            dep+1, plan.logical.iter_set.at(dep).id);
+    out += emit_tbb_call(plan, plan.context.config, dep+1);
+    return out + fmt::format("for (size_t {0} = 0; {0} < s{1}.size(); ++{0}) {{\n",
+                            codegen_names::index(dep+1), plan.logical.iter_set.at(dep).id);
 }
 
 namespace {
@@ -177,14 +196,14 @@ std::string set_name(SetReference ref) {
     case SetSource::Prefix:
         return fmt::format("s{}", ref.id);
     case SetSource::GraphAdjacency:
-        return fmt::format("i{}_adj", ref.id);
+        return codegen_names::adjacency(ref.id);
     case SetSource::MiniGraphAdjacency:
         return fmt::format("m{}_adj", ref.id);
     }
     throw std::logic_error("Unknown set source");
 }
 std::string vertex_name(const VertexReference &ref) {
-    return ref.adjacency ? set_name(*ref.adjacency) + ".vid()" : fmt::format("i{}_id", ref.depth);
+    return ref.adjacency ? set_name(*ref.adjacency) + ".vid()" : codegen_names::vertex(ref.depth);
 }
 std::string set_expression(const SetExecution &op) {
     std::string out = set_name(op.input);
@@ -233,7 +252,7 @@ std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
         op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
     out += set_expression(op) + ";\n";
     if (op.guard_empty)
-        out += gen_indent(op.depth) + fmt::format("if (s{}.size() == 0) continue;\n", op.id);
+        out += fmt::format("if (s{}.size() == 0) continue;\n", op.id);
     if (op.result == SetResult::MaterializeThenCount)
         out += fmt::format("counter += s{}.size();\n", op.id);
     if (fallback_only) out += "} // array-only boundary definition\n";
@@ -250,12 +269,17 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
         return "";
     std::string out;
     if (dep == region.build_depth) {
-        out = gen_indent(dep) + fmt::format(
-            "auto bitmap_neighbors = graph->N(i{0}_id);\n"
-            "auto bitmap_rows = BitmapCountRegion::build_rows(*graph, i{0}_id, bitmap_neighbors, "
-            "bitmap_neighbors, {1}); // bitmap-region build once per anchor\n", region.anchor_depth, slots.size());
+        // Reuse the full, non-owning adjacency view only when it is available
+        // in this scope. Prefix views may be bounded and are not interchangeable.
+        const bool reuse_adjacency = dep == region.anchor_depth && execution_.loops.at(dep).read_adjacency;
+        const auto neighbors = reuse_adjacency ? codegen_names::adjacency(dep) : "bitmap_neighbors";
+        if (!reuse_adjacency)
+            out += fmt::format("auto bitmap_neighbors = graph->N({});\n", codegen_names::vertex(region.anchor_depth));
+        out += fmt::format(
+            "auto bitmap_rows = BitmapCountRegion::build_rows(*graph, {0}, {1}, "
+            "{1}, {2}); // bitmap-region build once per anchor\n", codegen_names::vertex(region.anchor_depth), neighbors, slots.size());
         if (bitmap_diagnostics_)
-            out += gen_indent(dep) + fmt::format(
+            out += fmt::format(
                 "if (bitmap_rows) {{ bitmap_counters[0].fetch_add(1, std::memory_order_relaxed); "
                 "bitmap_counters[1].fetch_add(bitmap_rows->row_count(), std::memory_order_relaxed); }}\n");
     }
@@ -266,8 +290,8 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
         const auto &pair = *region.projection_pair;
         auto slot = [&](int id) { return std::find(slots.begin(), slots.end(), id) - slots.begin(); };
         out += fmt::format("if (bitmap_region) {{ // shared bounded neighborhood projection\n"
-                           "bitmap_region->bind_projected_partition({}, {}, i{}_adj, i{}_id);\n",
-                           slot(pair.positive), slot(pair.negative), pair.external_depth, pair.local_depth);
+                           "bitmap_region->bind_projected_partition({}, {}, {}, {});\n",
+                           slot(pair.positive), slot(pair.negative), codegen_names::adjacency(pair.external_depth), codegen_names::vertex(pair.local_depth));
         for (int id : bindings)
             if (execution_.sets.at(id).guard_empty)
                 out += fmt::format("if (!bitmap_region->input_size({})) continue;\n", slot(id));
@@ -297,23 +321,20 @@ std::string CppCodegen::emit_mg_init(const PlanIR &plan, const MiniGraphIR &mg) 
                        physical.parallel);
 }
 
-std::string CppCodegen::emit_mg_adj(const PlanIR &plan, int dep, int indent_dep) {
+std::string CppCodegen::emit_mg_adj(const PlanIR &plan, int dep) {
     if (dep == 0)
         return "";
-    std::string indent = (indent_dep == -1) ? gen_indent(dep) : gen_indent_tbb(dep);
     const VertexSetIR &iter = plan.logical.iter_set.at(dep - 1);
     std::string out;
     for (const auto &mg : plan.auxiliary.mg_used.at(dep)) {
         const bool same_address = skip_build_indices(plan, mg, iter);
 
         if (same_address) {
-            out += indent;
-            out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N(i{dep}_idx);\n",
-                               fmt::arg("mg_id", mg.id), fmt::arg("dep", dep));
+            out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N({idx});\n",
+                               fmt::arg("mg_id", mg.id), fmt::arg("idx", codegen_names::index(dep)));
         } else {
-            std::string v_idx = fmt::format("m{mg_id}_s{iter_id}[i{dep}_idx]", fmt::arg("mg_id", mg.id),
-                                            fmt::arg("iter_id", iter.id), fmt::arg("dep", dep));
-            out += indent;
+            std::string v_idx = fmt::format("m{mg_id}_s{iter_id}[{idx}]", fmt::arg("mg_id", mg.id),
+                                            fmt::arg("iter_id", iter.id), fmt::arg("idx", codegen_names::index(dep)));
             out += fmt::format("VertexSet m{mg_id}_adj = m{mg_id}.N({v_idx});\n",
                                fmt::arg("mg_id", mg.id), fmt::arg("v_idx", v_idx));
         }
@@ -348,11 +369,9 @@ std::string CppCodegen::emit_mg_build(const PlanIR &, const MiniGraphIR &logical
                     visits += fmt::format(" * s{}.size()", *factor.set_id);
                 visits += fmt::format(" * {}", factor.scale);
             }
-            out += gen_indent(mg.depth) +
-                   fmt::format("m{}_factor += {} * {};\n", mg.id, visits, estimate.uses);
+            out += fmt::format("m{}_factor += {} * {};\n", mg.id, visits, estimate.uses);
         }
-        out +=
-            gen_indent(mg.depth) + fmt::format("m{}.set_reuse_multiplier(m{}_factor); ", mg.id, mg.id);
+        out += fmt::format("m{}.set_reuse_multiplier(m{}_factor); ", mg.id, mg.id);
     }
     out += fmt::format("m{}.build(", mg.id);
     if (mg.parent)
@@ -378,7 +397,7 @@ std::string CppCodegen::emit_iep(const PlanIR &, size_t group_id) {
         const auto &bitmap = *execution_.iep_bitmap;
         out = "// bitmap-backed IEP: shared-universe factor cardinalities\n";
         const auto universe = bitmap.universe_set ? fmt::format("s{}", *bitmap.universe_set)
-                                                 : fmt::format("i{}_adj", bitmap.anchor_depth);
+                                                 : codegen_names::adjacency(bitmap.anchor_depth);
         out += fmt::format("IEPBitmap iep_bitmap({}, {{", universe);
         for (size_t i = 0; i < bitmap.inputs.size(); ++i)
             out += fmt::format("{}&s{}", i ? ", " : "", bitmap.inputs[i]);
