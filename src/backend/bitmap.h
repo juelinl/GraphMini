@@ -217,10 +217,17 @@ class Bitmap {
         out.assign_neighbors(ids, size);
         return out;
     }
-    void assign_neighbors(const uint32_t *ids, size_t size) {
+    void assign_neighbors(const uint32_t *ids, size_t size, std::optional<uint32_t> upper = {}) {
         internal::require_sorted_ids(ids, size);
         const auto &domain = universe_.ids();
-        cardinality_ = bit_ops::from_sorted(domain.data(), domain.size(), ids, size, words_.data());
+        const auto limit = upper ? universe_.lower_bound(*upper) : domain.size();
+        if (upper) {
+            // Projection writes a shorter universe; erase the unused word tail
+            // too, since this storage may contain an earlier prefix's bits.
+            std::fill(words_.begin(), words_.end(), bit_ops::Word{0});
+            if (size) size = std::lower_bound(ids, ids + size, *upper) - ids;
+        }
+        cardinality_ = bit_ops::from_sorted(domain.data(), limit, ids, size, words_.data());
     }
 };
 inline Bitmap BitmapView::intersect(const BitmapView &other, std::optional<uint32_t> upper) const {

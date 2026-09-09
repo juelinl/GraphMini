@@ -133,6 +133,11 @@ std::string dump_execution(const ExecutionIR &execution) {
             << " cached-factors=" << execution.iep_bitmap->factors.size() << '\n';
     if (execution.bitmap_region) {
         const auto &region = *execution.bitmap_region;
+        if (region.projection_pair)
+            out << "bitmap-projection-pair positive=" << region.projection_pair->positive
+                << " negative=" << region.projection_pair->negative
+                << " local=" << region.projection_pair->local_depth
+                << " external=" << region.projection_pair->external_depth << '\n';
         out << "bitmap-region @depth" << region.entry_depth << " anchor=" << region.anchor_depth
             << " build@depth" << region.build_depth
             << " rows=universe conversions@depth" << region.conversion_depth << " live-ins:";

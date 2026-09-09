@@ -220,13 +220,14 @@ public:
                  std::string parallel_type,
                  std::string scheduler,
                  bool bitmap = false,
-                 bool bitmap_diagnostics = false)
+                 bool bitmap_diagnostics = false, bool bitmap_direct = false)
             : graph_(std::move(graph)),
               query_adjmat_(std::move(query_adjmat)),
               query_type_(std::move(query_type)),
               pruning_type_(std::move(pruning_type)),
               parallel_type_(std::move(parallel_type)),
-              scheduler_(std::move(scheduler)), bitmap_(bitmap), bitmap_diagnostics_(bitmap_diagnostics) {
+              scheduler_(std::move(scheduler)), bitmap_(bitmap), bitmap_diagnostics_(bitmap_diagnostics),
+              bitmap_direct_(bitmap_direct) {
         compile();
     }
 
@@ -304,6 +305,7 @@ private:
         config.runnerType = RunnerType::Benchmark;
         config.bitmap = bitmap_;
         config.bitmapDiagnostics = bitmap_diagnostics_;
+        config.bitmapDirect = bitmap_direct_;
 
         meta = metadata_from_graph(*graph_);
         }
@@ -347,6 +349,7 @@ private:
     std::string scheduler_;
     bool bitmap_;
     bool bitmap_diagnostics_;
+    bool bitmap_direct_;
     std::string generated_code_;
     std::filesystem::path module_copy_path_;
     LoadedPlanModule module_;
@@ -404,13 +407,13 @@ PYBIND11_MODULE(graphmini, m) {
                              const std::string &pruning_type,
                              const std::string &parallel_type,
                              const std::string &scheduler,
-                             bool bitmap, bool bitmap_diagnostics) {
+                             bool bitmap, bool bitmap_diagnostics, bool bitmap_direct) {
                      return CompiledPlan(graph.ptr(),
                                          query_adjmat,
                                          query_type,
                                          pruning_type,
                                          parallel_type,
-                                         scheduler, bitmap, bitmap_diagnostics);
+                                         scheduler, bitmap, bitmap_diagnostics, bitmap_direct);
                  }),
                  py::arg("graph"),
                  py::arg("query_adjmat"),
@@ -419,7 +422,8 @@ PYBIND11_MODULE(graphmini, m) {
                  py::arg("parallel_type") = "nested_rt",
                  py::arg("scheduler") = "graphpi",
                  py::arg("bitmap") = false,
-                 py::arg("bitmap_diagnostics") = false)
+                 py::arg("bitmap_diagnostics") = false,
+                 py::arg("bitmap_direct") = false)
             .def("run", [](const CompiledPlan &self, const PyGraph &graph, int num_threads) {
                 py::gil_scoped_release release;
                 return self.run(graph.ptr(), num_threads);
@@ -443,14 +447,14 @@ PYBIND11_MODULE(graphmini, m) {
              const std::string &pruning_type,
              const std::string &parallel_type,
              const std::string &scheduler,
-             bool bitmap, bool bitmap_diagnostics) {
+             bool bitmap, bool bitmap_diagnostics, bool bitmap_direct) {
               py::gil_scoped_release release;
               return CompiledPlan(graph.ptr(),
                                   query_adjmat,
                                   query_type,
                                   pruning_type,
                                   parallel_type,
-                                  scheduler, bitmap, bitmap_diagnostics);
+                                  scheduler, bitmap, bitmap_diagnostics, bitmap_direct);
           },
           py::arg("graph"),
           py::arg("query_adjmat"),
@@ -459,5 +463,6 @@ PYBIND11_MODULE(graphmini, m) {
           py::arg("parallel_type") = "nested_rt",
           py::arg("scheduler") = "graphpi",
           py::arg("bitmap") = false,
-          py::arg("bitmap_diagnostics") = false);
+          py::arg("bitmap_diagnostics") = false,
+          py::arg("bitmap_direct") = false);
 }

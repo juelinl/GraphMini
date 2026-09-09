@@ -120,6 +120,45 @@ int main() {
     }
     require(selected > 0, "No bitmap plans exercised");
     require(full > 0, "No full bitmap regions exercised");
+    {
+        CodeGenConfig config;
+        config.pruningType = PruningType::None;
+        config.schedulerType = SchedulerType::Outgoing;
+        config.bitmap = config.bitmapDirect = true;
+        const std::string query = "011011101101110110011011101101110110";
+        auto plan = compile_vertex_induced(query, config, meta);
+        auto ir = lower_execution(plan);
+        if (ir.bitmap_region && !ir.bitmap_region->projection_pair) std::cerr << dump_execution(ir);
+        require(ir.bitmap_region && ir.bitmap_region->projection_pair, "Missing algebraic projected partition");
+        const auto code = gen_code(query, config, meta);
+        require(code.find("bind_projected_partition") != std::string::npos &&
+                code.find("->bind_input(") == std::string::npos, "Direct variant still converts live-in arrays");
+        for (int mutation = 0; mutation < 6; ++mutation) {
+            auto bad = ir;
+            auto &p = bad.bitmap_region->projection_pair;
+            if (mutation == 0) ++p->positive;
+            if (mutation == 1) ++p->negative;
+            if (mutation == 2) ++p->local_depth;
+            if (mutation == 3) ++p->external_depth;
+            if (mutation == 4) p->fallback_sets.clear();
+            if (mutation == 5) p.reset();
+            bool rejected = false;
+            try { verify_execution(bad, plan); } catch (const std::logic_error &) { rejected = true; }
+            require(rejected, "Accepted invalid projected partition");
+        }
+        plan.context.config.bitmapDirect = false;
+        require(!lower_execution(plan).bitmap_region->projection_pair, "Enabled direct lowering by default");
+        // Selection is structural, not dependent on the original vertex labels.
+        std::vector<int> order{0, 1, 2, 3, 4, 5};
+        for (int permutation = 0; permutation < 12; ++permutation) {
+            std::string renamed;
+            for (int i : order) for (int j : order) renamed += query[i*6+j];
+            auto renamed_ir = lower_execution(compile_vertex_induced(renamed, config, meta));
+            require(renamed_ir.bitmap_region && renamed_ir.bitmap_region->projection_pair,
+                    "Projected partition depended on pattern labels");
+            std::next_permutation(order.begin(), order.end());
+        }
+    }
     // No universal query root: execution starts at depth 2, but immutable rows
     // depend only on anchor 0 (octahedron) or anchor 1 (atlas 145).
     for (const auto &[query, anchor] : std::vector<std::pair<std::string, int>>{

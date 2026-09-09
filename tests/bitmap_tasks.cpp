@@ -77,4 +77,38 @@ int main() {
           region->bind_input(0, graph.ids);
         }
     }
+    for (size_t n : {1, 63, 64, 65, 127, 128, 129, 257}) {
+        struct Graph {
+            std::vector<uint32_t> ids;
+            std::vector<uint32_t> N(uint32_t vertex) const {
+                std::vector<uint32_t> out;
+                for (auto id : ids) if (id != vertex && (id + vertex) % 3) out.push_back(id);
+                return out;
+            }
+        } graph;
+        for (size_t i = 0; i < n; ++i) graph.ids.push_back(10 + 2*i);
+        auto rows = BitmapCountRegion::build_rows(graph, 9, graph.ids, graph.ids, 2);
+        tbb::parallel_for(size_t{0}, size_t{16}, [&](size_t trial) {
+            auto state = BitmapCountRegion::from_rows(rows, 2);
+            std::vector<uint32_t> external;
+            for (uint32_t id = 0; id < 12 + 2*n; ++id)
+                if ((id + trial) % 4) external.push_back(id); // includes IDs outside U
+            for (size_t position : {n-1, n/2, size_t{0}, n-1}) {
+                const auto vertex = graph.ids[position];
+                const auto row = graph.N(vertex);
+                state->bind_projected_partition(0, 1, external, vertex);
+                for (size_t slot = 0; slot < 2; ++slot) {
+                    std::vector<uint32_t> expected, actual;
+                    for (size_t i = 0; i < position; ++i)
+                        if (std::binary_search(external.begin(), external.end(), graph.ids[i]) &&
+                            std::binary_search(row.begin(), row.end(), graph.ids[i]) == (slot == 0))
+                            expected.push_back(i);
+                    for (auto c = state->local_cursor(slot); c.valid(); c.advance()) actual.push_back(c.position());
+                    require(actual == expected && state->input_size(slot) == expected.size());
+                }
+            }
+            state->bind_projected_partition(0, 1, std::vector<uint32_t>{}, graph.ids.back());
+            require(state->input_size(0) == 0 && state->input_size(1) == 0);
+        });
+    }
 }

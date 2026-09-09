@@ -61,6 +61,21 @@ class BitmapCountRegion {
         inputs_.at(index).assign_sorted(input.data(), input.size());
     }
     size_t universe_size() const { return graph_->universe().size(); }
+    // Partition one external-neighborhood projection using an existing local
+    // row. Both outputs have the strict canonicality bound < local_vertex.
+    // Write the difference before overwriting the shared projection in positive.
+    template<class Set>
+    void bind_projected_partition(size_t positive, size_t negative, const Set &neighbors,
+                                  uint32_t local_vertex) {
+        if (positive == negative) throw std::invalid_argument("Projection outputs must differ");
+        const auto row = graph_->row(local_vertex);
+        const auto limit = graph_->universe().lower_bound(local_vertex);
+        auto &yes = inputs_.at(positive);
+        auto &no = inputs_.at(negative);
+        yes.assign_neighbors(neighbors.data(), neighbors.size(), local_vertex);
+        no.assign_local(yes, row.data(), true, limit);
+        yes.assign_local(yes, row.data(), false, limit);
+    }
     // Fixed Words must match this region; generated code dispatches once.
     template<size_t Words = 0>
     size_t materialize_local(size_t destination, size_t source, uint32_t position,

@@ -48,5 +48,6 @@ namespace minigraph {
         RunnerType runnerType = RunnerType::Benchmark;
         bool bitmap = false; // Experimental non-IEP bitmap regions; IEP always uses arrays.
         bool bitmapDiagnostics = false; // Instrument only explicit verification runs.
+        bool bitmapDirect = false; // Experimental shared projected-neighborhood live-ins.
     };
 }

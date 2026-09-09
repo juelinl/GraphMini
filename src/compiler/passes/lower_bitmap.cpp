@@ -7,6 +7,70 @@ namespace {
 bool contains(const std::vector<int> &values, int value) {
     return std::find(values.begin(), values.end(), value) != values.end();
 }
+std::optional<BitmapProjectionPair> projected_partition(const PlanIR &plan, const ExecutionIR &ir,
+                                                        const BitmapRegionExecution &region) {
+    if (!plan.context.config.bitmapDirect || !region.full_region || region.full_live_ins.size() != 2)
+        return {};
+    // Algebraic rule, independent of pattern identity:
+    // ((U intersect/difference N(local)) below local) intersect N(external).
+    // The pair shares one bounded external projection and partitions it by the
+    // local row. Require U or a provably redundant bound, not an arbitrary prefix.
+    BitmapProjectionPair pair{-1, -1, -1, region.entry_depth, {}};
+    for (int id : region.full_live_ins) {
+        const auto &op = ir.sets.at(id);
+        if (op.depth != region.entry_depth || op.result != SetResult::Materialize ||
+            op.input.source != SetSource::Prefix || op.steps.size() != 1) return {};
+        const auto &step = op.steps.front();
+        if (step.opcode != SetOpcode::Intersect || !step.rhs ||
+            step.rhs->source != SetSource::GraphAdjacency || step.rhs->id != region.entry_depth ||
+            step.upper_bound) return {};
+        const auto &base = ir.sets.at(op.input.id);
+        if (base.depth <= region.build_depth || base.depth >= region.entry_depth ||
+            base.result != SetResult::Materialize || base.steps.size() != 1) return {};
+        bool universe_input = base.input.source == SetSource::GraphAdjacency &&
+                              base.input.id == region.anchor_depth;
+        if (base.input.source == SetSource::Prefix) {
+            const auto &root = ir.sets.at(base.input.id);
+            // A bound-only universe is also valid if local was selected from
+            // that very set: x < local implies x satisfies the older bound.
+            universe_input = root.input.source == SetSource::GraphAdjacency &&
+                root.input.id == region.anchor_depth && root.steps.size() == 1 &&
+                root.steps.front().opcode == SetOpcode::Bound &&
+                plan.logical.iter_set.at(base.depth - 1).id == root.id;
+        }
+        if (!universe_input) return {};
+        const auto &b = base.steps.front();
+        if (!b.rhs || b.rhs->source != SetSource::GraphAdjacency || b.rhs->id != base.depth ||
+            !b.upper_bound) return {};
+        const auto &bound = *b.upper_bound;
+        const auto bound_depth = bound.adjacency ? bound.adjacency->id : bound.depth;
+        if ((bound.adjacency && bound.adjacency->source != SetSource::GraphAdjacency) ||
+            bound_depth != base.depth || (pair.local_depth >= 0 && pair.local_depth != base.depth)) return {};
+        if (plan.logical.adjacency[region.anchor_depth * plan.logical.p_size + base.depth] != '1') return {};
+        pair.local_depth = base.depth;
+        if (b.opcode == SetOpcode::Intersect) pair.positive = id;
+        else if (b.opcode == SetOpcode::DifferenceExcludingOwner) pair.negative = id;
+        else return {};
+        pair.fallback_sets.push_back(base.id);
+        pair.fallback_sets.push_back(id);
+    }
+    if (pair.positive < 0 || pair.negative < 0) return {};
+    // Do not elide a prefix needed by array iteration before the bitmap suffix,
+    // or by an unrelated definition. Later consumers belong to the full region;
+    // the original expressions remain available in its array fallback.
+    for (int depth = 0; depth < region.entry_depth; ++depth)
+        if (contains(pair.fallback_sets, plan.logical.iter_set.at(depth).id)) return {};
+    for (const auto &[id, op] : ir.sets) {
+        auto safe = [&](const SetReference &ref) {
+            return ref.source != SetSource::Prefix || !contains(pair.fallback_sets, ref.id) ||
+                   contains(pair.fallback_sets, id) || op.depth > region.entry_depth;
+        };
+        if (!safe(op.input)) return {};
+        for (const auto &step : op.steps)
+            if (step.rhs && !safe(*step.rhs)) return {};
+    }
+    return pair;
+}
 void extend_full_region(const PlanIR &plan, const ExecutionIR &ir, BitmapRegionExecution &region) {
     // Conservative all-or-nothing extension: prefix operands, local row/bound,
     // one lowered step. No ad hoc global-ID conversion inside the region.
@@ -102,6 +166,7 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
             if (!contains(out.live_ins, out.iterator_set))
                 out.live_ins.push_back(out.iterator_set);
             extend_full_region(plan, ir, out);
+            out.projection_pair = projected_partition(plan, ir, out);
             const bool unary_terminal = std::any_of(out.count_ops.begin(), out.count_ops.end(), [&](int id) {
                 const auto opcode = ir.sets.at(id).steps.front().opcode;
                 return opcode == SetOpcode::Bound || opcode == SetOpcode::Remove;
@@ -132,7 +197,9 @@ void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &ir) {
         actual.conversion_depth != expected->conversion_depth || actual.live_ins != expected->live_ins ||
         actual.count_ops != expected->count_ops || actual.iterator_set != expected->iterator_set ||
         actual.full_region != expected->full_region || actual.full_sets != expected->full_sets ||
-        actual.full_live_ins != expected->full_live_ins)
+        actual.full_live_ins != expected->full_live_ins ||
+        actual.projection_pair.has_value() != expected->projection_pair.has_value() ||
+        (actual.projection_pair && !(*actual.projection_pair == *expected->projection_pair)))
         throw std::logic_error("Invalid bitmap scope, identity, rows, or live-ins");
 }
 } // namespace minigraph

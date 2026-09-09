@@ -81,6 +81,15 @@ struct LoopExecution {
 // Array live-ins remain available for memory-budget fallback. A full region
 // owns fixed slots for all materialized prefixes; otherwise only terminal-loop
 // inputs are converted. Both use one immutable, full-universe row store.
+struct BitmapProjectionPair {
+    int positive, negative, local_depth, external_depth;
+    std::vector<int> fallback_sets;
+    bool operator==(const BitmapProjectionPair &other) const {
+        return positive == other.positive && negative == other.negative &&
+               local_depth == other.local_depth && external_depth == other.external_depth &&
+               fallback_sets == other.fallback_sets;
+    }
+};
 struct BitmapRegionExecution {
     int entry_depth, conversion_depth, anchor_depth;
     // Immutable rows depend only on the anchor's full graph neighborhood.
@@ -92,6 +101,7 @@ struct BitmapRegionExecution {
     int iterator_set{-1}; // Bitmap live-in traversed by the last explicit matching loop.
     bool full_region{false};
     std::vector<int> full_sets, full_live_ins; // fixed slots and boundary conversions
+    std::optional<BitmapProjectionPair> projection_pair;
 };
 struct ExecutionIR {
     int serial_loop_boundary{1};

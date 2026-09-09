@@ -221,13 +221,18 @@ std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
                "bitmap_counters[5].fetch_add(1, std::memory_order_relaxed); "
                "bitmap_counters[6].fetch_add(bitmap_result, std::memory_order_relaxed);\n"
                "counter += bitmap_result; }\n";
-    std::string out =
+    const bool fallback_only = execution_.bitmap_region && execution_.bitmap_region->projection_pair &&
+        std::find(execution_.bitmap_region->projection_pair->fallback_sets.begin(),
+                  execution_.bitmap_region->projection_pair->fallback_sets.end(), op.id) !=
+                  execution_.bitmap_region->projection_pair->fallback_sets.end();
+    std::string out = fallback_only ? fmt::format("VertexSet s{0}; if (!bitmap_rows) {{ s{0} = ", op.id) :
         op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
     out += set_expression(op) + ";\n";
     if (op.guard_empty)
         out += gen_indent(op.depth) + fmt::format("if (s{}.size() == 0) continue;\n", op.id);
     if (op.result == SetResult::MaterializeThenCount)
         out += fmt::format("counter += s{}.size();\n", op.id);
+    if (fallback_only) out += "} // array-only boundary definition\n";
     return out;
 }
 
@@ -253,6 +258,18 @@ std::string CppCodegen::emit_bitmap_build(int dep) {
     if (dep == region.entry_depth)
         out += fmt::format("auto bitmap_region = BitmapCountRegion::from_rows(bitmap_rows, {}); // private candidate state\n", slots.size());
     if (dep < region.entry_depth || (region.full_region && dep != region.entry_depth)) return out;
+    if (region.projection_pair) {
+        const auto &pair = *region.projection_pair;
+        auto slot = [&](int id) { return std::find(slots.begin(), slots.end(), id) - slots.begin(); };
+        out += fmt::format("if (bitmap_region) {{ // shared bounded neighborhood projection\n"
+                           "bitmap_region->bind_projected_partition({}, {}, i{}_adj, i{}_id);\n",
+                           slot(pair.positive), slot(pair.negative), pair.external_depth, pair.local_depth);
+        for (int id : bindings)
+            if (execution_.sets.at(id).guard_empty)
+                out += fmt::format("if (!bitmap_region->input_size({})) continue;\n", slot(id));
+        out += "}\n";
+        return out;
+    }
     for (int id : bindings) {
         const auto index = std::find(slots.begin(), slots.end(), id) - slots.begin();
         // SSA set IDs and their definition depths determine the lifetime. An
