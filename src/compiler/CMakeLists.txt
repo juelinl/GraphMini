@@ -8,7 +8,7 @@ add_library(graphmini_codegen STATIC
     passes/lower_bitmap.cpp
     passes/lower_iep_bitmap.cpp
     passes/representation.cpp
-    codegen/cpp.cpp codegen/openmp.cpp codegen/tbb.cpp codegen/format.cpp)
+    codegen/cpp.cpp codegen/bitmap.cpp codegen/openmp.cpp codegen/tbb.cpp codegen/format.cpp)
 get_filename_component(GRAPHMINI_PYTHON_BIN "${Python3_EXECUTABLE}" DIRECTORY)
 find_program(GRAPHMINI_CLANG_FORMAT_EXECUTABLE NAMES clang-format
     HINTS "${GRAPHMINI_PYTHON_BIN}")

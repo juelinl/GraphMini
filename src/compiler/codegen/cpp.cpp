@@ -68,25 +68,7 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
             for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) {
                 out += fmt::format("for (auto bc{0} = bitmap_region->local_cursor({1}); bc{0}.valid(); bc{0}.advance()) {{ // bitmap local-index loop\n"
                                    "const auto {2} = bc{0}.position();\n", depth, slot(plan.logical.iter_set.at(depth-1).id), codegen_names::bit_index(depth));
-                for (const auto &logical : plan.logical.set_ops.at(depth)) {
-                    const auto &op = execution_.sets.at(logical.id);
-                    const auto &step = op.steps.front();
-                    const bool subtract = step.opcode == SetOpcode::DifferenceExcludingOwner;
-                    const bool bound_only = step.opcode == SetOpcode::Bound;
-                    const bool remove_only = step.opcode == SetOpcode::Remove;
-                    const bool bounded = bound_only || step.upper_bound.has_value();
-                    if (op.result == SetResult::Count) {
-                        out += fmt::format("counter += bitmap_region->count_local<bitmap_words>({}, {}, {}, {}, {}, {});\n", slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound_only || remove_only, remove_only);
-                        if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
-                    } else {
-                        if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
-                            out += fmt::format("const auto bn{} = ", op.id);
-                        out += fmt::format("bitmap_region->materialize_local<bitmap_words>({}, {}, {}, {}, {}, {}, {});\n",
-                            slot(op.id), slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound_only || remove_only, remove_only);
-                        if (op.guard_empty) out += fmt::format("if (!bn{}) continue;\n", op.id);
-                        if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
-                    }
-                }
+                out += emit_bitmap_ops(plan, depth, {"bitmap_region->", "continue;"});
             }
             for (int depth = dep + 1; depth <= plan.logical.p_size - 2; ++depth) out += "}\n";
             out += "};\n"
@@ -149,25 +131,7 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
         out += fmt::format("auto bitmap_level{0} = [&](BitmapCountRegion& state) -> uint64_t {{\n"
                            "return bitmap_for_each(state, {1}, {2}, [&](BitmapCountRegion& task_state, uint32_t {3}) -> uint64_t {{ // bitmap local-index loop\n"
                            "uint64_t counter = 0;\n", depth, input, parallel, codegen_names::bit_index(depth));
-        for (const auto &logical : plan.logical.set_ops.at(depth)) {
-            const auto &op = execution_.sets.at(logical.id);
-            const auto &step = op.steps.front();
-            const bool subtract = step.opcode == SetOpcode::DifferenceExcludingOwner;
-            const bool bound = step.opcode == SetOpcode::Bound;
-            const bool remove_only = step.opcode == SetOpcode::Remove;
-            const bool bounded = bound || step.upper_bound.has_value();
-            if (op.result == SetResult::Count) {
-                out += fmt::format("counter += task_state.count_local<bitmap_words>({}, {}, {}, {}, {}, {});\n", slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
-                if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
-            } else {
-                if (op.guard_empty || op.result == SetResult::MaterializeThenCount)
-                    out += fmt::format("const auto bn{} = ", op.id);
-                out += fmt::format("task_state.materialize_local<bitmap_words>({}, {}, {}, {}, {}, {}, {});\n",
-                    slot(op.id), slot(op.input.id), codegen_names::bit_index(depth), subtract, bounded, bound || remove_only, remove_only);
-                if (op.guard_empty) out += fmt::format("if (!bn{}) return counter;\n", op.id);
-                if (op.result == SetResult::MaterializeThenCount) out += fmt::format("counter += bn{};\n", op.id);
-            }
-        }
+        out += emit_bitmap_ops(plan, depth, {"task_state.", "return counter;"});
         if (depth < plan.logical.p_size - 2)
             out += fmt::format("counter += bitmap_level{}(task_state);\n", depth+1);
         else
