@@ -2,6 +2,10 @@
 
 [Back to GraphMini](../README.md)
 
+Generated C++ is formatted by default with clang-format, discovered at CMake
+configuration time. Set `GRAPHMINI_FORMAT_CODE=0` for raw output. If the formatter
+is unavailable or fails, generation continues with raw code and a warning.
+
 Run all commands below from the repository root. The Conda environment below
 is the recommended installation method.
 

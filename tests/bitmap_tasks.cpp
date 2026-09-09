@@ -9,7 +9,7 @@ int main() {
     using namespace minigraph;
     auto require = [](bool value) { if (!value) throw std::logic_error("Bitmap task isolation/range failure"); };
     tbb::global_control limit(tbb::global_control::max_allowed_parallelism, 4);
-    for (size_t n : {1, 63, 64, 65, 127, 128, 129, 257}) {
+    for (size_t n : {1, 63, 64, 65, 127, 128, 129, 257, 512, 513}) {
         struct Graph {
             std::vector<uint32_t> ids;
             mutable std::atomic<size_t> reads{0};
@@ -42,6 +42,24 @@ int main() {
         require(copy.input_view(0).data() != region->input_view(0).data());
         copy.bind_input(0, std::vector<uint32_t>{});
         require(region->input_size(0) == n && copy.input_size(0) == 0);
+        {
+            auto child = region->fork_borrowed();
+            require((child.input_view(0).data() == region->input_view(0).data()) == (n > 512));
+            require((child.input_view(1).data() == region->input_view(1).data()) == (n > 512));
+            // Same-slot input/output must read the borrowed original before
+            // detaching. Repeated shrinking bounds must clear the entire tail.
+            child.materialize_local(0, 0, n / 2, false, true);
+            require(child.input_size(0) == n / 2 && region->input_size(0) == n);
+            require(child.input_view(0).data() != region->input_view(0).data());
+            auto grandchild = child.fork_borrowed();
+            require((grandchild.input_view(0).data() == child.input_view(0).data()) == (n > 512));
+            grandchild.materialize_local(0, 0, 0, false, true);
+            require(grandchild.input_size(0) == 0 && child.input_size(0) == n / 2);
+            child.bind_input(1, std::vector<uint32_t>{});
+            require(child.input_size(1) == 0 && region->input_size(1) == n);
+            auto detached = grandchild.fork();
+            require(detached.input_view(1).data() != region->input_view(1).data());
+        }
         for (size_t begin = 0; begin <= n; ++begin) {
             for (size_t end = begin; end <= n; ++end) {
                 size_t seen = begin;
@@ -51,7 +69,8 @@ int main() {
             }
         }
         for (const BitmapTaskPolicy policy : {BitmapTaskPolicy{}, BitmapTaskPolicy{16, 99, true},
-              BitmapTaskPolicy{64, 99, true}, BitmapTaskPolicy{128, 99, true}, BitmapTaskPolicy{64, 1, true}}) {
+              BitmapTaskPolicy{64, 99, true}, BitmapTaskPolicy{64, 99, true, false},
+              BitmapTaskPolicy{128, 99, true}, BitmapTaskPolicy{64, 1, true}}) {
           for (int repeat = 0; repeat < 4; ++repeat) {
             const auto result = bitmap_for_each(*region, 0, true,
                 [&](BitmapCountRegion &local, uint32_t position) {

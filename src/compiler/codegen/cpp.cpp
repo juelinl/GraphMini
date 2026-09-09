@@ -75,6 +75,8 @@ std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
             out += "};\n"
                    "if (bitmap_region->universe_size() <= 64) bitmap_execute(std::integral_constant<size_t, 1>{});\n"
                    "else if (bitmap_region->universe_size() <= 128) bitmap_execute(std::integral_constant<size_t, 2>{});\n"
+                   "else if (bitmap_region->universe_size() <= 256) bitmap_execute(std::integral_constant<size_t, 4>{});\n"
+                   "else if (bitmap_region->universe_size() <= 512) bitmap_execute(std::integral_constant<size_t, 8>{});\n"
                    "else bitmap_execute(std::integral_constant<size_t, 0>{});\n";
             out += "} else {\n";
             return out + fmt::format("for (size_t i{0}_idx = 0; i{0}_idx < s{1}.size(); ++i{0}_idx) {{\n", dep+1, iter_set.id);
@@ -160,6 +162,8 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
     out += "};\n"
            "if (bitmap_region->universe_size() <= 64) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 1>{}));\n"
            "else if (bitmap_region->universe_size() <= 128) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 2>{}));\n"
+           "else if (bitmap_region->universe_size() <= 256) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 4>{}));\n"
+           "else if (bitmap_region->universe_size() <= 512) counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 8>{}));\n"
            "else counter.add_without_progress(bitmap_execute(std::integral_constant<size_t, 0>{}));\n"
            "} else {\n";
     out += emit_tbb_call(plan, plan.context.config, dep+1, dep);

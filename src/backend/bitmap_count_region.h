@@ -3,6 +3,7 @@
 #include <cstdint>
 #include "bitgraph.h"
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -11,24 +12,54 @@ namespace minigraph {
 // execution. Boundary arrays remain available if the budget rejects the region.
 class BitmapCountRegion {
     std::shared_ptr<const BitGraph> graph_;
-    std::vector<Bitmap> inputs_;
+    struct Slot {
+        std::optional<Bitmap> owned;
+        const Bitmap *borrowed = nullptr;
+        const Bitmap &read() const { return owned ? *owned : *borrowed; }
+        Bitmap &output(const NeighborhoodUniverse &universe) {
+            if (!owned) owned.emplace(universe);
+            return *owned;
+        }
+    };
+    std::vector<Slot> inputs_;
     size_t input_count_;
 
     BitmapCountRegion(std::shared_ptr<const BitGraph> graph, size_t input_count)
         : graph_(std::move(graph)), input_count_(input_count) {
         inputs_.reserve(input_count);
         for (size_t i = 0; i < input_count; ++i)
-            inputs_.emplace_back(graph_->universe());
+            inputs_.push_back({Bitmap(graph_->universe()), nullptr});
     }
 
   public:
     // Copy candidate words/cardinalities; retain exactly the same immutable rows
     // and universe identity. A synchronous nested task owns its copy exclusively.
-    BitmapCountRegion fork() const { return *this; }
-    size_t input_size(size_t input) const { return inputs_.at(input).count(); }
+    BitmapCountRegion fork() const {
+        auto result = fork_borrowed();
+        for (auto &slot : result.inputs_)
+            if (!slot.owned) slot.owned.emplace(*slot.borrowed);
+        return result;
+    }
+    // Synchronous tasks only: all ancestors must remain alive and read-only
+    // until the join. Small inline inputs copy without word-buffer allocation;
+    // large inputs borrow. Large outputs allocate on first write without copying
+    // old contents. Reads resolve to the owning ancestor, not a slot chain.
+    BitmapCountRegion fork_borrowed() const & {
+        BitmapCountRegion result(graph_, 0);
+        result.input_count_ = input_count_;
+        result.inputs_.reserve(inputs_.size());
+        for (const auto &slot : inputs_) {
+            const auto &input = slot.read();
+            if (input.words().is_inline()) result.inputs_.push_back({input, nullptr});
+            else result.inputs_.push_back({{}, &input});
+        }
+        return result;
+    }
+    BitmapCountRegion fork_borrowed() const && = delete;
+    size_t input_size(size_t input) const { return inputs_.at(input).read().count(); }
     BitmapLocalCursor local_cursor(size_t input, size_t begin, size_t end) const & {
         if (!graph_->has_universe_rows()) throw std::logic_error("Requires universe rows");
-        return {inputs_.at(input).words().data(), graph_->universe().size(), begin, end};
+        return {inputs_.at(input).read().words().data(), graph_->universe().size(), begin, end};
     }
     BitmapLocalCursor local_cursor(size_t, size_t, size_t) const && = delete;
     // Borrowed until region destruction/rebinding. Construct after binding and
@@ -54,11 +85,11 @@ class BitmapCountRegion {
     CountingView counting_view(size_t input) const & {
         if (!graph_->has_universe_rows())
             throw std::logic_error("Local counting requires universe-indexed rows");
-        return {inputs_.at(input).words().data(), graph_->row_data_at(0), graph_->universe().size()};
+        return {inputs_.at(input).read().words().data(), graph_->row_data_at(0), graph_->universe().size()};
     }
     CountingView counting_view(size_t) const && = delete;
     template<class Set> void bind_input(size_t index, const Set &input) {
-        inputs_.at(index).assign_sorted(input.data(), input.size());
+        inputs_.at(index).output(graph_->universe()).assign_sorted(input.data(), input.size());
     }
     size_t universe_size() const { return graph_->universe().size(); }
     // Partition one external-neighborhood projection using an existing local
@@ -70,23 +101,23 @@ class BitmapCountRegion {
         if (positive == negative) throw std::invalid_argument("Projection outputs must differ");
         const auto row = graph_->row(local_vertex);
         const auto limit = graph_->universe().lower_bound(local_vertex);
-        auto &yes = inputs_.at(positive);
-        auto &no = inputs_.at(negative);
+        auto &yes = inputs_.at(positive).output(graph_->universe());
+        auto &no = inputs_.at(negative).output(graph_->universe());
         yes.assign_neighbors(neighbors.data(), neighbors.size(), local_vertex);
         no.assign_local(yes, row.data(), true, limit);
         yes.assign_local(yes, row.data(), false, limit);
     }
-    // Fixed Words must match this region; generated code dispatches once.
+    // Fixed Words must cover this region; generated code dispatches once.
     template<size_t Words = 0>
     size_t materialize_local(size_t destination, size_t source, uint32_t position,
                              bool subtract, bool bounded, bool bound_only = false, bool remove_only = false) {
         if (!graph_->has_universe_rows()) throw std::logic_error("Requires universe rows");
         const auto *row = graph_->row_data_at(position);
-        const auto &input = inputs_.at(source);
-        inputs_.at(destination).assign_local<Words>(input, bound_only ? input.words().data() : row,
+        const auto &input = inputs_.at(source).read();
+        inputs_.at(destination).output(graph_->universe()).assign_local<Words>(input, bound_only ? input.words().data() : row,
             subtract, bounded ? position : graph_->universe().size(),
             (subtract || remove_only) ? std::optional<uint32_t>(position) : std::nullopt);
-        return inputs_[destination].count();
+        return inputs_[destination].read().count();
     }
     // Includes persistent row words, candidate words, ID mappings and object
     // storage plus one construction scratch bitmap. Allocator overhead is not
@@ -109,7 +140,9 @@ class BitmapCountRegion {
         if (!charge(1, sizeof(BitmapCountRegion)) || !charge(1, sizeof(BitGraph)) ||
             !charge(neighbors.size(), sizeof(uint32_t)) ||
             !charge(rows.size(), sizeof(uint32_t)) || !charge(rows.size(), stride) ||
-            !charge(input_count, stride) || !charge(input_count, sizeof(Bitmap)) || !charge(1, stride))
+            !charge(input_count, neighbors.size() <= 512 ? 0 :
+                internal::BitmapWordPool::capacity_for(bit_ops::word_count(neighbors.size())) * sizeof(bit_ops::Word)) ||
+            !charge(input_count, sizeof(Slot)) || !charge(1, stride))
             return {};
         return std::make_shared<BitGraph>(
             NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
@@ -138,17 +171,17 @@ class BitmapCountRegion {
             if (!inputs[i])
                 throw std::invalid_argument("Null bitmap region live-in");
         for (size_t i = 0; i < size; ++i)
-            inputs_[i].assign_sorted(inputs[i]->data(), inputs[i]->size());
+            inputs_[i].output(graph_->universe()).assign_sorted(inputs[i]->data(), inputs[i]->size());
     }
     template <class Set> void bind_inputs(const std::vector<const Set *> &inputs) {
         bind_inputs(inputs.data(), inputs.size());
     }
-    BitmapView input_view(size_t input) const & { return inputs_.at(input).view(); }
+    BitmapView input_view(size_t input) const & { return inputs_.at(input).read().view(); }
     BitmapView input_view(size_t) const && = delete;
     BitmapLocalCursor local_cursor(size_t input) const & {
         if (!graph_->has_universe_rows())
             throw std::logic_error("Local iteration requires universe-indexed rows");
-        return {inputs_.at(input).words().data(), graph_->universe().size()};
+        return {inputs_.at(input).read().words().data(), graph_->universe().size()};
     }
     BitmapLocalCursor local_cursor(size_t) const && = delete;
     // Canonicality against the selected local vertex is order-preserving because
@@ -158,7 +191,7 @@ class BitmapCountRegion {
                        bool unary = false, bool remove_only = false) const {
         if (!graph_->has_universe_rows())
             throw std::logic_error("Local counting requires universe-indexed rows");
-        const auto *source = inputs_.at(input).words().data();
+        const auto *source = inputs_.at(input).read().words().data();
         const auto *row = graph_->row_data_at(position);
         const auto bits = graph_->universe().size();
         const size_t limit = bounded ? position : bits;
@@ -177,7 +210,7 @@ class BitmapCountRegion {
     }
     size_t count(size_t input, uint32_t vertex, bool subtract,
                  std::optional<uint32_t> upper = {}) const {
-        const auto source = inputs_.at(input).view();
+        const auto source = inputs_.at(input).read().view();
         const auto row = graph_->row(vertex);
         return subtract ? source.subtract_count(row, vertex, upper) : source.intersect_count(row, upper);
     }

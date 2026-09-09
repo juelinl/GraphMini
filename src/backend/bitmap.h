@@ -4,6 +4,7 @@
 #include "bit_ops/bit_ops.h"
 #include "bit_ops/from_sorted.h"
 #include "neighborhood_universe.h"
+#include "bitmap_words.h"
 
 namespace minigraph {
 class Bitmap;
@@ -128,11 +129,12 @@ class BitmapView {
     Bitmap bounded(uint32_t upper) const;
 };
 
-// Owned words; copying is deep, moving transfers storage. A moved-from Bitmap
-// may only be assigned or destroyed. No pool/global state in the initial path.
+// Owned words, inline through 512 bits. Copying is deep; moving copies inline
+// words or transfers large storage. A moved-from Bitmap may only be assigned
+// or destroyed. Large word buffers recycle through a bounded worker-local pool.
 class Bitmap {
     NeighborhoodUniverse universe_;
-    std::vector<bit_ops::Word> words_;
+    internal::BitmapWords<8> words_;
     size_t cardinality_{0};
     friend class BitmapView;
 
@@ -147,7 +149,7 @@ class Bitmap {
     BitmapView view() const & { return {universe_, words_.data(), words_.size(), &cardinality_}; }
     BitmapView view() const && = delete;
     const NeighborhoodUniverse &universe() const { return universe_; }
-    const std::vector<bit_ops::Word> &words() const { return words_; }
+    const internal::BitmapWords<8> &words() const { return words_; }
     size_t count() const { return cardinality_; }
     // Internal-region operation: fixed universe, preallocated destination.
     // Exact source/destination alias is supported by bit_ops.

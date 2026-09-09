@@ -403,13 +403,6 @@ void compile(AppConfig config) {
     out_file.close();
     auto codewrite_t = t.Passed();
 
-    // format code
-    auto reformat_cmd = fmt::format("clang-format -i {}", code_path().string());
-    auto reformat_flag = system(reformat_cmd.c_str());
-    if (reformat_flag != 0) {
-        LOG(MSG) << "Install clang-format to format: " << code_path();
-    }
-
     LOG(MSG) << "Code Generation Time: " << ToReadableDuration(codewrite_t + codegen_t);
 
     // compile and run

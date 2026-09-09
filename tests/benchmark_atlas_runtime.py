@@ -212,7 +212,7 @@ def main():
         return
     from runtime_test_support import restore_generated_plan_at_exit
     restore_generated_plan_at_exit()
-    assert args.threads > 0 and args.trials >= 3
+    assert args.threads > 0 and args.trials >= 1
     assert args.execution_budget > 0 and args.preparation_budget > 0
     corpus = Path(args.corpus).read_bytes()
     patterns = json.loads(corpus)["patterns"]

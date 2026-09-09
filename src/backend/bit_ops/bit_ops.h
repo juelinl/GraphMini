@@ -116,18 +116,20 @@ inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nul
 inline size_t intersection_count(const Word *a, const Word *b, size_t bits, size_t limit = unlimited) {
     return combine<Binary::Intersection, false>(a, b, bits, nullptr, limit);
 }
-// Words=0 retains dynamic SIMD dispatch. Fixed callers must establish
-// word_count(bits)==Words once at region entry; buffers need no extra padding.
+// Words=0 retains dynamic SIMD dispatch. Words is a capacity tier; callers
+// establish word_count(bits)<=Words. Never read padding from packed graph rows.
 template<size_t Words, Binary Op, bool Write>
 inline size_t combine_fixed(const Word *a, const Word *b, size_t bits, Word *out = nullptr,
                             size_t limit = unlimited) {
-    static_assert(Words <= 2, "Only one/two-word specializations are supported");
+    static_assert(Words == 0 || Words == 1 || Words == 2 || Words == 4 || Words == 8,
+                  "Supported fixed capacities are 64/128/256/512 bits");
     if constexpr (Words == 0) {
         return combine<Op, Write>(a, b, bits, out, limit);
     } else {
         const size_t active = std::min(bits, limit);
         size_t result = 0;
         for (size_t i = 0; i < Words; ++i) {
+            if (i >= word_count(bits)) break;
             Word value = Op == Binary::Intersection ? a[i] & b[i] : a[i] & ~b[i];
             value &= word_mask(i, active);
             result += popcount(value);

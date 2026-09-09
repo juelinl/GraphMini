@@ -3,6 +3,7 @@
 #include "backend/set_ops/set_ops.h"
 #include "compiler/representation.h" // Runtime and compiler universe names must coexist.
 #include <iostream>
+#include <numeric>
 #include <random>
 #include <set>
 
@@ -269,6 +270,41 @@ void graphs(std::mt19937_64 &rng) {
 }
 } // namespace
 int main() {
+    auto storage_contract = [](auto tag) {
+        constexpr size_t capacity = decltype(tag)::value;
+        internal::BitmapWords<capacity> small(capacity, 17), large(capacity + 1, 23);
+        require(small.is_inline() && !large.is_inline(), "Storage specialization threshold");
+        auto copied = small;
+        copied[0] = 42;
+        require(small[0] == 17, "Inline copy isolation");
+        copied = large;
+        require(!copied.is_inline() && copied[capacity] == 23, "Inline to heap assignment");
+        large = small;
+        require(large.is_inline() && large[0] == 17, "Heap to inline assignment");
+        copied = std::move(large);
+        require(copied.is_inline() && copied[0] == 17, "Inline move assignment");
+    };
+    storage_contract(std::integral_constant<size_t, 1>{});
+    storage_contract(std::integral_constant<size_t, 2>{});
+    storage_contract(std::integral_constant<size_t, 4>{});
+    storage_contract(std::integral_constant<size_t, 8>{});
+    for (size_t n : {0, 1, 63, 64, 65, 127, 128, 129, 255, 256, 257, 511, 512, 513, 1024}) {
+        std::vector<uint32_t> ids(n);
+        std::iota(ids.begin(), ids.end(), 0);
+        Bitmap original(NeighborhoodUniverse(9999, ids.data(), ids.size()), true);
+        require(original.words().is_inline() == (n <= 512), "Inline threshold");
+        auto copy = original;
+        require(copy.words().data() != original.words().data(), "Copy owns its words");
+        if (n) copy.clear(0);
+        require(original.count() == n && copy.count() == (n ? n-1 : 0), "Copy isolation");
+        auto moved = std::move(copy);
+        require(moved.count() == (n ? n-1 : 0), "Move contents");
+        copy = original;
+        require(copy.count() == n, "Reassign moved-from bitmap");
+        moved = original;
+        moved.reset();
+        require(moved.count() == 0 && original.count() == n, "Assignment isolation");
+    }
     {
         NeighborhoodUniverse universe(99, std::vector<uint32_t>{1, 3, 7, 12});
         Bitmap bitmap(universe);

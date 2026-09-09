@@ -60,7 +60,7 @@ def main():
                 assert plan.run(host, num_threads=threads).number_of_matches == expected
                 checks += 1
     # Variable word counts, empty/tail masks, and positive budget fallback.
-    for degree in (63, 64, 65, 127, 128, 129, 257, 20000):
+    for degree in (63, 64, 65, 127, 128, 129, 255, 256, 257, 511, 512, 513, 20000):
         adjacency = [set() for _ in range(degree + 1)]
         core = list(range(degree - 5, degree + 1))
         for i in range(6):
