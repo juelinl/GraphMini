@@ -24,6 +24,7 @@ class CppCodegen {
     std::string emit_read_adj(const PlanIR &plan, int dep);
     std::string emit_iter(const PlanIR &plan, int dep);
     std::string emit_op(const PlanIR &plan, const VertexSetIR &op);
+    std::string emit_bitmap_iter(const PlanIR &plan, int dep);
     std::string emit_bitmap_build(int dep);
     std::string emit_bitmap_tasks(const PlanIR &plan, int dep);
     struct BitmapEmission {

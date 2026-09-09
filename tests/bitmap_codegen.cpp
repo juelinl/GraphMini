@@ -37,10 +37,57 @@ std::vector<std::string> bitmap_operations(const std::string &code) {
     return result;
 }
 
+std::string check_count_only_emission() {
+    CodeGenConfig config;
+    config.schedulerType = SchedulerType::Outgoing;
+    config.pruningType = PruningType::None;
+    config.parType = ParallelType::OpenMP;
+    config.bitmap = config.bitmapDiagnostics = true;
+    std::string query(36, '1');
+    for (int v = 0; v < 6; ++v)
+        query[v * 6 + v] = '0';
+    const auto plan = compile_vertex_induced(query, config, MetaData(100, 1000, 600, 30, 20, 60));
+    auto ir = lower_execution(plan);
+    if (!ir.bitmap_region || !ir.bitmap_region->full_region)
+        throw std::runtime_error("Missing full-region fixture");
+    // Exercise the count-only emitter even when planning prefers the full
+    // extension. Its terminal live-ins/counts are retained by the lowering.
+    // This is an emitter fixture, not a change to region selection policy.
+    auto &region = *ir.bitmap_region;
+    region.full_region = false;
+    region.full_sets.clear();
+    region.full_live_ins.clear();
+    region.projection_pair.reset();
+    CppCodegen writer(config, ir);
+    const auto code = writer.emit_omp(plan, config);
+    const auto build = code.find("BitmapCountRegion::build_rows");
+    const auto state = code.find("BitmapCountRegion::from_rows");
+    const auto count = code.find("->counting_view(");
+    if (count == std::string::npos || !(build < state && state < count) ||
+        code.find("// full bitmap region") != std::string::npos ||
+        code.find("} // array fallback") == std::string::npos ||
+        code.find("bitmap_counters[3].fetch_add") == std::string::npos)
+        throw std::runtime_error("Broken count-only region scaffolding");
+    for (size_t i = 0; i < region.live_ins.size(); ++i) {
+        const auto binding = "->bind_input(" + std::to_string(i) + ", s" + std::to_string(region.live_ins[i]) + ");";
+        const auto position = code.find(binding);
+        if (!(state < position && position < count) || code.find(binding, position + 1) != std::string::npos)
+            throw std::runtime_error("Missing or duplicate count-only live-in binding");
+    }
+    return code;
+}
+
 int main(int argc, char **argv) {
+    const auto count_only = check_count_only_emission();
     const MetaData meta(100, 1000, 600, 30, 20, 60);
-    if (argc > 1)
+    if (argc > 1) {
         std::filesystem::create_directories(argv[1]);
+        const auto fixtures = std::filesystem::path(argv[1]) / "fixtures";
+        std::filesystem::create_directories(fixtures);
+        std::ofstream out(fixtures / "count-only.cpp");
+        out << count_only;
+        if (!out) throw std::runtime_error("Cannot save count-only fixture");
+    }
     size_t cases = 0, full = 0;
     std::set<SetOpcode> opcodes;
     for (int n = 4; n <= 8; ++n)
