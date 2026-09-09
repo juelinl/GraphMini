@@ -75,7 +75,8 @@ def worker(args):
     # graph statistics: compile for the measured host, then validate on the oracle.
     plan = gm.compile_plan(graph, bits, "vertex", scheduler="outgoing",
                            pruning_type="none", parallel_type=job["parallel"],
-                           bitmap=job["backend"] == "bitmap")
+                           bitmap=job["backend"] == "bitmap",
+                           bitmap_direct=job.get("bitmap_direct", False))
     assert plan.run(small, num_threads=1).number_of_matches == expected
     source = plan.generated_code
     state.with_name("plan.cpp").write_text(source)
@@ -83,6 +84,7 @@ def worker(args):
                   compilation=plan.compilation_profile,
                   code_sha256=hashlib.sha256(source.encode()).hexdigest(),
                   bitmap_selected="// bitmap-region build once" in source,
+                  direct_selected="// shared bounded neighborhood projection" in source,
                   full_region="// full bitmap region" in source,
                   fixed_words="count_local<bitmap_words>" in source,
                   module=gm.__file__, affinity=sorted(os.sched_getaffinity(0)),
@@ -189,6 +191,8 @@ def main():
     parser.add_argument("--threads", type=int, default=12)
     parser.add_argument("--parallel", choices=["openmp", "tbb_top", "nested", "nested_rt"], default="nested_rt")
     parser.add_argument("--backends", choices=["array,bitmap", "array", "bitmap"], default="array,bitmap")
+    parser.add_argument("--bitmap-direct", action="store_true",
+                        help="Opt in to supported shared-projection bitmap live-ins")
     parser.add_argument("--trials", type=int, default=3)
     parser.add_argument("--execution-budget", type=float, default=300)
     parser.add_argument("--preparation-budget", type=float, default=300)
@@ -222,6 +226,7 @@ def main():
     metadata = dict(commit=subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip(),
                     corpus_sha256=hashlib.sha256(corpus).hexdigest(), threads=args.threads,
                     trials=args.trials, parallel=args.parallel, backends=args.backends,
+                    bitmap_direct=args.bitmap_direct,
                     bitmap_task_policy=os.environ.get("GRAPHMINI_BITMAP_TASK_POLICY", "baseline"),
                     execution_budget=args.execution_budget,
                     preparation_budget=args.preparation_budget, atlas_ids=args.atlas_ids,
@@ -244,7 +249,8 @@ def main():
             for backend in order:
                 directory = output / f'{pattern["atlas_id"]}-{backend}'
                 directory.mkdir(exist_ok=True)
-                job = dict(pattern, backend=backend, threads=args.threads, trials=args.trials, parallel=args.parallel)
+                job = dict(pattern, backend=backend, threads=args.threads, trials=args.trials, parallel=args.parallel,
+                           bitmap_direct=args.bitmap_direct and backend == "bitmap")
                 save(directory / "job.json", job)
                 state = directory / "state.json"
                 record = json.loads(state.read_text()) if state.exists() else {}
