@@ -27,6 +27,7 @@ def main():
     parser.add_argument('--threads', default='1,4')
     parser.add_argument('--trials', type=int, default=5)
     parser.add_argument('--verify-only', action='store_true')
+    parser.add_argument('--deferred-counts', action='store_true')
     args = parser.parse_args()
     threads_list = list(map(int, args.threads.split(',')))
     rng = random.Random(20260909)
@@ -34,8 +35,11 @@ def main():
     dense = matrix(64, [e for e in itertools.combinations(range(64), 2) if rng.random() < .55])
     calibration = graph(dense)
     options = dict(scheduler='outgoing', pruning_type='none', parallel_type=args.parallel, bitmap=True)
+    options['bitmap_deferred_counts'] = args.deferred_counts
     plans = [gm.compile_plan(calibration, PATTERNS[204], 'vertex', **options, bitmap_direct=direct)
              for direct in (False, True)]
+    for plan in plans:
+        assert ('<bitmap_words,false>' in ''.join(plan.generated_code.split())) == args.deferred_counts
     assert 'shared bounded neighborhood projection' not in plans[0].generated_code
     assert 'shared bounded neighborhood projection' in plans[1].generated_code
     assert '->bind_input(' not in plans[1].generated_code

@@ -78,5 +78,46 @@ int main() {
             }, policy) == 4);
         }
     }
+    // A loose bound is never used as the number of candidates or as an exact
+    // scheduling decision. Cover empty, singleton and both threshold sides.
+    NeighborhoodUniverse universe(7, {10, 20, 30, 40, 50, 60, 70, 80});
+    Bitmap full(universe, true), rhs(universe), lazy(universe);
+    for (size_t count = 0; count <= 8; ++count) {
+        rhs.reset();
+        for (size_t i = count; i < 8; ++i) rhs.set(universe.vertex(i));
+        lazy.assign_subtraction<0, false>(full, rhs.view(), 8);
+        require(lazy.capacity_bound() == 8 && !lazy.has_exact_count() && lazy.count() == count);
+        for (auto mode : {BitmapIteration::Positions, BitmapIteration::DecodedScalar, BitmapIteration::DecodedAVX2})
+        for (size_t threshold : {size_t{0}, size_t{3}, size_t{8}}) {
+            BitmapTaskPolicy policy{1, 99, true, false, mode};
+            const auto total = bitmap_for_each(lazy, true, [&](auto cursor, bool task) -> uint64_t {
+                require(count > 0 && task == (count > std::max(size_t{1}, threshold)));
+                constexpr bool decoded = std::is_same_v<decltype(cursor), BitmapIndexCursor>;
+                require(decoded == (task && mode != BitmapIteration::Positions));
+                uint64_t visited = 0;
+                for (; cursor.valid(); cursor.advance()) { require(cursor.position() < count); ++visited; }
+                return visited;
+            }, policy, 0, threshold);
+            require(total == count);
+            policy.grain = 0;
+            bool rejected = false;
+            try {
+                require(bitmap_for_each(lazy, true, [](auto cursor, bool task) -> uint64_t {
+                    require(!task);
+                    uint64_t visited = 0;
+                    for (; cursor.valid(); cursor.advance()) ++visited;
+                    return visited;
+                }, policy, 0, threshold) == count);
+            } catch (const std::invalid_argument &) { rejected = true; }
+            require(rejected == (count > std::max(size_t{1}, threshold)));
+        }
+        // Point mutations must also preserve bounds without forcing a recount.
+        lazy.set(80);
+        require(lazy.count() == std::min(count + 1, size_t{8}) && lazy.capacity_bound() >= lazy.count());
+        lazy.clear(80);
+        require(lazy.count() == std::min(count, size_t{7}) && lazy.capacity_bound() >= lazy.count());
+        lazy.assign_neighbors(nullptr, 0);
+        require(lazy.has_exact_count() && lazy.count() == 0);
+    }
     std::cout << "Validated " << cases << " cursor/slicing cases; AVX2=" << bit_ops::has_avx2_decoder() << '\n';
 }

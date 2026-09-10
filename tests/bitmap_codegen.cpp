@@ -28,7 +28,7 @@ std::vector<std::string> bitmap_operations(const std::string &code) {
         throw std::runtime_error("Missing array fallback");
     auto body = std::regex_replace(code.substr(begin, end - begin), std::regex(R"(\s+)"), "");
     static const std::regex statement(
-        R"(s[0-9]+\.(intersection_count|subtraction_count|bounded_count|removed_count|assign_intersection|assign_subtraction|assign_bounded|assign_removed)<bitmap_words>\([^;]+;|if\(!s[0-9]+\.count\(\)\)continue;|counter\+=s[0-9]+\.count\(\);|bitmap_counters\[3\]\.fetch_add\([^;]+;)");
+        R"(s[0-9]+\.(intersection_count|subtraction_count|bounded_count|removed_count|assign_intersection|assign_subtraction|assign_bounded|assign_removed)<bitmap_words(,(true|false))?>\([^;]+;|if\(s[0-9]+\.empty\(\)\)continue;|counter\+=s[0-9]+\.count\(\);|bitmap_counters\[3\]\.fetch_add\([^;]+;)");
     std::vector<std::string> result;
     for (auto it = std::sregex_iterator(body.begin(), body.end(), statement); it != std::sregex_iterator(); ++it)
         result.push_back(it->str());
@@ -140,6 +140,7 @@ int main(int argc, char **argv) {
                             config.parType = parallel;
                             config.bitmapDirect = direct;
                             config.bitmapDiagnostics = diagnostics;
+                            config.bitmapDeferredCounts = diagnostics;
                             plan.context.config = config;
                             const auto ir = lower_execution(plan);
                             CppCodegen writer(config, ir);

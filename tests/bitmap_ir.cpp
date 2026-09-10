@@ -34,13 +34,13 @@ void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan,
         const auto &loop = ir.loops.at(depth);
         const int iter = plan.logical.iter_set.at(depth - 1).id;
         std::string parallel = loop.spawn_nested ? "true" : "false";
+        int threshold = 0;
         if (loop.spawn_nested && loop.runtime_threshold) {
-            int threshold = loop.threshold_factor * loop.average_degree;
+            threshold = loop.threshold_factor * loop.average_degree;
             if (loop.cap_threshold) threshold = std::min(threshold, 100);
-            parallel = "input_s" + std::to_string(iter) + ".count()>" + std::to_string(threshold);
         }
         const auto call = "bitmap_for_each(input_s" + std::to_string(iter) + "," + parallel +
-            ",*this,policy," + std::to_string(depth - region.entry_depth - 1) + ");";
+            ",*this,policy," + std::to_string(depth - region.entry_depth - 1) + "," + std::to_string(threshold) + ");";
         require(compact.find(call) != std::string::npos, "Changed bitmap task input, threshold or captures");
         const auto declaration = "template<size_tbitmap_words>classBitLevel" + std::to_string(depth) + "{";
         const auto start = compact.find(declaration);

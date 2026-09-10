@@ -61,8 +61,13 @@ std::string CppCodegen::emit_bitmap_ops(const PlanIR &plan, int depth) {
             out += fmt::format("counter += {}.{}<bitmap_words>({});\n", source, method, args);
             if (bitmap_diagnostics_) out += "bitmap_counters[3].fetch_add(1, std::memory_order_relaxed);\n";
         } else {
-            out += fmt::format("{}.{}<bitmap_words>({}, {});\n", destination, method, source, args);
-            if (op.guard_empty) out += fmt::format("if (!{}.count()) continue;\n", destination);
+            // In deferred mode, ordinary intermediates carry safe capacity bounds;
+            // immediately consumed counts still use fused population counting.
+            const bool count_materialized = !plan.context.config.bitmapDeferredCounts ||
+                                            op.result == SetResult::MaterializeThenCount;
+            out += fmt::format("{}.{}<bitmap_words, {}>({}, {});\n", destination, method,
+                               count_materialized ? "true" : "false", source, args);
+            if (op.guard_empty) out += fmt::format("if ({}.empty()) continue;\n", destination);
             if (op.result == SetResult::MaterializeThenCount)
                 out += fmt::format("counter += {}.count();\n", destination);
         }
@@ -134,14 +139,14 @@ std::string CppCodegen::emit_bitmap_levels(const PlanIR &plan) {
         for (int id : inputs) out += fmt::format(", input_s{0}(input_s{0})", id);
         out += " {}\n";
         std::string parallel = loop.spawn_nested ? "true" : "false";
+        int threshold = 0;
         if (loop.spawn_nested && loop.runtime_threshold) {
-            int threshold = loop.threshold_factor * loop.average_degree;
+            threshold = loop.threshold_factor * loop.average_degree;
             if (loop.cap_threshold) threshold = std::min(threshold, 100);
-            parallel = fmt::format("input_s{}.count() > {}", input, threshold);
         }
         out += fmt::format("uint64_t operator()() const {{\n"
-                           "return bitmap_for_each(input_s{}, {}, *this, policy, {});\n}}\n",
-                           input, parallel, depth - region.entry_depth - 1);
+                           "return bitmap_for_each(input_s{}, {}, *this, policy, {}, {});\n}}\n",
+                           input, parallel, depth - region.entry_depth - 1, threshold);
         out += fmt::format("template<class Cursor>\nuint64_t operator()(Cursor bc{}, bool parallel_task) const {{\n", depth);
         for (int id : inputs)
             out += fmt::format("BitmapTaskInput task_s{0}(input_s{0}, parallel_task, policy);\n"

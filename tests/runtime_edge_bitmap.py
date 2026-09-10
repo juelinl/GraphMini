@@ -12,6 +12,7 @@ restore_generated_plan_at_exit()
 parser = argparse.ArgumentParser()
 parser.add_argument('--benchmark-only', action='store_true')
 parser.add_argument('--iep-case-only', action='store_true')
+parser.add_argument('--deferred-counts', action='store_true')
 parser.add_argument('--vertices', type=int, default=45, help='Synthetic benchmark graph size')
 parser.add_argument('--density', type=float, help='Single benchmark edge probability')
 args = parser.parse_args()
@@ -42,7 +43,8 @@ for n, missing in cases:
             for parallel in ('openmp', 'nested'):
                 for mode, bitmap in [('edge', False), ('edge', True), ('edge_iep', True)]:
                     p = gm.compile_plan(g, bits, mode, scheduler='outgoing', pruning_type='none',
-                                        parallel_type=parallel, bitmap=bitmap)
+                                        parallel_type=parallel, bitmap=bitmap,
+                                        bitmap_deferred_counts=args.deferred_counts)
                     active = '// full bitmap region' in p.generated_code
                     assert active == (mode == 'edge' and bitmap), (n, parallel, mode, bitmap)
                     assert 'bitmap-backed IEP' not in p.generated_code

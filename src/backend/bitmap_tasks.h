@@ -75,28 +75,35 @@ class BitmapTaskInput {
 // only splits ranges and joins reductions; it does not interpret set operations.
 template<class Function>
 uint64_t bitmap_for_each(const Bitmap &input, bool parallel, const Function &range_body,
-                         const BitmapTaskPolicy &policy = {}, size_t level = 0) {
+                         const BitmapTaskPolicy &policy = {}, size_t level = 0,
+                         size_t parallel_threshold = 0) {
     const auto bits = input.universe().size();
-    const auto candidates = input.count();
     // An empty matching loop has no body work. Avoid constructing private
     // scratch for it, particularly when the universe uses pooled buffers.
-    if (!candidates) return 0;
-    if (!parallel || level >= policy.levels || candidates < 2)
+    if (input.empty()) return 0;
+    const auto threshold = std::max(size_t{1}, parallel_threshold);
+    if (!parallel || level >= policy.levels || input.capacity_bound() <= threshold)
         return range_body(input.local_cursor(), false);
-    if (!policy.grain) throw std::invalid_argument("Bitmap task grain must be positive");
     if (policy.iteration != BitmapIteration::Positions) {
-        // Allocate/decode exactly once per parallel level invocation, not per
-        // task. No global-ID conversion. Storage survives until every child joins.
-        std::vector<uint32_t> indices(candidates);
+        // Allocate from a proven upper bound, not an estimated cardinality.
+        // Decode supplies the exact task range without a preceding count pass.
+        // Storage survives until every child joins; no global-ID conversion.
+        std::vector<uint32_t> indices(input.capacity_bound());
         const auto written = policy.iteration == BitmapIteration::DecodedAVX2
             ? bit_ops::decode_indices_avx2(input.words().data(), bits, indices.data())
             : bit_ops::decode_indices_scalar(input.words().data(), bits, indices.data());
-        if (written != candidates) throw std::logic_error("Bitmap decode cardinality mismatch");
-        return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, candidates, policy.grain), uint64_t{0},
+        if (written > indices.size() || (input.has_exact_count() && written != input.count()))
+            throw std::logic_error("Bitmap decode cardinality mismatch");
+        // Preserve the exact generated threshold, including task/copy semantics.
+        if (written <= threshold) return range_body(input.local_cursor(), false);
+        if (!policy.grain) throw std::invalid_argument("Bitmap task grain must be positive");
+        return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, written, policy.grain), uint64_t{0},
             [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
                 return count + range_body(BitmapIndexCursor(indices.data(), range.begin(), range.end()), true);
             }, std::plus<uint64_t>{});
     }
+    if (input.count() <= threshold) return range_body(input.local_cursor(), false);
+    if (!policy.grain) throw std::invalid_argument("Bitmap task grain must be positive");
     return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, bits, policy.grain), uint64_t{0},
         [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
             if (policy.skip_empty && !input.local_cursor(range.begin(), range.end()).valid()) return count;

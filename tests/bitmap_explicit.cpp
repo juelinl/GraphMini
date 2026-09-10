@@ -58,6 +58,47 @@ int main() {
                     alias = a;
                     alias.assign_intersection<Words>(alias, alias.view(), upper);
                     require(alias.view().vertices() == bounded);
+                    // Write-only variants preserve contents, carry only safe
+                    // bounds, and keep existing borrowed views up to date.
+                    const auto borrowed = output.view();
+                    auto lazy_check = [&](const std::vector<uint32_t> &expected) {
+                        require(output.count() == expected.size());
+                        require(borrowed.count() == expected.size());
+                        require(borrowed.vertices() == expected);
+                        require(output.capacity_bound() >= expected.size());
+                        require(output.capacity_bound() <= std::min(n, upper));
+                        require(output.empty() == expected.empty());
+                    };
+                    output.assign_intersection<Words, false>(a, b.view(), upper);
+                    lazy_check(intersection);
+                    require(output.capacity_bound() <= b.count());
+                    output.assign_subtraction<Words, false>(a, b.view(), excluded, upper);
+                    lazy_check(subtraction);
+                    output.assign_bounded<Words, false>(a, upper);
+                    lazy_check(bounded);
+                    output.assign_removed<Words, false>(a, excluded, upper);
+                    lazy_check(removed);
+                    alias = a;
+                    alias.assign_bounded<Words, false>(alias, upper);
+                    alias.assign_subtraction<Words, false>(alias, b.view(), excluded, upper);
+                    require(alias.view().vertices() == subtraction && alias.capacity_bound() >= subtraction.size());
+                    alias = a;
+                    alias.assign_intersection<Words, false>(alias, alias.view(), upper);
+                    require(alias.view().vertices() == bounded);
+                    alias = b;
+                    alias.assign_intersection<Words, false>(a, alias.view(), upper);
+                    require(alias.view().vertices() == intersection);
+                    alias = b;
+                    alias.assign_subtraction<Words, false>(a, alias.view(), excluded, upper);
+                    require(alias.view().vertices() == subtraction);
+                    if (n) {
+                        const auto row = graph.local_row(static_cast<uint32_t>(n-1));
+                        require(row.count() == b.count() && graph.row_at(n-1).count() == b.count());
+                        require(graph.row_cardinality_at(n-1) == b.count());
+                        output.assign_intersection<Words, false>(a, row, upper);
+                        lazy_check(intersection);
+                        require(output.capacity_bound() <= row.count());
+                    }
                 }
             }
         };
@@ -79,7 +120,7 @@ int main() {
                         Bitmap s1(universe);
                         uint64_t total = 0;
                         for (; cursor.valid(); cursor.advance()) {
-                            s1.assign_bounded(s0, cursor.position());
+                            s1.assign_bounded<0, false>(s0, cursor.position());
                             // A private output is reused only after this nested join.
                             total += bitmap_for_each(s1, parallel,
                                 [&](auto c, bool child_task) -> uint64_t {

@@ -12,6 +12,7 @@ class BitGraph {
     NeighborhoodUniverse universe_;
     std::vector<uint32_t> rows_;
     std::vector<bit_ops::Word> words_;
+    std::vector<size_t> row_counts_;
     bool universe_rows_{false};
 
   public:
@@ -33,7 +34,7 @@ class BitGraph {
         const size_t candidate_bytes = sizeof(std::optional<Bitmap>) + sizeof(const Bitmap *);
         if (!charge(1, state_bytes) || !charge(1, sizeof(BitGraph)) ||
             !charge(neighbors.size(), sizeof(uint32_t)) || !charge(rows.size(), sizeof(uint32_t)) ||
-            !charge(rows.size(), stride) ||
+            !charge(rows.size(), stride) || !charge(rows.size(), sizeof(size_t)) ||
             !charge(candidates, neighbors.size() <= 512 ? 0 :
                 internal::BitmapWordPool::capacity_for(bit_ops::word_count(neighbors.size())) * sizeof(bit_ops::Word)) ||
             !charge(candidates, candidate_bytes) || !charge(1, stride)) return {};
@@ -50,16 +51,19 @@ class BitGraph {
         if (stride && rows_.size() > words_.max_size() / stride)
             throw std::length_error("BitGraph is too large");
         words_.resize(rows_.size() * stride);
+        row_counts_.resize(rows_.size());
         Bitmap bitmap(universe_);
         for (size_t i = 0; i < rows_.size(); ++i) {
             decltype(auto) adjacency = neighbors(rows_[i]);
             bitmap.assign_neighbors(adjacency.data(), adjacency.size());
+            row_counts_[i] = bitmap.count();
             if (stride)
                 std::copy(bitmap.words().begin(), bitmap.words().end(), words_.data() + i * stride);
         }
     }
     const NeighborhoodUniverse &universe() const { return universe_; }
     size_t row_count() const { return rows_.size(); }
+    size_t row_cardinality_at(size_t row) const { return row_counts_.at(row); }
     bool has_universe_rows() const { return universe_rows_; }
     size_t storage_bytes() const { return words_.size() * sizeof(bit_ops::Word); }
     const bit_ops::Word *row_data_at(size_t row) const & {
@@ -70,12 +74,12 @@ class BitGraph {
     }
     const bit_ops::Word *row_data_at(size_t) const && = delete;
     BitmapView row_at(size_t row) const & {
-        return {universe_, row_data_at(row), bit_ops::word_count(universe_.size())};
+        return {universe_, row_data_at(row), bit_ops::word_count(universe_.size()), &row_counts_.at(row)};
     }
     BitmapView row_at(size_t) const && = delete;
     BitmapRowView local_row(uint32_t position) const & {
         if (!universe_rows_) throw std::logic_error("Local bitmap row requires universe-indexed rows");
-        return {universe_, row_data_at(position)};
+        return {universe_, row_data_at(position), row_counts_.at(position)};
     }
     BitmapRowView local_row(uint32_t) const && = delete;
     BitmapView row(uint32_t vertex) const & {

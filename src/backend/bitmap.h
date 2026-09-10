@@ -63,12 +63,15 @@ class BitmapLocalCursor {
 class BitmapRowView {
     const NeighborhoodUniverse *universe_;
     const bit_ops::Word *words_;
+    size_t cardinality_;
     friend class BitGraph;
-    BitmapRowView(const NeighborhoodUniverse &universe, const bit_ops::Word *words)
-        : universe_(&universe), words_(words) {}
+    BitmapRowView(const NeighborhoodUniverse &universe, const bit_ops::Word *words, size_t cardinality)
+        : universe_(&universe), words_(words), cardinality_(cardinality) {}
   public:
     const NeighborhoodUniverse &universe() const { return *universe_; }
     const bit_ops::Word *data() const { return words_; }
+    size_t count() const { return cardinality_; }
+    size_t capacity_bound() const { return cardinality_; }
 };
 
 // The mapping is retained; words are borrowed and must outlive this view. Views
@@ -78,11 +81,14 @@ class BitmapView {
     NeighborhoodUniverse universe_;
     const bit_ops::Word *words_;
     const size_t *cardinality_{nullptr};
+    const bool *count_exact_{nullptr};
     friend class Bitmap;
+    friend class BitGraph;
     BitmapView(NeighborhoodUniverse universe, const bit_ops::Word *words, size_t word_count,
-               const size_t *cardinality)
+               const size_t *cardinality, const bool *count_exact = nullptr)
         : BitmapView(std::move(universe), words, word_count) {
         cardinality_ = cardinality;
+        count_exact_ = count_exact;
     }
     size_t limit(std::optional<uint32_t> upper) const {
         return upper ? universe_.lower_bound(*upper) : universe_.size();
@@ -102,10 +108,11 @@ class BitmapView {
     const bit_ops::Word *data() const { return words_; }
     BitmapLocalCursor local_cursor() const { return {words_, universe_.size()}; }
     size_t count(std::optional<uint32_t> upper = {}) const {
-        if (!upper && cardinality_)
+        if (!upper && cardinality_ && (!count_exact_ || *count_exact_))
             return *cardinality_;
         return bit_ops::count(words_, universe_.size(), limit(upper));
     }
+    size_t capacity_bound() const { return cardinality_ ? *cardinality_ : universe_.size(); }
     bool contains(uint32_t vertex) const {
         auto pos = universe_.position(vertex);
         return pos && bit_ops::test(words_, universe_.size(), *pos);
@@ -150,6 +157,9 @@ class Bitmap {
     NeighborhoodUniverse universe_;
     internal::BitmapWords<8> words_;
     size_t cardinality_{0};
+    // If false, cardinality_ is only an upper bound. Const reads never update
+    // this metadata: parent inputs can be borrowed concurrently by child tasks.
+    bool count_exact_{true};
     friend class BitmapView;
 
   public:
@@ -160,11 +170,16 @@ class Bitmap {
         if (!words_.empty())
             words_.back() &= bit_ops::word_mask(words_.size() - 1, universe_.size());
     }
-    BitmapView view() const & { return {universe_, words_.data(), words_.size(), &cardinality_}; }
+    BitmapView view() const & { return {universe_, words_.data(), words_.size(), &cardinality_, &count_exact_}; }
     BitmapView view() const && = delete;
     const NeighborhoodUniverse &universe() const { return universe_; }
     const internal::BitmapWords<8> &words() const { return words_; }
-    size_t count() const { return cardinality_; }
+    size_t count() const {
+        return count_exact_ ? cardinality_ : bit_ops::count(words_.data(), universe_.size());
+    }
+    size_t capacity_bound() const { return cardinality_; }
+    bool has_exact_count() const { return count_exact_; }
+    bool empty() const { return count_exact_ ? !cardinality_ : !local_cursor().valid(); }
     BitmapLocalCursor local_cursor() const & { return {words_.data(), universe_.size()}; }
     BitmapLocalCursor local_cursor(size_t begin, size_t end) const & {
         return {words_.data(), universe_.size(), begin, end};
@@ -173,24 +188,27 @@ class Bitmap {
     BitmapLocalCursor local_cursor(size_t, size_t) const && = delete;
     // Generated operations use LOCAL positions for bounds and exclusions.
     // Destinations are preallocated and can alias the source exactly.
-    template<size_t Words = 0, class Row>
+    // Count=false writes only, retaining a proven upper bound for later decode.
+    template<size_t Words = 0, bool Count = true, class Row>
     void assign_intersection(const Bitmap &source, const Row &row, size_t upper = bit_ops::unlimited) {
         require_row(row);
-        assign_local<Words>(source, row.data(), false, upper);
+        size_t row_bound = bit_ops::unlimited;
+        if constexpr (!Count) row_bound = row.capacity_bound();
+        assign_local<Words, Count>(source, row.data(), false, upper, {}, row_bound);
     }
-    template<size_t Words = 0, class Row>
+    template<size_t Words = 0, bool Count = true, class Row>
     void assign_subtraction(const Bitmap &source, const Row &row, uint32_t excluded,
                             size_t upper = bit_ops::unlimited) {
         require_row(row);
-        assign_local<Words>(source, row.data(), true, upper, excluded);
+        assign_local<Words, Count>(source, row.data(), true, upper, excluded);
     }
-    template<size_t Words = 0>
+    template<size_t Words = 0, bool Count = true>
     void assign_bounded(const Bitmap &source, size_t upper) {
-        assign_local<Words>(source, source.words_.data(), false, upper);
+        assign_local<Words, Count>(source, source.words_.data(), false, upper);
     }
-    template<size_t Words = 0>
+    template<size_t Words = 0, bool Count = true>
     void assign_removed(const Bitmap &source, uint32_t excluded, size_t upper = bit_ops::unlimited) {
-        assign_local<Words>(source, source.words_.data(), false, upper, excluded);
+        assign_local<Words, Count>(source, source.words_.data(), false, upper, excluded);
     }
     template<size_t Words = 0, class Row>
     size_t intersection_count(const Row &row, size_t upper = bit_ops::unlimited) const {
@@ -220,15 +238,21 @@ class Bitmap {
     }
     // Internal-region operation: fixed universe, preallocated destination.
     // Exact source/destination alias is supported by bit_ops.
-    template<size_t Words = 0>
+    template<size_t Words = 0, bool Count = true>
     void assign_local(const Bitmap &source, const bit_ops::Word *row, bool subtract,
-                      size_t limit, std::optional<uint32_t> excluded = {}) {
+                      size_t limit, std::optional<uint32_t> excluded = {},
+                      size_t row_bound = bit_ops::unlimited) {
         if (!universe_.compatible(source.universe_))
             throw std::invalid_argument("Incompatible bitmap assignment");
         const size_t bits = universe_.size();
-        cardinality_ = subtract
-            ? bit_ops::combine_fixed<Words, bit_ops::Binary::Difference, true>(source.words_.data(), row, bits, words_.data(), limit)
-            : bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, true>(source.words_.data(), row, bits, words_.data(), limit);
+        // Read bounds before writing: source and even row may alias this output.
+        const size_t bound = std::min({source.capacity_bound(), bits, limit,
+                                      subtract ? bits : row_bound});
+        const auto written_count = subtract
+            ? bit_ops::combine_fixed<Words, bit_ops::Binary::Difference, true, Count>(source.words_.data(), row, bits, words_.data(), limit)
+            : bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, true, Count>(source.words_.data(), row, bits, words_.data(), limit);
+        cardinality_ = Count ? written_count : bound;
+        count_exact_ = Count || !bound;
         if (excluded && bit_ops::test(words_.data(), bits, *excluded)) {
             bit_ops::clear(words_.data(), bits, *excluded);
             --cardinality_;
@@ -237,6 +261,7 @@ class Bitmap {
     void reset() {
         std::fill(words_.begin(), words_.end(), 0);
         cardinality_ = 0;
+        count_exact_ = true;
     }
     void set(uint32_t vertex) {
         const auto pos = universe_.position(vertex);
@@ -244,7 +269,7 @@ class Bitmap {
             throw std::out_of_range("Vertex is outside bitmap universe");
         if (!bit_ops::test(words_.data(), universe_.size(), *pos)) {
             words_[*pos / 64] |= bit_ops::Word{1} << (*pos % 64);
-            ++cardinality_;
+            cardinality_ = std::min(universe_.size(), cardinality_ + 1);
         }
     }
     void clear(uint32_t vertex) {
@@ -297,6 +322,7 @@ class Bitmap {
             if (size) size = std::lower_bound(ids, ids + size, *upper) - ids;
         }
         cardinality_ = bit_ops::from_sorted(domain.data(), limit, ids, size, words_.data());
+        count_exact_ = true;
     }
   private:
     template<class Row> void require_row(const Row &row) const {
