@@ -6,7 +6,7 @@
 #include <functional>
 #include <cstdlib>
 #include <string>
-#include <memory>
+#include <vector>
 
 namespace minigraph {
 enum class BitmapIteration { Positions, DecodedScalar, DecodedAVX2 };
@@ -87,14 +87,14 @@ uint64_t bitmap_for_each(const Bitmap &input, bool parallel, const Function &ran
     if (policy.iteration != BitmapIteration::Positions) {
         // Allocate/decode exactly once per parallel level invocation, not per
         // task. No global-ID conversion. Storage survives until every child joins.
-        std::unique_ptr<uint32_t[]> indices(new uint32_t[candidates]);
+        std::vector<uint32_t> indices(candidates);
         const auto written = policy.iteration == BitmapIteration::DecodedAVX2
-            ? bit_ops::decode_indices_avx2(input.words().data(), bits, indices.get())
-            : bit_ops::decode_indices_scalar(input.words().data(), bits, indices.get());
+            ? bit_ops::decode_indices_avx2(input.words().data(), bits, indices.data())
+            : bit_ops::decode_indices_scalar(input.words().data(), bits, indices.data());
         if (written != candidates) throw std::logic_error("Bitmap decode cardinality mismatch");
         return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, candidates, policy.grain), uint64_t{0},
             [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
-                return count + range_body(BitmapIndexCursor(indices.get(), range.begin(), range.end()), true);
+                return count + range_body(BitmapIndexCursor(indices.data(), range.begin(), range.end()), true);
             }, std::plus<uint64_t>{});
     }
     return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, bits, policy.grain), uint64_t{0},
