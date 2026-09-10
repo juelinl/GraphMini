@@ -25,9 +25,6 @@ void lower_loops(const PlanIR &plan, ExecutionIR &execution) {
                            (plan.context.config.parType == ParallelType::Nested ||
                             plan.context.config.parType == ParallelType::NestedRt);
         out.runtime_threshold = plan.context.config.parType == ParallelType::NestedRt;
-        // Keep the existing degree heuristic; empty graphs must not divide by zero.
-        out.average_degree = plan.context.meta.num_vertex ? plan.context.meta.num_edge / plan.context.meta.num_vertex : 0;
-        out.cap_threshold = out.average_degree > 0 && plan.context.meta.max_degree / out.average_degree > 100;
         if (loop == 0)
             continue;
         if (execution.iep_bitmap && static_cast<int>(loop) <= plan.counting.iep_depth) {

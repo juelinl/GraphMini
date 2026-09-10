@@ -79,7 +79,8 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
     switch (config.pruningType) {
     case (PruningType::None):
         if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.counting.iep_num <= 1) {
-            for (int dep = 0; dep < max_dep; dep++) {
+            if (execution_.bitmap_region) out << emit_search_body(plan, config, 0);
+            else for (int dep = 0; dep < max_dep; dep++) {
                 // code for reading adj from the graph
                 out << emit_read_adj(plan, dep);
                 // code for computation at this loop
@@ -88,7 +89,6 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
                     out << emit_op(plan, op);
                 }
                 // code for iterating next loop
-                out << emit_bitmap_build(dep);
                 if (dep == plan.logical.p_size - 2)
                     continue;
                 out << emit_iter(plan, dep);
@@ -197,14 +197,13 @@ std::string CppCodegen::emit_omp(PlanIR plan, CodeGenConfig config) {
         }
         break;
     }
-    if (plan.counting.iep_num <= 1) {
+    if (execution_.bitmap_region) {
+        out << "handled+=1;\n}\n"; // Descendant loops are already closed.
+    } else if (plan.counting.iep_num <= 1) {
         for (int dep = max_dep - 1; dep >= 0; dep--) {
             if (dep == 0)
                 out << "handled+=1;\n";
             out << "}\n";
-            if (execution_.bitmap_region && dep == (execution_.bitmap_region->full_region
-                ? execution_.bitmap_region->entry_depth : execution_.bitmap_region->conversion_depth) + 1)
-                out << "} // array fallback\n";
         }
     } else {
         for (int dep = plan.counting.iep_depth; dep >= 0; dep--) {

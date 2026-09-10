@@ -1,0 +1,65 @@
+{
+  "adjacency": "0111111101111111011111110110111101011111001110000",
+  "atlas_id": 1244,
+  "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+  "codegen_build_id": "830f858f4a37cd5691b09dbf29aa926ad82087362c2414cac8729121bb206309",
+  "config": {
+    "bitmap": true,
+    "bitmap_deferred_counts": false,
+    "bitmap_direct": true,
+    "parallel": "nested_rt",
+    "pruning": "none"
+  },
+  "execution_query_type": "vertex",
+  "format_enabled": true,
+  "iep_width": 0,
+  "input_adjacency": "0111111101111111011101110110111101011111011100010",
+  "matching_order": [
+    0,
+    1,
+    5,
+    2,
+    3,
+    4,
+    6
+  ],
+  "restrictions": [
+    [
+      0,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      4,
+      5
+    ]
+  ],
+  "schedule_counting": {
+    "groups": [
+      [
+        [
+          0
+        ]
+      ]
+    ],
+    "iep_num": 1,
+    "redundancy": 1,
+    "values": [
+      1
+    ]
+  },
+  "schedule_id": "7af410ac327d45fa41aeeff0e4fc76072c5c458a8cbd1a9d18d1f5b5f2a2503b",
+  "scheduler": "outgoing",
+  "schema": "graphmini-outgoing-bitmap-v1",
+  "semantics": "vertex",
+  "source_file": "bitmap.cpp",
+  "source_sha256": "c791e76375a239ba64bb5e1cc9c0bcc1fe1b116adf8fd20785964fb8b67f3e46",
+  "strategy": "bitmap"
+}

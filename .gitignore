@@ -28,6 +28,7 @@ venv
 .idea
 .cache
 __pycache__/
+/plans/.catalog.lock
 
 # Local-only compiler guides, development notes, and experiment reports.
 /REFACTOR_PLAN.md

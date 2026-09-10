@@ -1,0 +1,101 @@
+{
+  "adjacency": "0111110101110111011001110000111000010000000100000",
+  "atlas_id": 741,
+  "bitmap_reason": "disabled",
+  "codegen_build_id": "830f858f4a37cd5691b09dbf29aa926ad82087362c2414cac8729121bb206309",
+  "config": {
+    "bitmap": false,
+    "bitmap_deferred_counts": false,
+    "bitmap_direct": false,
+    "parallel": "nested_rt",
+    "pruning": "none"
+  },
+  "execution_query_type": "edge_iep",
+  "format_enabled": true,
+  "iep_width": 3,
+  "input_adjacency": "0101100101110001011001110110111100100010000000100",
+  "matching_order": [
+    3,
+    4,
+    1,
+    0,
+    2,
+    5,
+    6
+  ],
+  "restrictions": [
+    [
+      0,
+      1
+    ],
+    [
+      3,
+      4
+    ]
+  ],
+  "schedule_counting": {
+    "groups": [
+      [
+        [
+          0
+        ],
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ],
+      [
+        [
+          0,
+          2
+        ],
+        [
+          1
+        ]
+      ],
+      [
+        [
+          0
+        ],
+        [
+          1,
+          2
+        ]
+      ],
+      [
+        [
+          0,
+          1
+        ],
+        [
+          2
+        ]
+      ],
+      [
+        [
+          0,
+          1,
+          2
+        ]
+      ]
+    ],
+    "iep_num": 3,
+    "redundancy": 1,
+    "values": [
+      1,
+      -1,
+      -1,
+      -1,
+      2
+    ]
+  },
+  "schedule_id": "2107665e26bb9447ec207baa7761f6f76b44b32520c9cb9016b3d864af5a75fd",
+  "scheduler": "outgoing",
+  "schema": "graphmini-outgoing-bitmap-v1",
+  "semantics": "edge",
+  "source_file": "iep.cpp",
+  "source_sha256": "4904a1433f0d5cb3d841a70989557ec19300ffc3fb404d2f1c8fe83ab2ba4917",
+  "strategy": "iep"
+}

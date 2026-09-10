@@ -15,8 +15,24 @@ void require_bitmap_names(const std::string &code) {
     static const std::regex old_names(R"(\b_?i[0-9]+_(id|idx|adj)\b|\bbp[0-9]+\b|\bbitmap_position\b)");
     require(code.find("// Naming (D is matching depth; N is an IR set ID):") == 0,
             "Missing bitmap naming guide");
+    const auto compact = std::regex_replace(code, std::regex(R"(\s+)"), "");
+    const auto decision = compact.find("if(bitmap_rows)");
+    require(decision != std::string::npos &&
+            compact.find("if(bitmap_rows)", decision + 1) == std::string::npos &&
+            compact.find("if(!bitmap_rows)") == std::string::npos,
+            "Expected exactly one bitmap availability decision");
+    require(code.find("std::optional<Bitmap>") == std::string::npos &&
+            code.find("bound_b") == std::string::npos,
+            "Boundary bitmaps should be ordinary scoped values");
+    require(code.find("bitmap-enabled continuation") != std::string::npos &&
+            code.find("array-only continuation") != std::string::npos,
+            "Missing explicit success/fallback continuations");
     require(std::regex_search(code, bit_index), "Missing depth-specific bitmap index");
     require(!std::regex_search(code, old_names), "Legacy bitmap vertex name");
+    require(!std::regex_search(code, std::regex(R"(\bBitmap\s*&?\s+(input_)?s[0-9]+\b|\b(bitmap_s|task_s)[0-9]+\b)")),
+            "Bitmap still uses an array-set identifier");
+    require(!std::regex_search(code, std::regex(R"(\bVertexSet\s*&?\s+b[0-9]+\b)")),
+            "VertexSet uses a bitmap identifier");
 }
 void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan, const ExecutionIR &ir) {
     const auto &region = *ir.bitmap_region;
@@ -34,27 +50,26 @@ void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan,
         const auto &loop = ir.loops.at(depth);
         const int iter = plan.logical.iter_set.at(depth - 1).id;
         std::string parallel = loop.spawn_nested ? "true" : "false";
-        int threshold = 0;
+        std::string threshold = "0";
         if (loop.spawn_nested && loop.runtime_threshold) {
-            threshold = loop.threshold_factor * loop.average_degree;
-            if (loop.cap_threshold) threshold = std::min(threshold, 100);
+            threshold = "query.nested_thresholds[" + std::to_string(depth) + "]";
         }
-        const auto call = "bitmap_for_each(input_s" + std::to_string(iter) + "," + parallel +
-            ",*this,policy," + std::to_string(depth - region.entry_depth - 1) + "," + std::to_string(threshold) + ");";
+        const auto call = "bitmap_for_each(input_b" + std::to_string(iter) + "," + parallel +
+            ",*this,policy," + std::to_string(depth - region.entry_depth - 1) + "," + threshold + ");";
         require(compact.find(call) != std::string::npos, "Changed bitmap task input, threshold or captures");
         const auto declaration = "template<size_tbitmap_words>classBitLevel" + std::to_string(depth) + "{";
         const auto start = compact.find(declaration);
         require(start != std::string::npos, "Missing templated bitmap level class");
         const auto fields = compact.substr(start + declaration.size(), compact.find("public:", start) - start - declaration.size());
         std::string expected = "constQueryContext&query;constBitGraph&bitgraph;constBitmapTaskPolicy&policy;";
-        for (int id : region.loop_inputs.at(depth)) expected += "constBitmap&input_s" + std::to_string(id) + ";";
+        for (int id : region.loop_inputs.at(depth)) expected += "constBitmap&input_b" + std::to_string(id) + ";";
         require(fields == expected, "Level class must hold only required read-only references, not scratch");
         require(compact.find("template<classCursor>uint64_toperator()(Cursorbc" + std::to_string(depth) +
                              ",boolparallel_task)const{") != std::string::npos,
                 "Missing const range invocation");
         for (int id : region.loop_inputs.at(depth)) {
             require(ir.sets.at(id).depth < depth, "Captured a private output as input");
-            require(compact.find("BitmapTaskInputtask_s" + std::to_string(id)) != std::string::npos,
+            require(compact.find("BitmapTaskInputtask_b" + std::to_string(id)) != std::string::npos,
                     "Missing explicit task input lifetime");
         }
     }
@@ -73,7 +88,7 @@ size_t require_bitmap_temporaries(const std::string &code, const ExecutionIR &ir
         if (op.depth <= region.entry_depth || op.result == SetResult::Count) continue;
         require(code.find("const auto bn" + std::to_string(id) + " =") == std::string::npos,
                 "Redundant bitmap count temporary");
-        require(code.find("Bitmap s" + std::to_string(id) + "(bitgraph.universe())") != std::string::npos,
+        require(code.find("Bitmap b" + std::to_string(id) + "(bitgraph.universe())") != std::string::npos,
                 "Missing named private bitmap output");
         ++omitted;
     }
@@ -134,7 +149,7 @@ int main() {
                             "Missing prepared count or fallback scope");
                     const auto &inputs = ir.bitmap_region->full_region ? ir.bitmap_region->full_live_ins : ir.bitmap_region->live_ins;
                     for (int id : inputs) {
-                        const auto binding = "bitmap_s" + std::to_string(id) + ".emplace(Bitmap::from_sorted(";
+                        const auto binding = "Bitmap b" + std::to_string(id) + " = Bitmap::from_sorted(";
                         const auto first = code.find(binding);
                         require(first != std::string::npos && code.find(binding, first+1) == std::string::npos,
                                 "Missing or duplicate generated binding");
@@ -223,6 +238,7 @@ int main() {
         if (ir.bitmap_region && !ir.bitmap_region->projection_pair) std::cerr << dump_execution(ir);
         require(ir.bitmap_region && ir.bitmap_region->projection_pair, "Missing algebraic projected partition");
         const auto code = gen_code(query, config, meta);
+        require_bitmap_names(code);
         require(code.find("// shared bounded neighborhood projection") != std::string::npos &&
                 code.find("->bind_input(") == std::string::npos, "Direct variant still converts live-in arrays");
         for (int mutation = 0; mutation < 9; ++mutation) {
@@ -271,12 +287,13 @@ int main() {
                     "Conflated row construction with execution scope");
             const auto code = gen_code(query, config, meta);
             const auto build = code.find("BitGraph::build");
-            const auto enter = code.find("std::optional<Bitmap> bitmap_s");
+            const auto enter = code.find("Bitmap b", build);
             const auto root_body = parallel == ParallelType::OpenMP ? code.find("// loop-0 begin")
                                                                   : code.find("// loop-0begin");
             const auto next_loop = code.find("for (size_t v" + std::to_string(anchor + 1) + "_idx", root_body);
             require(build != std::string::npos && next_loop != std::string::npos &&
-                    build < next_loop && next_loop < enter,
+                    build < code.find("if (bitmap_rows)", build) &&
+                    code.find("if (bitmap_rows)", build) < next_loop && next_loop < enter,
                     "Generated construction was not moved outside descendant loops");
             require(code.find("BitGraph::build", build + 1) == std::string::npos,
                     "Duplicate immutable row construction site");

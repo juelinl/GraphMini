@@ -54,8 +54,6 @@ std::string CppCodegen::emit_read_adj(const PlanIR &plan, int dep) {
 std::string CppCodegen::emit_iter(const PlanIR &plan, int dep) {
     if (dep >= plan.logical.p_size - 2)
         return "";
-    if (auto bitmap = emit_bitmap_iter(plan, dep); !bitmap.empty())
-        return bitmap;
     const auto &iter_set = plan.logical.iter_set.at(dep);
     return fmt::format("for (size_t {idx} = 0; {idx} < s{iter_id}.size(); "
                        "{idx}++) {left} // loop-{dep} begin\n",
@@ -121,14 +119,13 @@ std::string CppCodegen::emit_op(const PlanIR &, const VertexSetIR &logical) {
         std::find(execution_.bitmap_region->projection_pair->fallback_sets.begin(),
                   execution_.bitmap_region->projection_pair->fallback_sets.end(), op.id) !=
                   execution_.bitmap_region->projection_pair->fallback_sets.end();
-    std::string out = fallback_only ? fmt::format("VertexSet s{0}; if (!bitmap_rows) {{ s{0} = ", op.id) :
-        op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
+    if (fallback_only && bitmap_enabled_) return "";
+    std::string out = op.result == SetResult::Count ? "counter += " : fmt::format("VertexSet s{} = ", op.id);
     out += set_expression(op) + ";\n";
     if (op.guard_empty)
         out += fmt::format("if (s{}.size() == 0) continue;\n", op.id);
     if (op.result == SetResult::MaterializeThenCount)
         out += fmt::format("counter += s{}.size();\n", op.id);
-    if (fallback_only) out += "} // array-only boundary definition\n";
     return out;
 }
 

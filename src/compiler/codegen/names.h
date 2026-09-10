@@ -10,10 +10,12 @@ inline std::string adjacency(int depth) { return vertex(depth) + "_adj"; }
 inline std::string bit_index(int depth) { return vertex(depth) + "_bit_idx"; }
 inline std::string set_level(int depth) { return "SetLevel" + std::to_string(depth); }
 inline std::string bit_level(int depth) { return "BitLevel" + std::to_string(depth); }
+inline std::string bitmap(int id) { return "b" + std::to_string(id); }
 
 inline constexpr const char *guide =
     "// Naming (D is matching depth; N is an IR set ID):\n"
-    "// sN         : prefix set N (array or bitmap), not matching depth N\n"
+    "// sN         : array-backed vertex set with IR set ID N\n"
+    "// bN         : bitmap with IR set ID N (same ID as its array representation)\n"
     "// vD         : global vertex ID matched at depth D\n"
     "// vD_idx     : position in the prefix set iterated at depth D\n"
     "// vD_adj     : adjacency list or bitmap row of vD\n"

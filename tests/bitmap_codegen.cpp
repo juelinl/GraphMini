@@ -15,6 +15,19 @@
 
 using namespace minigraph;
 
+void check_single_decision(const std::string &code) {
+    const auto compact = std::regex_replace(code, std::regex(R"(\s+)"), "");
+    const auto decision = compact.find("if(bitmap_rows)");
+    if (decision == std::string::npos ||
+        compact.find("if(bitmap_rows)", decision + 1) != std::string::npos ||
+        compact.find("if(!bitmap_rows)") != std::string::npos ||
+        compact.find("std::optional<Bitmap>") != std::string::npos)
+        throw std::runtime_error("Expected one construction decision and non-optional boundary values");
+    const auto build = compact.find("BitGraph::build");
+    if (build >= decision || compact.find("BitGraph::build", build + 1) != std::string::npos)
+        throw std::runtime_error("Construction/selection must occur once at the anchor");
+}
+
 // Compare operation statements independently of loop/task scaffolding and
 // order: OpenMP emits outer-to-inner loops, while TBB declares inner tasks
 // first.
@@ -28,7 +41,7 @@ std::vector<std::string> bitmap_operations(const std::string &code) {
         throw std::runtime_error("Missing array fallback");
     auto body = std::regex_replace(code.substr(begin, end - begin), std::regex(R"(\s+)"), "");
     static const std::regex statement(
-        R"(s[0-9]+\.(intersection_count|subtraction_count|bounded_count|removed_count|assign_intersection|assign_subtraction|assign_bounded|assign_removed)<bitmap_words(,(true|false))?>\([^;]+;|if\(s[0-9]+\.empty\(\)\)continue;|counter\+=s[0-9]+\.count\(\);|bitmap_counters\[3\]\.fetch_add\([^;]+;)");
+        R"(b[0-9]+\.(intersection_count|subtraction_count|bounded_count|removed_count|assign_intersection|assign_subtraction|assign_bounded|assign_removed)<bitmap_words(,(true|false))?>\([^;]+;|if\(b[0-9]+\.empty\(\)\)continue;|counter\+=b[0-9]+\.count\(\);|bitmap_counters\[3\]\.fetch_add\([^;]+;)");
     std::vector<std::string> result;
     for (auto it = std::sregex_iterator(body.begin(), body.end(), statement); it != std::sregex_iterator(); ++it)
         result.push_back(it->str());
@@ -81,8 +94,9 @@ std::string check_count_only_emission() {
     }
     CppCodegen writer(config, ir);
     const auto code = writer.emit_omp(plan, config);
+    check_single_decision(code);
     const auto build = code.find("BitGraph::build");
-    const auto state = code.find("std::optional<Bitmap> bitmap_s");
+    const auto state = code.find("Bitmap b");
     const auto count = code.find("// bitmap terminal region");
     if (count == std::string::npos || !(build < state && state < count) ||
         code.find("// full bitmap region") != std::string::npos ||
@@ -90,9 +104,9 @@ std::string check_count_only_emission() {
         code.find("bitmap_counters[3].fetch_add") == std::string::npos)
         throw std::runtime_error("Broken count-only region scaffolding");
     for (size_t i = 0; i < region.live_ins.size(); ++i) {
-        const auto binding = "bitmap_s" + std::to_string(region.live_ins[i]) + ".emplace(Bitmap::from_sorted(";
+        const auto binding = "Bitmap b" + std::to_string(region.live_ins[i]) + " = Bitmap::from_sorted(";
         const auto position = code.find(binding);
-        if (!(state < position && position < count) || code.find(binding, position + 1) != std::string::npos)
+        if (!(state <= position && position < count) || code.find(binding, position + 1) != std::string::npos)
             throw std::runtime_error("Missing or duplicate count-only live-in binding");
     }
     return code;
@@ -100,6 +114,12 @@ std::string check_count_only_emission() {
 
 int main(int argc, char **argv) {
     const auto count_only = check_count_only_emission();
+    if (argc == 3 && std::string(argv[1]) == "--count-only") {
+        std::ofstream out(argv[2]);
+        out << count_only;
+        if (!out) throw std::runtime_error("Cannot save count-only fixture");
+        return 0;
+    }
     const MetaData meta(100, 1000, 600, 30, 20, 60);
     if (argc > 1) {
         std::filesystem::create_directories(argv[1]);
@@ -155,6 +175,7 @@ int main(int argc, char **argv) {
                                         for (const auto &step : op.steps)
                                             opcodes.insert(step.opcode);
                             const auto operations = bitmap_operations(code);
+                            if (ir.bitmap_region) check_single_decision(code);
                             if (!operations.empty())
                                 ++full;
                             if (parallel == ParallelType::OpenMP)

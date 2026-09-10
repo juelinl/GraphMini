@@ -1,6 +1,13 @@
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
+add_executable(offline_plans_regression offline_plans.cpp)
+target_link_libraries(offline_plans_regression PRIVATE graphmini_codegen)
+add_test(NAME offline_plans_regression COMMAND offline_plans_regression)
+add_test(NAME offline_policy
+    COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:graphmini>"
+            ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/offline_policy.py)
+
 add_executable(common_types_regression common_types.cpp)
 add_executable(codegen_format_regression codegen_format.cpp)
 target_link_libraries(codegen_format_regression PRIVATE graphmini_codegen)
@@ -88,6 +95,18 @@ add_executable(bitmap_ir_regression bitmap_ir.cpp)
 add_executable(bitmap_codegen_regression bitmap_codegen.cpp)
 target_link_libraries(bitmap_codegen_regression PRIVATE graphmini_codegen)
 add_test(NAME bitmap_codegen_regression COMMAND bitmap_codegen_regression)
+set(bitmap_count_fixture "${CMAKE_CURRENT_BINARY_DIR}/bitmap_count_only_fixture.cpp")
+add_custom_command(OUTPUT "${bitmap_count_fixture}"
+    COMMAND bitmap_codegen_regression --count-only "${bitmap_count_fixture}"
+    DEPENDS bitmap_codegen_regression
+    VERBATIM)
+add_executable(bitmap_count_only_runtime bitmap_count_only_runtime.cpp "${bitmap_count_fixture}")
+# The harness includes the generated fixture so its diagnostics are in scope.
+set_source_files_properties("${bitmap_count_fixture}" PROPERTIES HEADER_FILE_ONLY TRUE)
+target_include_directories(bitmap_count_only_runtime PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}" "${PROJECT_SOURCE_DIR}/src/codegen_output")
+target_link_libraries(bitmap_count_only_runtime PRIVATE graph_runtime)
+add_test(NAME bitmap_count_only_runtime COMMAND bitmap_count_only_runtime)
 target_link_libraries(bitmap_ir_regression PRIVATE graphmini_headers)
 target_link_libraries(bitmap_ir_regression PRIVATE graphmini_codegen)
 add_test(NAME bitmap_ir_regression COMMAND bitmap_ir_regression)

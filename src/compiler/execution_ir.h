@@ -72,15 +72,13 @@ struct LoopExecution {
     bool spawn_nested{false};
     bool runtime_threshold{false};
     int threshold_factor{4};
-    int average_degree{0};
-    bool cap_threshold{false};
     int grain_size{1};
     std::vector<int> captured_sets, captured_minigraphs;
     std::set<int> captured_adjacencies;
 };
-// Array live-ins remain available for memory-budget fallback. A full region
-// owns fixed slots for all materialized prefixes; otherwise only terminal-loop
-// inputs are converted. Both use one immutable, full-universe row store.
+// Construction selects separate bitmap-enabled and array-only continuations.
+// A full region uses named bitmap prefixes; otherwise only terminal-loop inputs
+// are converted. Both use one immutable, full-universe row store.
 struct BitmapProjectionPair {
     int positive, negative, local_depth, external_depth;
     std::vector<int> fallback_sets;
@@ -93,7 +91,7 @@ struct BitmapProjectionPair {
 struct BitmapBinding {
     int set_id;
     int slot;
-    // Initialize after this depth's set definitions/guards, on every visit.
+    // Initialize in the success continuation after this depth's definitions/guards.
     // Older live-ins bind at region entry; newly defined inputs bind in-scope.
     int depth;
 };

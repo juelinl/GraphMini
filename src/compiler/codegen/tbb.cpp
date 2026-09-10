@@ -55,18 +55,7 @@ std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &c
     if (!physical.runtime_threshold) {
         out << "if (true) ";
     } else {
-        const int factor = physical.threshold_factor;
-        const int avg_deg = physical.average_degree;
-        if (physical.cap_threshold) {
-            out << fmt::format("if (s{iter_id}.size() > std::min({factor} * "
-                                   "{avg_deg}, 100)) ",
-                                   fmt::arg("iter_id", iter_id), fmt::arg("avg_deg", avg_deg),
-                                   fmt::arg("factor", factor));
-        } else {
-            out << fmt::format("if (s{iter_id}.size() > {factor} * {avg_deg}) ",
-                                   fmt::arg("iter_id", iter_id), fmt::arg("avg_deg", avg_deg),
-                                   fmt::arg("factor", factor));
-        }
+        out << fmt::format("if (s{}.size() > query.nested_thresholds[{}]) ", iter_id, loop);
     }
 
     int grain_size = physical.grain_size;
@@ -231,7 +220,8 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     switch (config.pruningType) {
     case (PruningType::None):
         if (config.adjMatType != AdjMatType::EdgeInducedIEP || plan.counting.iep_num <= 1) {
-            for (int dep = loop; dep < max_dep; dep++) {
+            if (execution_.bitmap_region) out << emit_search_body(plan, config, loop);
+            else for (int dep = loop; dep < max_dep; dep++) {
                 // code for reading adj from the graph
                 out << emit_read_adj(plan, dep);
                 // code for computation at this loop
@@ -244,9 +234,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
                     continue;
 
                 // code for calling parallel nested loop
-                out << emit_bitmap_build(dep);
-                if (!execution_.bitmap_region || dep > execution_.bitmap_region->entry_depth)
-                    out << emit_tbb_call(plan, config, dep + 1);
+                out << emit_tbb_call(plan, config, dep + 1);
 
                 // code for serial executing next loop
                 out << emit_iter(plan, dep);
@@ -370,11 +358,11 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
         }
         break;
     }
-    if (plan.counting.iep_num <= 1) {
+    if (execution_.bitmap_region) {
+        out << "}\n"; // Root/task-range loop; structured emission closes descendants.
+    } else if (plan.counting.iep_num <= 1) {
         for (int dep = max_dep - 1; dep >= loop; dep--) {
             out << "}\n";
-            if (execution_.bitmap_region && dep == execution_.bitmap_region->entry_depth + 1)
-                out << "} // array fallback\n";
         }
     } else {
         for (int dep = plan.counting.iep_depth; dep >= loop; dep--) {
@@ -397,6 +385,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     else
         out << "#include \"plan.h\"\n";
     if (!profiling_) out << "#include \"backend/benchmark_progress.h\"\n";
+    out << "#include <array>\n#include \"runtime/nested_policy.h\"\n";
     if (execution_.bitmap_region) out << "#include \"backend/bitmap_tasks.h\"\n";
     if (execution_.bitmap_region && execution_.bitmap_region->full_region)
         out << "#include \"backend/bitmap_dispatch.h\"\n";
@@ -407,6 +396,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
            "const Graph* const graph;\n"
            "Context& ctx;\n";
     if (!profiling_) out << "BenchmarkProgress& progress;\n";
+    out << "const std::array<size_t, " << execution_.loops.size() << "> nested_thresholds;\n";
     out << "};\n";
     if (execution_.bitmap_region)
         out << "static const auto bitmap_task_policy = BitmapTaskPolicy::from_environment();\n";
@@ -450,7 +440,16 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     out << "ctx.iep_redundency = " << plan.counting.iep_redundancy << ";\n";
     if (!profiling_)
         out << "BenchmarkProgress progress(ctx, graph->get_vnum());\n";
-    out << "const QueryContext query{graph, ctx" << (profiling_ ? "" : ", progress") << "};\n";
+    out << "const QueryContext query{graph, ctx" << (profiling_ ? "" : ", progress") << ", {";
+    for (size_t depth = 0; depth < execution_.loops.size(); ++depth) {
+        if (depth) out << ", ";
+        const auto &loop = execution_.loops[depth];
+        if (loop.spawn_nested && loop.runtime_threshold)
+            out << "nested_threshold(graph->num_vertex, graph->num_edge, graph->max_degree, "
+                << loop.threshold_factor << ")";
+        else out << "0";
+    }
+    out << "}};\n";
     if (config.pruningType != PruningType::None)
         out << "MiniGraphIF::DATA_GRAPH = graph;\n";
     out << "internal::VertexSetPool::configure_for_graph(graph->get_maxdeg())"

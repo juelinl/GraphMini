@@ -265,8 +265,7 @@ std::string dump_execution(const ExecutionIR &execution) {
             out << " adj" << id;
         out << '\n';
         if (loop.spawn_nested && loop.runtime_threshold)
-            out << "  rule: degree-threshold " << loop.threshold_factor << " * " << loop.average_degree
-                << (loop.cap_threshold ? " capped-at-100" : "") << '\n';
+            out << "  rule: runtime degree-threshold, factor=" << loop.threshold_factor << '\n';
     }
     for (const auto &term : execution.iep) {
         out << "iep " << term.coefficient;

@@ -7,18 +7,21 @@
 #include <stdexcept>
 namespace minigraph {
 std::string gen_code(const std::string &query, CodeGenConfig config, MetaData meta) {
+    return gen_code(query, config, meta, schedule_query(query, config, meta));
+}
+std::string gen_code(const std::string &query, CodeGenConfig config, MetaData meta,
+                     const ScheduleResult &schedule) {
     PlanIR plan;
     {
         CompilationStage stage("planning_total");
+        auto scheduled = build_plan(query, config, meta, schedule);
         switch (config.adjMatType) {
         case AdjMatType::VertexInduced:
-            plan = compile_vertex_induced(query, config, meta);
-            break;
         case AdjMatType::EdgeInduced:
-            plan = compile_edge_induced(query, config, meta);
+            plan = std::move(scheduled.plan);
             break;
         case AdjMatType::EdgeInducedIEP:
-            plan = compile_edge_induced_iep(query, config, meta);
+            plan = compile_edge_induced_iep(std::move(scheduled));
             break;
         default:
             throw std::invalid_argument("Unsupported query type");

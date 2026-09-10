@@ -102,9 +102,10 @@ int main(int argc, char **argv) {
                 plan.context.meta.num_vertex = 0;
                 ExecutionIR loops_only;
                 lower_loops(plan, loops_only);
-                for (const auto &loop : loops_only.loops)
-                    require(loop.average_degree == 0 && !loop.cap_threshold,
-                            "Invalid empty-graph task policy");
+                for (size_t depth = 0; depth < loops_only.loops.size(); ++depth)
+                    require(loops_only.loops[depth].threshold_factor == execution.loops[depth].threshold_factor &&
+                            loops_only.loops[depth].spawn_nested == execution.loops[depth].spawn_nested,
+                            "Graph metadata changed task policy structure");
                 ++cases;
             }
     require(opcodes.size() == 4 && mini && iep && count, "Missing execution IR coverage");

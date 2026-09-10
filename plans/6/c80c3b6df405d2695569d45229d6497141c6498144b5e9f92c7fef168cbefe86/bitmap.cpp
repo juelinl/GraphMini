@@ -1,0 +1,342 @@
+// Naming (D is matching depth; N is an IR set ID):
+// sN         : array-backed vertex set with IR set ID N
+// bN         : bitmap with IR set ID N (same ID as its array representation)
+// vD         : global vertex ID matched at depth D
+// vD_idx     : position in the prefix set iterated at depth D
+// vD_adj     : adjacency list or bitmap row of vD
+// vD_bit_idx : position of vD in the current bitmap universe
+// SetLevelD / BitLevelD : array / bitmap task at matching depth D
+
+// bitmap: terminal counts reuse one neighborhood BitGraph across at least two matching loops
+#include "plan.h"
+#include "backend/benchmark_progress.h"
+#include <array>
+#include "runtime/nested_policy.h"
+#include "backend/bitmap_tasks.h"
+#include "backend/bitmap_dispatch.h"
+namespace minigraph {
+// Borrowed per-query state; all task joins complete before plan returns.
+struct QueryContext {
+    const Graph *const graph;
+    Context &ctx;
+    BenchmarkProgress &progress;
+    const std::array<size_t, 5> nested_thresholds;
+};
+static const auto bitmap_task_policy = BitmapTaskPolicy::from_environment();
+uint64_t pattern_size() { return 6; }
+// Bitmap level definitions: borrowed inputs; invocation-local scratch.
+template <size_t bitmap_words>
+class BitLevel4 {
+    const QueryContext &query;
+    const BitGraph &bitgraph;
+    const BitmapTaskPolicy &policy;
+    const Bitmap &input_b5;
+    const Bitmap &input_b6;
+
+  public:
+    BitLevel4(const QueryContext &query, const BitGraph &bitgraph, const BitmapTaskPolicy &policy, const Bitmap &input_b5, const Bitmap &input_b6)
+        : query(query), bitgraph(bitgraph), policy(policy), input_b5(input_b5), input_b6(input_b6) {}
+    uint64_t operator()() const {
+        return bitmap_for_each(input_b6, false, *this, policy, 3, 0);
+    }
+    template <class Cursor>
+    uint64_t operator()(Cursor bc4, bool parallel_task) const {
+        BitmapTaskInput task_b5(input_b5, parallel_task, policy);
+        const Bitmap &b5 = task_b5.get();
+        BitmapTaskInput task_b6(input_b6, parallel_task, policy);
+        const Bitmap &b6 = task_b6.get();
+        uint64_t counter = 0;
+        for (; bc4.valid(); bc4.advance()) { // bitmap local-index loop
+            const auto v4_bit_idx = bc4.position();
+            const uint64_t previous_count = counter;
+            counter += b5.removed_count<bitmap_words>(v4_bit_idx);
+            query.progress.add_bitmap_matches(counter - previous_count);
+        }
+        return counter;
+    }
+};
+template <size_t bitmap_words>
+class BitLevel3 {
+    const QueryContext &query;
+    const BitGraph &bitgraph;
+    const BitmapTaskPolicy &policy;
+    const Bitmap &input_b4;
+
+  public:
+    BitLevel3(const QueryContext &query, const BitGraph &bitgraph, const BitmapTaskPolicy &policy, const Bitmap &input_b4)
+        : query(query), bitgraph(bitgraph), policy(policy), input_b4(input_b4) {}
+    uint64_t operator()() const {
+        return bitmap_for_each(input_b4, true, *this, policy, 2, query.nested_thresholds[3]);
+    }
+    template <class Cursor>
+    uint64_t operator()(Cursor bc3, bool parallel_task) const {
+        BitmapTaskInput task_b4(input_b4, parallel_task, policy);
+        const Bitmap &b4 = task_b4.get();
+        Bitmap b5(bitgraph.universe());
+        Bitmap b6(bitgraph.universe());
+        uint64_t counter = 0;
+        for (; bc3.valid(); bc3.advance()) { // bitmap local-index loop
+            const auto v3_bit_idx = bc3.position();
+            b5.assign_removed<bitmap_words, true>(b4, v3_bit_idx);
+            const auto v3_adj = bitgraph.local_row(v3_bit_idx);
+            b6.assign_intersection<bitmap_words, true>(b4, v3_adj, v3_bit_idx);
+            counter += BitLevel4<bitmap_words>(query, bitgraph, policy, b5, b6)();
+        }
+        return counter;
+    }
+};
+template <size_t bitmap_words>
+class BitLevel2 {
+    const QueryContext &query;
+    const BitGraph &bitgraph;
+    const BitmapTaskPolicy &policy;
+    const Bitmap &input_b2;
+    const Bitmap &input_b3;
+
+  public:
+    BitLevel2(const QueryContext &query, const BitGraph &bitgraph, const BitmapTaskPolicy &policy, const Bitmap &input_b2, const Bitmap &input_b3)
+        : query(query), bitgraph(bitgraph), policy(policy), input_b2(input_b2), input_b3(input_b3) {}
+    uint64_t operator()() const {
+        return bitmap_for_each(input_b3, true, *this, policy, 1, query.nested_thresholds[2]);
+    }
+    template <class Cursor>
+    uint64_t operator()(Cursor bc2, bool parallel_task) const {
+        BitmapTaskInput task_b2(input_b2, parallel_task, policy);
+        const Bitmap &b2 = task_b2.get();
+        BitmapTaskInput task_b3(input_b3, parallel_task, policy);
+        const Bitmap &b3 = task_b3.get();
+        Bitmap b4(bitgraph.universe());
+        uint64_t counter = 0;
+        for (; bc2.valid(); bc2.advance()) { // bitmap local-index loop
+            const auto v2_bit_idx = bc2.position();
+            const auto v2_adj = bitgraph.local_row(v2_bit_idx);
+            b4.assign_intersection<bitmap_words, true>(b2, v2_adj);
+            counter += BitLevel3<bitmap_words>(query, bitgraph, policy, b4)();
+        }
+        return counter;
+    }
+};
+template <size_t bitmap_words>
+class BitLevel1 {
+    const QueryContext &query;
+    const BitGraph &bitgraph;
+    const BitmapTaskPolicy &policy;
+    const Bitmap &input_b0;
+    const Bitmap &input_b1;
+
+  public:
+    BitLevel1(const QueryContext &query, const BitGraph &bitgraph, const BitmapTaskPolicy &policy, const Bitmap &input_b0, const Bitmap &input_b1)
+        : query(query), bitgraph(bitgraph), policy(policy), input_b0(input_b0), input_b1(input_b1) {}
+    uint64_t operator()() const {
+        return bitmap_for_each(input_b1, true, *this, policy, 0, query.nested_thresholds[1]);
+    }
+    template <class Cursor>
+    uint64_t operator()(Cursor bc1, bool parallel_task) const {
+        BitmapTaskInput task_b0(input_b0, parallel_task, policy);
+        const Bitmap &b0 = task_b0.get();
+        BitmapTaskInput task_b1(input_b1, parallel_task, policy);
+        const Bitmap &b1 = task_b1.get();
+        Bitmap b2(bitgraph.universe());
+        Bitmap b3(bitgraph.universe());
+        uint64_t counter = 0;
+        for (; bc1.valid(); bc1.advance()) { // bitmap local-index loop
+            const auto v1_bit_idx = bc1.position();
+            const auto v1_adj = bitgraph.local_row(v1_bit_idx);
+            b2.assign_intersection<bitmap_words, true>(b0, v1_adj);
+            b3.assign_intersection<bitmap_words, true>(b1, v1_adj, v1_bit_idx);
+            counter += BitLevel2<bitmap_words>(query, bitgraph, policy, b2, b3)();
+        }
+        return counter;
+    }
+};
+// End bitmap level definitions.
+class SetLevel3 {
+  private:
+    const QueryContext &query;
+    // Iterate Set
+    VertexSet &s4;
+
+  public:
+    SetLevel3(const QueryContext &_query, VertexSet &_s4) : query{_query}, s4{_s4} {};
+    void operator()(const tbb::blocked_range<size_t> &r) const {
+        auto &ctx = query.ctx;
+        const int worker_id = tbb::this_task_arena::current_thread_index();
+        cc &counter = ctx.per_thread_result.at(worker_id);
+        for (size_t v3_idx = r.begin(); v3_idx < r.end(); v3_idx++) { // loop-3begin
+            const IdType v3 = s4[v3_idx];
+            VertexSet v3_adj = query.graph->N(v3);
+            VertexSet s5 = s4.remove(v3_adj.vid());
+            VertexSet s6 = s4.intersect(v3_adj, v3_adj.vid());
+            for (size_t v4_idx = 0; v4_idx < s6.size(); v4_idx++) { // loop-4 begin
+                const IdType v4 = s6[v4_idx];
+                VertexSet v4_adj = query.graph->N(v4);
+                counter += s5.remove_cnt(v4_adj.vid());
+            }
+        }
+    }
+};
+
+class SetLevel2 {
+  private:
+    const QueryContext &query;
+    // Parent Intermediates
+    VertexSet &s2;
+    // Iterate Set
+    VertexSet &s3;
+
+  public:
+    SetLevel2(const QueryContext &_query, VertexSet &_s2, VertexSet &_s3) : query{_query}, s2{_s2}, s3{_s3} {};
+    void operator()(const tbb::blocked_range<size_t> &r) const {
+        auto &ctx = query.ctx;
+        const int worker_id = tbb::this_task_arena::current_thread_index();
+        cc &counter = ctx.per_thread_result.at(worker_id);
+        for (size_t v2_idx = r.begin(); v2_idx < r.end(); v2_idx++) { // loop-2begin
+            const IdType v2 = s3[v2_idx];
+            VertexSet v2_adj = query.graph->N(v2);
+            VertexSet s4 = s2.intersect(v2_adj);
+            if (s4.size() > query.nested_thresholds[3]) {
+                tbb::parallel_for(tbb::blocked_range<size_t>(0, s4.size(), 1), SetLevel3(query, s4), tbb::auto_partitioner());
+                continue;
+            }
+            for (size_t v3_idx = 0; v3_idx < s4.size(); v3_idx++) { // loop-3 begin
+                const IdType v3 = s4[v3_idx];
+                VertexSet v3_adj = query.graph->N(v3);
+                VertexSet s5 = s4.remove(v3_adj.vid());
+                VertexSet s6 = s4.intersect(v3_adj, v3_adj.vid());
+                for (size_t v4_idx = 0; v4_idx < s6.size(); v4_idx++) { // loop-4 begin
+                    const IdType v4 = s6[v4_idx];
+                    VertexSet v4_adj = query.graph->N(v4);
+                    counter += s5.remove_cnt(v4_adj.vid());
+                }
+            }
+        }
+    }
+};
+
+class SetLevel1 {
+  private:
+    const QueryContext &query;
+    // Parent Intermediates
+    VertexSet &s0;
+    // Iterate Set
+    VertexSet &s1;
+
+  public:
+    SetLevel1(const QueryContext &_query, VertexSet &_s0, VertexSet &_s1) : query{_query}, s0{_s0}, s1{_s1} {};
+    void operator()(const tbb::blocked_range<size_t> &r) const {
+        auto &ctx = query.ctx;
+        const int worker_id = tbb::this_task_arena::current_thread_index();
+        cc &counter = ctx.per_thread_result.at(worker_id);
+        for (size_t v1_idx = r.begin(); v1_idx < r.end(); v1_idx++) { // loop-1begin
+            const IdType v1 = s1[v1_idx];
+            VertexSet v1_adj = query.graph->N(v1);
+            VertexSet s2 = s0.intersect(v1_adj);
+            VertexSet s3 = s1.intersect(v1_adj, v1_adj.vid());
+            if (s3.size() > query.nested_thresholds[2]) {
+                tbb::parallel_for(tbb::blocked_range<size_t>(0, s3.size(), 1), SetLevel2(query, s2, s3), tbb::auto_partitioner());
+                continue;
+            }
+            for (size_t v2_idx = 0; v2_idx < s3.size(); v2_idx++) { // loop-2 begin
+                const IdType v2 = s3[v2_idx];
+                VertexSet v2_adj = query.graph->N(v2);
+                VertexSet s4 = s2.intersect(v2_adj);
+                if (s4.size() > query.nested_thresholds[3]) {
+                    tbb::parallel_for(tbb::blocked_range<size_t>(0, s4.size(), 1), SetLevel3(query, s4), tbb::auto_partitioner());
+                    continue;
+                }
+                for (size_t v3_idx = 0; v3_idx < s4.size(); v3_idx++) { // loop-3 begin
+                    const IdType v3 = s4[v3_idx];
+                    VertexSet v3_adj = query.graph->N(v3);
+                    VertexSet s5 = s4.remove(v3_adj.vid());
+                    VertexSet s6 = s4.intersect(v3_adj, v3_adj.vid());
+                    for (size_t v4_idx = 0; v4_idx < s6.size(); v4_idx++) { // loop-4 begin
+                        const IdType v4 = s6[v4_idx];
+                        VertexSet v4_adj = query.graph->N(v4);
+                        counter += s5.remove_cnt(v4_adj.vid());
+                    }
+                }
+            }
+        }
+    }
+};
+
+class SetLevel0 {
+  private:
+    const QueryContext &query;
+
+  public:
+    SetLevel0(const QueryContext &_query) : query{_query} {};
+    void operator()(const tbb::blocked_range<size_t> &r) const {
+        auto &ctx = query.ctx;
+        const int worker_id = tbb::this_task_arena::current_thread_index();
+        cc &counter = ctx.per_thread_result.at(worker_id);
+        for (size_t v0 = r.begin(); v0 < r.end(); v0++) { // loop-0begin
+            BenchmarkRootProgress root_progress(query.progress.root(v0));
+            VertexSet v0_adj = query.graph->N(v0);
+            VertexSet s0 = v0_adj;
+            if (s0.size() == 0)
+                continue;
+            VertexSet s1 = s0.bounded(v0);
+            auto bitmap_rows = BitGraph::build(*query.graph, v0, v0_adj, v0_adj, 7); // bitmap-region build once per anchor
+            if (bitmap_rows) {                                                       // bitmap-enabled continuation
+                const auto &bitgraph = *bitmap_rows;
+                Bitmap b1 = Bitmap::from_sorted(bitgraph.universe(), s1.data(), s1.size());
+                Bitmap b0 = Bitmap::from_sorted(bitgraph.universe(), s0.data(), s0.size());
+                { // full bitmap region
+                    auto bitmap_execute = [&](auto bitmap_tag) {
+                        constexpr size_t bitmap_words = decltype(bitmap_tag)::value;
+                        return BitLevel1<bitmap_words>(query, bitgraph, bitmap_task_policy, b0, b1)();
+                    };
+                    counter.add_without_progress(dispatch_bitmap_words(bitgraph.universe().size(), bitmap_execute));
+                } // end bitmap region
+            } else { // array-only continuation
+                if (s1.size() > query.nested_thresholds[1]) {
+                    tbb::parallel_for(tbb::blocked_range<size_t>(0, s1.size(), 1), SetLevel1(query, s0, s1), tbb::auto_partitioner());
+                    continue;
+                }
+                for (size_t v1_idx = 0; v1_idx < s1.size(); v1_idx++) { // loop-1 begin
+                    const IdType v1 = s1[v1_idx];
+                    VertexSet v1_adj = query.graph->N(v1);
+                    VertexSet s2 = s0.intersect(v1_adj);
+                    VertexSet s3 = s1.intersect(v1_adj, v1_adj.vid());
+                    if (s3.size() > query.nested_thresholds[2]) {
+                        tbb::parallel_for(tbb::blocked_range<size_t>(0, s3.size(), 1), SetLevel2(query, s2, s3), tbb::auto_partitioner());
+                        continue;
+                    }
+                    for (size_t v2_idx = 0; v2_idx < s3.size(); v2_idx++) { // loop-2 begin
+                        const IdType v2 = s3[v2_idx];
+                        VertexSet v2_adj = query.graph->N(v2);
+                        VertexSet s4 = s2.intersect(v2_adj);
+                        if (s4.size() > query.nested_thresholds[3]) {
+                            tbb::parallel_for(tbb::blocked_range<size_t>(0, s4.size(), 1), SetLevel3(query, s4), tbb::auto_partitioner());
+                            continue;
+                        }
+                        for (size_t v3_idx = 0; v3_idx < s4.size(); v3_idx++) { // loop-3 begin
+                            const IdType v3 = s4[v3_idx];
+                            VertexSet v3_adj = query.graph->N(v3);
+                            VertexSet s5 = s4.remove(v3_adj.vid());
+                            VertexSet s6 = s4.intersect(v3_adj, v3_adj.vid());
+                            for (size_t v4_idx = 0; v4_idx < s6.size(); v4_idx++) { // loop-4 begin
+                                const IdType v4 = s6[v4_idx];
+                                VertexSet v4_adj = query.graph->N(v4);
+                                counter += s5.remove_cnt(v4_adj.vid());
+                            }
+                        }
+                    }
+                }
+            } // array fallback
+        }
+    }
+};
+
+void plan(const GraphType *graph, Context &ctx) {
+    ctx.tick_begin = tbb::tick_count::now();
+    ctx.iep_redundency = 0;
+    BenchmarkProgress progress(ctx, graph->get_vnum());
+    const QueryContext query{graph, ctx, progress, {0, nested_threshold(graph->num_vertex, graph->num_edge, graph->max_degree, 4), nested_threshold(graph->num_vertex, graph->num_edge, graph->max_degree, 4), nested_threshold(graph->num_vertex, graph->num_edge, graph->max_degree, 4), 0}};
+    internal::VertexSetPool::configure_for_graph(graph->get_maxdeg());
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, graph->get_vnum()), SetLevel0(query), tbb::simple_partitioner());
+}
+} // namespace minigraph
+extern "C" uint64_t graphmini_pattern_size() { return minigraph::pattern_size(); }
+extern "C" void graphmini_plan(const minigraph::GraphType *graph, minigraph::Context *ctx) { minigraph::plan(graph, *ctx); }

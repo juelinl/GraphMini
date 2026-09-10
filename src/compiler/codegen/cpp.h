@@ -20,12 +20,19 @@ class CppCodegen {
     const ExecutionIR &execution_;
     const bool bitmap_diagnostics_;
     const char *const graph_name_;
+    // Emission state, never a runtime condition. The success continuation has
+    // a valid BitGraph; the fallback writer has no bitmap region.
+    bool bitmap_enabled_{false};
+    int nested_resume_depth_{-1};
+    std::string emit_search_body(const PlanIR &plan, const CodeGenConfig &config, int dep);
+    std::string emit_search_tail(const PlanIR &plan, const CodeGenConfig &config, int dep);
     bool uses_selected_vertex(int dep) const;
     std::string emit_read_adj(const PlanIR &plan, int dep);
     std::string emit_iter(const PlanIR &plan, int dep);
     std::string emit_op(const PlanIR &plan, const VertexSetIR &op);
     std::string emit_bitmap_iter(const PlanIR &plan, int dep);
     std::string emit_bitmap_build(int dep);
+    std::string emit_bitmap_bindings(int dep);
     std::string emit_bitmap_tasks(const PlanIR &plan, int dep);
     std::string emit_bitmap_levels(const PlanIR &plan);
     std::string emit_bitmap_ops(const PlanIR &plan, int depth);
