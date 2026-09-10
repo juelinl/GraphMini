@@ -113,28 +113,38 @@ std::string CppCodegen::emit_bitmap_iter(const PlanIR &plan, int dep) {
     return "";
 }
 
-std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
+// Emit innermost first so each level can directly instantiate its successor.
+// Fields are references only; range-local scratch must never become task state.
+std::string CppCodegen::emit_bitmap_levels(const PlanIR &plan) {
+    if (!execution_.bitmap_region || !execution_.bitmap_region->full_region) return "";
     const auto &region = *execution_.bitmap_region;
-    std::string out = "if (bitmap_rows) { // full bitmap region\n"
-                      "const auto& bitgraph = *bitmap_rows;\nauto& progress = query.progress;\n"
-                      "auto bitmap_execute = [&](auto bitmap_tag) {\n"
-                      "constexpr size_t bitmap_words = decltype(bitmap_tag)::value;\n";
-    for (int depth = plan.logical.p_size - 2; depth > dep; --depth) {
+    std::string out = "// Bitmap level definitions: borrowed inputs; invocation-local scratch.\n";
+    for (int depth = plan.logical.p_size - 2; depth > region.entry_depth; --depth) {
+        const auto name = codegen_names::bit_level(depth);
+        const auto &inputs = region.loop_inputs.at(depth);
         const auto &loop = execution_.loops.at(depth);
         const int input = plan.logical.iter_set.at(depth - 1).id;
-        const auto &inputs = region.loop_inputs.at(depth);
+        out += fmt::format("template<size_t bitmap_words>\nclass {} {{\n", name);
+        out += "const QueryContext& query;\nconst BitGraph& bitgraph;\nconst BitmapTaskPolicy& policy;\n";
+        for (int id : inputs) out += fmt::format("const Bitmap& input_s{};\n", id);
+        out += fmt::format("public:\n{}(const QueryContext& query, const BitGraph& bitgraph, "
+                           "const BitmapTaskPolicy& policy, {})\n"
+                           ": query(query), bitgraph(bitgraph), policy(policy)",
+                           name, arguments(inputs, "const Bitmap& input_s"));
+        for (int id : inputs) out += fmt::format(", input_s{0}(input_s{0})", id);
+        out += " {}\n";
         std::string parallel = loop.spawn_nested ? "true" : "false";
         if (loop.spawn_nested && loop.runtime_threshold) {
             int threshold = loop.threshold_factor * loop.average_degree;
             if (loop.cap_threshold) threshold = std::min(threshold, 100);
             parallel = fmt::format("input_s{}.count() > {}", input, threshold);
         }
-        out += fmt::format("auto bitmap_level{} = [&]({}) -> uint64_t {{\n", depth,
-                           arguments(inputs, "const Bitmap& input_s"));
-        out += fmt::format("return bitmap_for_each(input_s{}, {}, [&](size_t begin, size_t end, bool parallel_task) -> uint64_t {{ // private task range\n",
-                           input, parallel);
+        out += fmt::format("uint64_t operator()() const {{\n"
+                           "return bitmap_for_each(input_s{}, {}, *this, policy, {});\n}}\n",
+                           input, parallel, depth - region.entry_depth - 1);
+        out += "uint64_t operator()(size_t begin, size_t end, bool parallel_task) const {\n";
         for (int id : inputs)
-            out += fmt::format("BitmapTaskInput task_s{0}(input_s{0}, parallel_task, bitmap_task_policy);\n"
+            out += fmt::format("BitmapTaskInput task_s{0}(input_s{0}, parallel_task, policy);\n"
                                "const Bitmap& s{0} = task_s{0}.get();\n", id);
         out += emit_bitmap_outputs(depth);
         out += fmt::format("uint64_t counter = 0;\n"
@@ -144,12 +154,22 @@ std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
         if (depth == plan.logical.p_size - 2) out += "const uint64_t previous_count = counter;\n";
         out += emit_bitmap_ops(plan, depth);
         if (depth < plan.logical.p_size - 2)
-            out += fmt::format("counter += bitmap_level{}({});\n", depth + 1, arguments(region.loop_inputs.at(depth + 1)));
-        else out += "progress.add_bitmap_matches(counter - previous_count);\n";
-        out += "}\n";
-        out += fmt::format("return counter;\n}}, bitmap_task_policy, {});\n}};\n", depth - dep - 1);
+            out += fmt::format("counter += {}<bitmap_words>(query, bitgraph, policy, {})();\n",
+                               codegen_names::bit_level(depth + 1), arguments(region.loop_inputs.at(depth + 1)));
+        else out += "query.progress.add_bitmap_matches(counter - previous_count);\n";
+        out += "}\nreturn counter;\n}\n};\n";
     }
-    out += fmt::format("return bitmap_level{}({});\n", dep + 1, arguments(region.loop_inputs.at(dep + 1), "*bitmap_s"));
+    return out + "// End bitmap level definitions.\n";
+}
+
+std::string CppCodegen::emit_bitmap_tasks(const PlanIR &plan, int dep) {
+    const auto &region = *execution_.bitmap_region;
+    std::string out = "if (bitmap_rows) { // full bitmap region\n"
+                      "const auto& bitgraph = *bitmap_rows;\n"
+                      "auto bitmap_execute = [&](auto bitmap_tag) {\n"
+                      "constexpr size_t bitmap_words = decltype(bitmap_tag)::value;\n";
+    out += fmt::format("return {}<bitmap_words>(query, bitgraph, bitmap_task_policy, {})();\n",
+                       codegen_names::bit_level(dep + 1), arguments(region.loop_inputs.at(dep + 1), "*bitmap_s"));
     out += "};\ncounter.add_without_progress(dispatch_bitmap_words(bitgraph.universe().size(), bitmap_execute));\n} else {\n";
     out += emit_tbb_call(plan, plan.context.config, dep + 1);
     return out + fmt::format("for (size_t {0} = 0; {0} < s{1}.size(); ++{0}) {{\n", codegen_names::index(dep + 1),

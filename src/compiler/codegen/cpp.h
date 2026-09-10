@@ -27,6 +27,7 @@ class CppCodegen {
     std::string emit_bitmap_iter(const PlanIR &plan, int dep);
     std::string emit_bitmap_build(int dep);
     std::string emit_bitmap_tasks(const PlanIR &plan, int dep);
+    std::string emit_bitmap_levels(const PlanIR &plan);
     std::string emit_bitmap_ops(const PlanIR &plan, int depth);
     std::string emit_bitmap_outputs(int depth);
     std::string gen_mg_type(const PlanIR &plan, const MiniGraphIR &mg);

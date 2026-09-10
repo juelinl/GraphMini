@@ -73,9 +73,9 @@ std::string CppCodegen::emit_tbb_call(const PlanIR &plan, const CodeGenConfig &c
 
     out << "{\n";
     out << fmt::format("tbb::parallel_for(tbb::blocked_range<size_t>(0, "
-                           "s{iter_id}.size(), {grain_size}), Loop{dep}",
+                           "s{iter_id}.size(), {grain_size}), {level}",
                            fmt::arg("grain_size", grain_size), fmt::arg("iter_id", iter_id),
-                           fmt::arg("dep", loop));
+                           fmt::arg("level", codegen_names::set_level(loop)));
     // Args
     out << "(query";
     for (int dep : used_adj) {
@@ -116,7 +116,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     std::vector<VertexSetIR> used_set = gen_used_set(plan, config, loop);
     std::set<int> used_adj = gen_used_adj(plan, config, loop);
 
-    out << "class Loop" << loop << "\n{\n";
+    out << "class " << codegen_names::set_level(loop) << "\n{\n";
 
     // Private Variables
     out << "private:\n";
@@ -155,7 +155,7 @@ std::string CppCodegen::emit_tbb_loop(const PlanIR &plan, const CodeGenConfig &c
     out << "public:\n";
     // Constructor
     // Args
-    out << "Loop" << loop << "(const QueryContext& _query";
+    out << codegen_names::set_level(loop) << "(const QueryContext& _query";
 
     for (int dep : used_adj) {
         out << fmt::format(", VertexSet& _{}", codegen_names::adjacency(dep));
@@ -412,6 +412,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
         out << "static const auto bitmap_task_policy = BitmapTaskPolicy::from_environment();\n";
     if (config.bitmapDiagnostics) out << "static std::atomic<uint64_t> bitmap_counters[7]{};\n";
     out << "uint64_t pattern_size() {return " << plan.logical.p_size << ";}\n";
+    out << emit_bitmap_levels(plan);
 
     const bool needs_minigraph_alias = std::any_of(execution_.minigraphs.begin(), execution_.minigraphs.end(),
         [](const auto &entry) { return !entry.second.eager; });
@@ -455,7 +456,7 @@ std::string CppCodegen::emit_nested(PlanIR plan, CodeGenConfig config) {
     out << "internal::VertexSetPool::configure_for_graph(graph->get_maxdeg())"
            ";\n";
     out << "tbb::parallel_for(tbb::blocked_range<size_t>(0, "
-           "graph->get_vnum()), Loop0(query), tbb::simple_partitioner());\n";
+        << "graph->get_vnum()), " << codegen_names::set_level(0) << "(query), tbb::simple_partitioner());\n";
     out << "}\n";
     out << "} // minigraph\n";
     if (config.bitmapDiagnostics)

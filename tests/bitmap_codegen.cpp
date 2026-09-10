@@ -19,10 +19,11 @@ using namespace minigraph;
 // order: OpenMP emits outer-to-inner loops, while TBB declares inner tasks
 // first.
 std::vector<std::string> bitmap_operations(const std::string &code) {
-    const auto begin = code.find("// full bitmap region");
+    const bool classes = code.find("// Bitmap level definitions:") != std::string::npos;
+    const auto begin = code.find(classes ? "// Bitmap level definitions:" : "// full bitmap region");
     if (begin == std::string::npos)
         return {};
-    const auto end = code.find("} else {", begin);
+    const auto end = code.find(classes ? "// End bitmap level definitions." : "} else {", begin);
     if (end == std::string::npos)
         throw std::runtime_error("Missing array fallback");
     auto body = std::regex_replace(code.substr(begin, end - begin), std::regex(R"(\s+)"), "");

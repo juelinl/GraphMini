@@ -56,13 +56,13 @@ int main(int argc, char **argv) {
                                 throw std::runtime_error("Redundant generated comments");
                             if (parallel != ParallelType::OpenMP) {
                                 if (code.find("struct QueryContext") == std::string::npos ||
-                                    code.find("Loop0(query)") == std::string::npos ||
+                                    code.find("SetLevel0(query)") == std::string::npos ||
                                     code.find("query.ctx") == std::string::npos ||
                                     code.find("query.graph") == std::string::npos ||
                                     code.find("static const Graph") != std::string::npos ||
                                     code.find("static BenchmarkProgress") != std::string::npos)
                                     throw std::runtime_error("Missing explicit per-query task context");
-                                static const std::regex old_context_call(R"(Loop[0-9]+\(ctx\b)");
+                                static const std::regex old_context_call(R"((Loop|SetLevel)[0-9]+\(ctx\b)");
                                 if (std::regex_search(code, old_context_call))
                                     throw std::runtime_error("Nested task did not receive query context");
                                 const bool progress = runner != RunnerType::Profiling;

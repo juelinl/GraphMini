@@ -40,18 +40,26 @@ void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan,
             parallel = "input_s" + std::to_string(iter) + ".count()>" + std::to_string(threshold);
         }
         const auto call = "bitmap_for_each(input_s" + std::to_string(iter) + "," + parallel +
-            ",[&](size_tbegin,size_tend,boolparallel_task)->uint64_t{";
+            ",*this,policy," + std::to_string(depth - region.entry_depth - 1) + ");";
         require(compact.find(call) != std::string::npos, "Changed bitmap task input, threshold or captures");
-        const auto policy = "},bitmap_task_policy," + std::to_string(depth - region.entry_depth - 1) + ");";
-        require(compact.find(policy) != std::string::npos, "Changed bitmap task policy or level");
-        const auto body = "autobitmap_level" + std::to_string(depth) + "=[&](constBitmap&input_s";
-        require(compact.find(body) != std::string::npos, "Missing synchronous level wrapper");
+        const auto declaration = "template<size_tbitmap_words>classBitLevel" + std::to_string(depth) + "{";
+        const auto start = compact.find(declaration);
+        require(start != std::string::npos, "Missing templated bitmap level class");
+        const auto fields = compact.substr(start + declaration.size(), compact.find("public:", start) - start - declaration.size());
+        std::string expected = "constQueryContext&query;constBitGraph&bitgraph;constBitmapTaskPolicy&policy;";
+        for (int id : region.loop_inputs.at(depth)) expected += "constBitmap&input_s" + std::to_string(id) + ";";
+        require(fields == expected, "Level class must hold only required read-only references, not scratch");
+        require(compact.find("uint64_toperator()(size_tbegin,size_tend,boolparallel_task)const{") != std::string::npos,
+                "Missing const range invocation");
         for (int id : region.loop_inputs.at(depth)) {
             require(ir.sets.at(id).depth < depth, "Captured a private output as input");
             require(compact.find("BitmapTaskInputtask_s" + std::to_string(id)) != std::string::npos,
                     "Missing explicit task input lifetime");
         }
     }
+    require(code.find("bitmap_level") == std::string::npos && code.find("class Loop") == std::string::npos,
+            "Legacy level name remains");
+    require(code.find("class SetLevel0") != std::string::npos, "Missing array level name");
 }
 size_t require_bitmap_temporaries(const std::string &code, const ExecutionIR &ir) {
     const auto &region = *ir.bitmap_region;
