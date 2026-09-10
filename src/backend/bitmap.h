@@ -57,6 +57,20 @@ class BitmapLocalCursor {
         }
     }
 };
+// A local BitGraph row borrows both words and universe. The immutable BitGraph
+// must outlive the view (including synchronous task joins). Unlike BitmapView,
+// creating this hot-loop view does not increment a shared ownership counter.
+class BitmapRowView {
+    const NeighborhoodUniverse *universe_;
+    const bit_ops::Word *words_;
+    friend class BitGraph;
+    BitmapRowView(const NeighborhoodUniverse &universe, const bit_ops::Word *words)
+        : universe_(&universe), words_(words) {}
+  public:
+    const NeighborhoodUniverse &universe() const { return *universe_; }
+    const bit_ops::Word *data() const { return words_; }
+};
+
 // The mapping is retained; words are borrowed and must outlive this view. Views
 // observe writes and current cardinality. Moving/assigning an owner invalidates
 // its views; in-place reset/rebinding does not. No view may escape its owner.
@@ -151,6 +165,59 @@ class Bitmap {
     const NeighborhoodUniverse &universe() const { return universe_; }
     const internal::BitmapWords<8> &words() const { return words_; }
     size_t count() const { return cardinality_; }
+    BitmapLocalCursor local_cursor() const & { return {words_.data(), universe_.size()}; }
+    BitmapLocalCursor local_cursor(size_t begin, size_t end) const & {
+        return {words_.data(), universe_.size(), begin, end};
+    }
+    BitmapLocalCursor local_cursor() const && = delete;
+    BitmapLocalCursor local_cursor(size_t, size_t) const && = delete;
+    // Generated operations use LOCAL positions for bounds and exclusions.
+    // Destinations are preallocated and can alias the source exactly.
+    template<size_t Words = 0, class Row>
+    void assign_intersection(const Bitmap &source, const Row &row, size_t upper = bit_ops::unlimited) {
+        require_row(row);
+        assign_local<Words>(source, row.data(), false, upper);
+    }
+    template<size_t Words = 0, class Row>
+    void assign_subtraction(const Bitmap &source, const Row &row, uint32_t excluded,
+                            size_t upper = bit_ops::unlimited) {
+        require_row(row);
+        assign_local<Words>(source, row.data(), true, upper, excluded);
+    }
+    template<size_t Words = 0>
+    void assign_bounded(const Bitmap &source, size_t upper) {
+        assign_local<Words>(source, source.words_.data(), false, upper);
+    }
+    template<size_t Words = 0>
+    void assign_removed(const Bitmap &source, uint32_t excluded, size_t upper = bit_ops::unlimited) {
+        assign_local<Words>(source, source.words_.data(), false, upper, excluded);
+    }
+    template<size_t Words = 0, class Row>
+    size_t intersection_count(const Row &row, size_t upper = bit_ops::unlimited) const {
+        require_row(row);
+        return bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, false>(
+            words_.data(), row.data(), universe_.size(), nullptr, upper);
+    }
+    template<size_t Words = 0, class Row>
+    size_t subtraction_count(const Row &row, uint32_t excluded, size_t upper = bit_ops::unlimited) const {
+        require_row(row);
+        auto result = bit_ops::combine_fixed<Words, bit_ops::Binary::Difference, false>(
+            words_.data(), row.data(), universe_.size(), nullptr, upper);
+        if (excluded < upper && bit_ops::test(words_.data(), universe_.size(), excluded) &&
+            !bit_ops::test(row.data(), universe_.size(), excluded)) --result;
+        return result;
+    }
+    template<size_t Words = 0>
+    size_t bounded_count(size_t upper) const {
+        return bit_ops::combine_fixed<Words, bit_ops::Binary::Intersection, false>(
+            words_.data(), words_.data(), universe_.size(), nullptr, upper);
+    }
+    template<size_t Words = 0>
+    size_t removed_count(uint32_t excluded, size_t upper = bit_ops::unlimited) const {
+        auto result = bounded_count<Words>(upper);
+        if (excluded < upper && bit_ops::test(words_.data(), universe_.size(), excluded)) --result;
+        return result;
+    }
     // Internal-region operation: fixed universe, preallocated destination.
     // Exact source/destination alias is supported by bit_ops.
     template<size_t Words = 0>
@@ -230,6 +297,11 @@ class Bitmap {
             if (size) size = std::lower_bound(ids, ids + size, *upper) - ids;
         }
         cardinality_ = bit_ops::from_sorted(domain.data(), limit, ids, size, words_.data());
+    }
+  private:
+    template<class Row> void require_row(const Row &row) const {
+        if (!universe_.compatible(row.universe()))
+            throw std::invalid_argument("Bitmap row universe mismatch");
     }
 };
 inline Bitmap BitmapView::intersect(const BitmapView &other, std::optional<uint32_t> upper) const {

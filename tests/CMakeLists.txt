@@ -31,6 +31,9 @@ add_test(NAME python_import
 
 add_executable(bitmap_reuse_regression bitmap_reuse.cpp)
 add_executable(bitmap_tasks_regression bitmap_tasks.cpp)
+add_executable(bitmap_explicit_regression bitmap_explicit.cpp)
+target_link_libraries(bitmap_explicit_regression PRIVATE graphmini_headers TBB::tbb)
+add_test(NAME bitmap_explicit_regression COMMAND bitmap_explicit_regression)
 add_executable(bitmap_dispatch_regression bitmap_dispatch.cpp)
 target_link_libraries(bitmap_dispatch_regression PRIVATE graphmini_headers)
 add_test(NAME bitmap_dispatch_regression COMMAND bitmap_dispatch_regression)
@@ -181,6 +184,7 @@ endif()
 # Each translation unit includes exactly one project header, without a PCH.
 set(standalone_headers
     backend/bitmap_dispatch.h
+    backend/bitmap.h backend/bitgraph.h backend/bitmap_tasks.h
     backend/bit_ops/from_sorted.h
     common/types.h common/counter.h common/timer.h common/logging.h
     common/meta.h common/constant.h common/logitem.h

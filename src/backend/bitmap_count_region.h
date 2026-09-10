@@ -128,26 +128,7 @@ class BitmapCountRegion {
     static std::shared_ptr<const BitGraph>
     build_rows(const Graph &graph, uint32_t anchor, const Set &neighbors, const Set &rows, size_t input_count,
           size_t budget = 32 * 1024 * 1024) {
-        if (!rows.size() || !neighbors.size())
-            return {};
-        auto charge = [&](size_t count, size_t width) {
-            if (width && count > budget / width)
-                return false;
-            budget -= count * width;
-            return true;
-        };
-        const size_t stride = bit_ops::word_count(neighbors.size()) * sizeof(bit_ops::Word);
-        if (!charge(1, sizeof(BitmapCountRegion)) || !charge(1, sizeof(BitGraph)) ||
-            !charge(neighbors.size(), sizeof(uint32_t)) ||
-            !charge(rows.size(), sizeof(uint32_t)) || !charge(rows.size(), stride) ||
-            !charge(input_count, neighbors.size() <= 512 ? 0 :
-                internal::BitmapWordPool::capacity_for(bit_ops::word_count(neighbors.size())) * sizeof(bit_ops::Word)) ||
-            !charge(input_count, sizeof(Slot)) || !charge(1, stride))
-            return {};
-        return std::make_shared<BitGraph>(
-            NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
-            std::vector<uint32_t>(rows.data(), rows.data() + rows.size()),
-            [&](uint32_t vertex) { return graph.N(vertex); });
+        return BitGraph::build(graph, anchor, neighbors, rows, input_count, budget);
     }
     // Fresh private masks over shared immutable rows. A rejected row build
     // propagates the existing array fallback without allocating candidate state.

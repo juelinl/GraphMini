@@ -30,6 +30,41 @@ struct BitmapTaskPolicy {
 } // namespace minigraph
 
 namespace minigraph {
+// Own only task-local copies; otherwise borrow an immutable named input until
+// the synchronous join. Never keep a view into this wrapper after its lifetime.
+class BitmapTaskInput {
+    std::optional<Bitmap> owned_;
+    const Bitmap *input_;
+  public:
+    BitmapTaskInput(const Bitmap &input, bool task, const BitmapTaskPolicy &policy)
+        : input_(&input) {
+        if (task && (policy.copy_inputs || input.words().is_inline()))
+            owned_.emplace(input);
+    }
+    BitmapTaskInput(Bitmap &&, bool, const BitmapTaskPolicy &) = delete;
+    const Bitmap &get() const & { return owned_ ? *owned_ : *input_; }
+    const Bitmap &get() const && = delete;
+};
+
+// The generated body owns named scratch values and the cursor. This helper
+// only splits ranges and joins reductions; it does not interpret set operations.
+template<class Function>
+uint64_t bitmap_for_each(const Bitmap &input, bool parallel, const Function &range_body,
+                         const BitmapTaskPolicy &policy = {}, size_t level = 0) {
+    const auto bits = input.universe().size();
+    const auto candidates = input.count();
+    // An empty matching loop has no body work. Avoid constructing private
+    // scratch for it, particularly when the universe uses pooled buffers.
+    if (!candidates) return 0;
+    if (!parallel || level >= policy.levels || candidates < 2)
+        return range_body(0, bits, false);
+    return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, bits, policy.grain), uint64_t{0},
+        [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
+            if (policy.skip_empty && !input.local_cursor(range.begin(), range.end()).valid()) return count;
+            return count + range_body(range.begin(), range.end(), true);
+        }, std::plus<uint64_t>{});
+}
+
 // No mutable state is stored in a TBB body: each invocation has its own slots
 // and reduction accumulator. Parent state stays read-only until the join.
 template<class Function>

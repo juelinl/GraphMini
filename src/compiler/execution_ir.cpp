@@ -157,6 +157,13 @@ std::string dump_execution(const ExecutionIR &execution) {
             out << "bitmap-bind set" << binding.set_id << " -> slot" << binding.slot
                 << " @depth" << binding.depth
                 << (region.projection_pair ? " projected" : " array") << '\n';
+        for (const auto &[depth, inputs] : region.loop_inputs) {
+            out << "bitmap-loop @depth" << depth << " inputs:";
+            for (int id : inputs) out << " s" << id;
+            out << " private-outputs:";
+            for (int id : region.loop_outputs.at(depth)) out << " s" << id;
+            out << '\n';
+        }
     }
     auto ref = [&](SetReference r) {
         switch (r.source) {

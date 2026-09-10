@@ -33,21 +33,24 @@ void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan,
     for (int depth = region.entry_depth + 1; depth <= plan.logical.p_size - 2; ++depth) {
         const auto &loop = ir.loops.at(depth);
         const int iter = plan.logical.iter_set.at(depth - 1).id;
-        const auto input = std::find(region.full_sets.begin(), region.full_sets.end(), iter) - region.full_sets.begin();
         std::string parallel = loop.spawn_nested ? "true" : "false";
         if (loop.spawn_nested && loop.runtime_threshold) {
             int threshold = loop.threshold_factor * loop.average_degree;
             if (loop.cap_threshold) threshold = std::min(threshold, 100);
-            parallel = "state.input_size(" + std::to_string(input) + ")>" + std::to_string(threshold);
+            parallel = "input_s" + std::to_string(iter) + ".count()>" + std::to_string(threshold);
         }
-        const auto call = "bitmap_for_each(state," + std::to_string(input) + "," + parallel +
-            ",[&](BitmapCountRegion&task_state,uint32_tv" + std::to_string(depth) + "_bit_idx)->uint64_t{";
+        const auto call = "bitmap_for_each(input_s" + std::to_string(iter) + "," + parallel +
+            ",[&](size_tbegin,size_tend,boolparallel_task)->uint64_t{";
         require(compact.find(call) != std::string::npos, "Changed bitmap task input, threshold or captures");
         const auto policy = "},bitmap_task_policy," + std::to_string(depth - region.entry_depth - 1) + ");";
         require(compact.find(policy) != std::string::npos, "Changed bitmap task policy or level");
-        const auto body = "autobitmap_level" + std::to_string(depth) +
-            "=[&](BitmapCountRegion&state)->uint64_t{";
+        const auto body = "autobitmap_level" + std::to_string(depth) + "=[&](constBitmap&input_s";
         require(compact.find(body) != std::string::npos, "Missing synchronous level wrapper");
+        for (int id : region.loop_inputs.at(depth)) {
+            require(ir.sets.at(id).depth < depth, "Captured a private output as input");
+            require(compact.find("BitmapTaskInputtask_s" + std::to_string(id)) != std::string::npos,
+                    "Missing explicit task input lifetime");
+        }
     }
 }
 size_t require_bitmap_temporaries(const std::string &code, const ExecutionIR &ir) {
@@ -59,11 +62,11 @@ size_t require_bitmap_temporaries(const std::string &code, const ExecutionIR &ir
     size_t omitted = 0;
     for (const auto &[id, op] : ir.sets) {
         if (op.depth <= region.entry_depth || op.result == SetResult::Count) continue;
-        const bool needs_count = op.guard_empty || op.result == SetResult::MaterializeThenCount;
-        const auto declaration = "const auto bn" + std::to_string(id) + " =";
-        require((code.find(declaration) != std::string::npos) == needs_count,
-                "Bitmap materialization count must be declared exactly when consumed");
-        if (!needs_count) ++omitted;
+        require(code.find("const auto bn" + std::to_string(id) + " =") == std::string::npos,
+                "Redundant bitmap count temporary");
+        require(code.find("Bitmap s" + std::to_string(id) + "(bitgraph.universe())") != std::string::npos,
+                "Missing named private bitmap output");
+        ++omitted;
     }
     return omitted;
 }
@@ -100,9 +103,9 @@ int main() {
                     if (ir.bitmap_region->full_region) {
                         ++full;
                         const auto compact = std::regex_replace(code, std::regex(R"(\s+)"), "");
-                        require(code.find("count_local<bitmap_words>") != std::string::npos &&
-                                code.find("materialize_local<bitmap_words>") != std::string::npos &&
-                                compact.find("dispatch_bitmap_words(bitmap_region->universe_size(),bitmap_execute)") != std::string::npos &&
+                        require(code.find("_count<bitmap_words>") != std::string::npos &&
+                                code.find(".assign_") != std::string::npos &&
+                                compact.find("dispatch_bitmap_words(bitgraph.universe().size(),bitmap_execute)") != std::string::npos &&
                                 code.find("#include \"backend/bitmap_dispatch.h\"") != std::string::npos,
                                 "Missing fixed-word region dispatch");
                         const auto start = code.find("// full bitmap region");
@@ -113,15 +116,16 @@ int main() {
                     }
                     require(code.find("bitmap_region ?") == std::string::npos,
                             "Mixed bitmap/array hot loop");
-                    require(code.find(ir.bitmap_region->full_region ? "// full bitmap region" : "->counting_view(") != std::string::npos &&
+                    require(code.find("materialize_local<") == std::string::npos &&
+                            code.find("count_local<") == std::string::npos &&
+                            code.find("task_state") == std::string::npos,
+                            "Generated bitmap execution still uses numbered slots");
+                    require(code.find(ir.bitmap_region->full_region ? "// full bitmap region" : "// bitmap terminal region") != std::string::npos &&
                             code.find("} // array fallback") != std::string::npos,
                             "Missing prepared count or fallback scope");
-                    const auto &slots = ir.bitmap_region->full_region ? ir.bitmap_region->full_sets : ir.bitmap_region->live_ins;
                     const auto &inputs = ir.bitmap_region->full_region ? ir.bitmap_region->full_live_ins : ir.bitmap_region->live_ins;
                     for (int id : inputs) {
-                        const auto index = std::find(slots.begin(), slots.end(), id) - slots.begin();
-                        const auto binding = "->bind_input(" + std::to_string(index) + ", s" +
-                            std::to_string(id) + ");";
+                        const auto binding = "bitmap_s" + std::to_string(id) + ".emplace(Bitmap::from_sorted(";
                         const auto first = code.find(binding);
                         require(first != std::string::npos && code.find(binding, first+1) == std::string::npos,
                                 "Missing or duplicate generated binding");
@@ -131,7 +135,7 @@ int main() {
                             "Rows not hoisted to their dependency scope");
                     require(dump_execution(ir).find("bitmap-bind set") != std::string::npos,
                             "Missing binding metadata in IR dump");
-                    for (int mutation = 0; mutation < 19; ++mutation) {
+                    for (int mutation = 0; mutation < 21; ++mutation) {
                         auto bad = ir;
                         auto &r = *bad.bitmap_region;
                         if (mutation == 0)
@@ -159,6 +163,8 @@ int main() {
                         if (mutation == 16) r.bindings.front().slot = -1;
                         if (mutation == 17) --r.bindings.front().depth;
                         if (mutation == 18) ++r.bindings.front().depth;
+                        if (mutation == 19) r.loop_inputs[-1] = {0};
+                        if (mutation == 20) r.loop_outputs[-1] = {0};
                         bool rejected = false;
                         try {
                             verify_execution(bad, plan);
@@ -208,7 +214,7 @@ int main() {
         if (ir.bitmap_region && !ir.bitmap_region->projection_pair) std::cerr << dump_execution(ir);
         require(ir.bitmap_region && ir.bitmap_region->projection_pair, "Missing algebraic projected partition");
         const auto code = gen_code(query, config, meta);
-        require(code.find("bind_projected_partition") != std::string::npos &&
+        require(code.find("// shared bounded neighborhood projection") != std::string::npos &&
                 code.find("->bind_input(") == std::string::npos, "Direct variant still converts live-in arrays");
         for (int mutation = 0; mutation < 9; ++mutation) {
             auto bad = ir;
@@ -255,15 +261,15 @@ int main() {
             require(ir.bitmap_region->build_depth == anchor && ir.bitmap_region->entry_depth == 2,
                     "Conflated row construction with execution scope");
             const auto code = gen_code(query, config, meta);
-            const auto build = code.find("BitmapCountRegion::build_rows");
-            const auto enter = code.find("BitmapCountRegion::from_rows");
+            const auto build = code.find("BitGraph::build");
+            const auto enter = code.find("std::optional<Bitmap> bitmap_s");
             const auto root_body = parallel == ParallelType::OpenMP ? code.find("// loop-0 begin")
                                                                   : code.find("// loop-0begin");
             const auto next_loop = code.find("for (size_t v" + std::to_string(anchor + 1) + "_idx", root_body);
             require(build != std::string::npos && next_loop != std::string::npos &&
                     build < next_loop && next_loop < enter,
                     "Generated construction was not moved outside descendant loops");
-            require(code.find("BitmapCountRegion::build_rows", build + 1) == std::string::npos,
+            require(code.find("BitGraph::build", build + 1) == std::string::npos,
                     "Duplicate immutable row construction site");
         }
     }

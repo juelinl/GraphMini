@@ -107,12 +107,16 @@ struct BitmapRegionExecution {
     std::vector<int> live_ins, count_ops;
     int iterator_set{-1}; // Bitmap live-in traversed by the last explicit matching loop.
     bool full_region{false};
-    std::vector<int> full_sets, full_live_ins; // fixed slots and boundary conversions
+    std::vector<int> full_sets, full_live_ins; // SSA values and boundary conversions
     std::optional<BitmapProjectionPair> projection_pair;
-    // Resolved physical layout, preserving full_sets/live_ins ordering.
-    std::map<int, int> slots; // set ID -> candidate slot, including private outputs
+    // Stable storage numbering for accounting and binding verification only;
+    // generated execution uses the named values in loop_inputs/loop_outputs.
+    std::map<int, int> slots;
     // Live-in destinations initialized from arrays, or jointly by projection_pair.
     std::vector<BitmapBinding> bindings;
+    // Explicit SSA values crossing each bitmap loop boundary, and private
+    // outputs reused within that loop's task range. No runtime slot lookup.
+    std::map<int, std::vector<int>> loop_inputs, loop_outputs;
 };
 struct ExecutionIR {
     int serial_loop_boundary{1};

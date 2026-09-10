@@ -50,8 +50,8 @@ def main():
                                  parallel_type=args.parallel, bitmap=bitmap) for bitmap in (False, True)]
         assert "// full bitmap region" in plans[1].generated_code
         if not args.baseline:
-            assert "BitmapCountRegion::build_rows" in plans[1].generated_code
-            assert "BitmapCountRegion::from_rows" in plans[1].generated_code
+            assert "BitGraph::build" in plans[1].generated_code
+            assert "std::optional<Bitmap> bitmap_s" in plans[1].generated_code
         diagnostic = gm.compile_plan(g, bits, "vertex", scheduler="outgoing", pruning_type="none",
                                      parallel_type=args.parallel, bitmap=True, bitmap_diagnostics=True)
         counter = ctypes.CDLL(diagnostic.module_path).graphmini_bitmap_counter

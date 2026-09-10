@@ -26,10 +26,8 @@ std::vector<std::string> bitmap_operations(const std::string &code) {
     if (end == std::string::npos)
         throw std::runtime_error("Missing array fallback");
     auto body = std::regex_replace(code.substr(begin, end - begin), std::regex(R"(\s+)"), "");
-    body = std::regex_replace(body, std::regex(R"(bitmap_region->|task_state\.)"), "state.");
-    body = std::regex_replace(body, std::regex("returncounter;"), "continue;");
     static const std::regex statement(
-        R"(state\.(count_local|materialize_local)<bitmap_words>\([^;]+;|if\(!bn[0-9]+\)continue;|constautobn[0-9]+=|counter\+=bn[0-9]+;|bitmap_counters\[3\]\.fetch_add\([^;]+;)");
+        R"(s[0-9]+\.(intersection_count|subtraction_count|bounded_count|removed_count|assign_intersection|assign_subtraction|assign_bounded|assign_removed)<bitmap_words>\([^;]+;|if\(!s[0-9]+\.count\(\)\)continue;|counter\+=s[0-9]+\.count\(\);|bitmap_counters\[3\]\.fetch_add\([^;]+;)");
     std::vector<std::string> result;
     for (auto it = std::sregex_iterator(body.begin(), body.end(), statement); it != std::sregex_iterator(); ++it)
         result.push_back(it->str());
@@ -82,16 +80,16 @@ std::string check_count_only_emission() {
     }
     CppCodegen writer(config, ir);
     const auto code = writer.emit_omp(plan, config);
-    const auto build = code.find("BitmapCountRegion::build_rows");
-    const auto state = code.find("BitmapCountRegion::from_rows");
-    const auto count = code.find("->counting_view(");
+    const auto build = code.find("BitGraph::build");
+    const auto state = code.find("std::optional<Bitmap> bitmap_s");
+    const auto count = code.find("// bitmap terminal region");
     if (count == std::string::npos || !(build < state && state < count) ||
         code.find("// full bitmap region") != std::string::npos ||
         code.find("} // array fallback") == std::string::npos ||
         code.find("bitmap_counters[3].fetch_add") == std::string::npos)
         throw std::runtime_error("Broken count-only region scaffolding");
     for (size_t i = 0; i < region.live_ins.size(); ++i) {
-        const auto binding = "->bind_input(" + std::to_string(i) + ", s" + std::to_string(region.live_ins[i]) + ");";
+        const auto binding = "bitmap_s" + std::to_string(region.live_ins[i]) + ".emplace(Bitmap::from_sorted(";
         const auto position = code.find(binding);
         if (!(state < position && position < count) || code.find(binding, position + 1) != std::string::npos)
             throw std::runtime_error("Missing or duplicate count-only live-in binding");

@@ -178,6 +178,24 @@ std::optional<BitmapRegionExecution> candidate(const PlanIR &plan, const Executi
                 continue; // Task capture currently requires a fully local region.
             reason = "terminal counts reuse one neighborhood BitGraph across at least two matching loops";
             lower_bitmap_bindings(ir, out);
+            if (out.full_region) {
+                for (int depth = entry + 1; depth <= plan.logical.p_size - 2; ++depth) {
+                    std::set<int> inputs;
+                    auto use = [&](int id) {
+                        if (ir.sets.at(id).depth < depth) inputs.insert(id);
+                    };
+                    for (int later = depth; later <= plan.logical.p_size - 2; ++later) {
+                        use(plan.logical.iter_set.at(later - 1).id);
+                        for (const auto &logical : plan.logical.set_ops.at(later))
+                            use(ir.sets.at(logical.id).input.id);
+                    }
+                    out.loop_inputs[depth] = {inputs.begin(), inputs.end()};
+                    auto &outputs = out.loop_outputs[depth];
+                    for (const auto &logical : plan.logical.set_ops.at(depth))
+                        if (ir.sets.at(logical.id).result != SetResult::Count)
+                            outputs.push_back(logical.id);
+                }
+            }
             return out;
         }
     }
@@ -244,6 +262,7 @@ void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &ir) {
         actual.count_ops != expected->count_ops || actual.iterator_set != expected->iterator_set ||
         actual.full_region != expected->full_region || actual.full_sets != expected->full_sets ||
         actual.full_live_ins != expected->full_live_ins ||
+        actual.loop_inputs != expected->loop_inputs || actual.loop_outputs != expected->loop_outputs ||
         actual.projection_pair.has_value() != expected->projection_pair.has_value() ||
         (actual.projection_pair && !(*actual.projection_pair == *expected->projection_pair)))
         throw std::logic_error("Invalid bitmap scope, identity, rows, or live-ins");
