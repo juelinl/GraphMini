@@ -33,6 +33,9 @@ add_executable(bitmap_reuse_regression bitmap_reuse.cpp)
 add_executable(bitmap_tasks_regression bitmap_tasks.cpp)
 add_executable(bitmap_explicit_regression bitmap_explicit.cpp)
 add_executable(bitmap_iteration_regression bitmap_iteration.cpp)
+add_executable(index_set_regression index_set.cpp)
+target_link_libraries(index_set_regression PRIVATE graphmini_headers TBB::tbb)
+add_test(NAME index_set_regression COMMAND index_set_regression)
 target_link_libraries(bitmap_iteration_regression PRIVATE graphmini_headers TBB::tbb)
 add_test(NAME bitmap_iteration_regression COMMAND bitmap_iteration_regression)
 target_link_libraries(bitmap_explicit_regression PRIVATE graphmini_headers TBB::tbb)
@@ -188,6 +191,7 @@ endif()
 set(standalone_headers
     backend/bitmap_dispatch.h
     backend/bitmap.h backend/bitgraph.h backend/bitmap_tasks.h
+    backend/index_set.h
     backend/bit_ops/from_sorted.h
     common/types.h common/counter.h common/timer.h common/logging.h
     common/meta.h common/constant.h common/logitem.h

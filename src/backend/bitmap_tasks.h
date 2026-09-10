@@ -1,12 +1,12 @@
 #pragma once
 #include "bitmap_count_region.h"
 #include "bit_ops/decode.h"
+#include "index_set.h"
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_reduce.h>
 #include <functional>
 #include <cstdlib>
 #include <string>
-#include <vector>
 
 namespace minigraph {
 enum class BitmapIteration { Positions, DecodedScalar, DecodedAVX2 };
@@ -85,19 +85,20 @@ uint64_t bitmap_for_each(const Bitmap &input, bool parallel, const Function &ran
     if (!parallel || level >= policy.levels || input.capacity_bound() <= threshold)
         return range_body(input.local_cursor(), false);
     if (policy.iteration != BitmapIteration::Positions) {
-        // Allocate from a proven upper bound, not an estimated cardinality.
+        // Lease uninitialized storage for a proven bound, not an estimate.
         // Decode supplies the exact task range without a preceding count pass.
         // Storage survives until every child joins; no global-ID conversion.
-        std::vector<uint32_t> indices(input.capacity_bound());
+        IndexSet indices(input.capacity_bound());
         const auto written = policy.iteration == BitmapIteration::DecodedAVX2
             ? bit_ops::decode_indices_avx2(input.words().data(), bits, indices.data())
             : bit_ops::decode_indices_scalar(input.words().data(), bits, indices.data());
-        if (written > indices.size() || (input.has_exact_count() && written != input.count()))
+        if (written > input.capacity_bound() || (input.has_exact_count() && written != input.count()))
             throw std::logic_error("Bitmap decode cardinality mismatch");
+        indices.set_size(written);
         // Preserve the exact generated threshold, including task/copy semantics.
         if (written <= threshold) return range_body(input.local_cursor(), false);
         if (!policy.grain) throw std::invalid_argument("Bitmap task grain must be positive");
-        return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, written, policy.grain), uint64_t{0},
+        return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, indices.size(), policy.grain), uint64_t{0},
             [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
                 return count + range_body(BitmapIndexCursor(indices.data(), range.begin(), range.end()), true);
             }, std::plus<uint64_t>{});
