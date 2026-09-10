@@ -1,0 +1,52 @@
+{
+  "adjacency": "011110100111100011110001111000011100",
+  "atlas_id": 188,
+  "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+  "codegen_build_id": "830f858f4a37cd5691b09dbf29aa926ad82087362c2414cac8729121bb206309",
+  "config": {
+    "bitmap": true,
+    "bitmap_deferred_counts": false,
+    "bitmap_direct": true,
+    "parallel": "nested_rt",
+    "pruning": "none"
+  },
+  "execution_query_type": "edge",
+  "format_enabled": true,
+  "iep_width": 0,
+  "input_adjacency": "011001101101110110011010001101110010",
+  "matching_order": [
+    1,
+    2,
+    5,
+    3,
+    0,
+    4
+  ],
+  "restrictions": [
+    [
+      0,
+      1
+    ]
+  ],
+  "schedule_counting": {
+    "groups": [
+      [
+        [
+          0
+        ]
+      ]
+    ],
+    "iep_num": 1,
+    "redundancy": 1,
+    "values": [
+      1
+    ]
+  },
+  "schedule_id": "8a4798e928ffaf514071477ed53f620107c8b227b2773bd634fa5a2123de1766",
+  "scheduler": "outgoing",
+  "schema": "graphmini-outgoing-bitmap-v1",
+  "semantics": "edge",
+  "source_file": "bitmap.cpp",
+  "source_sha256": "c6f65d649ba185de4a89b005c2eaed9e0c5b6c280ae9e5d1cd51c9fdc0836390",
+  "strategy": "bitmap"
+}

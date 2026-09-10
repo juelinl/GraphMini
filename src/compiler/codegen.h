@@ -20,4 +20,7 @@ namespace minigraph
      * meta: metadata of the target graph
      * */
     std::string gen_code(const std::string& adj_mat, CodeGenConfig config, MetaData meta);
+    struct ScheduleResult;
+    std::string gen_code(const std::string& adj_mat, CodeGenConfig config, MetaData meta,
+                         const ScheduleResult& schedule);
 }

@@ -133,7 +133,13 @@ std::string dump_execution(const ExecutionIR &execution) {
             << " cached-factors=" << execution.iep_bitmap->factors.size() << '\n';
     if (execution.bitmap_region) {
         const auto &region = *execution.bitmap_region;
+        if (region.projection_pair)
+            out << "bitmap-projection-pair positive=" << region.projection_pair->positive
+                << " negative=" << region.projection_pair->negative
+                << " local=" << region.projection_pair->local_depth
+                << " external=" << region.projection_pair->external_depth << '\n';
         out << "bitmap-region @depth" << region.entry_depth << " anchor=" << region.anchor_depth
+            << " build@depth" << region.build_depth
             << " rows=universe conversions@depth" << region.conversion_depth << " live-ins:";
         for (int id : region.live_ins) out << " set" << id;
         out << " counts:";
@@ -144,6 +150,20 @@ std::string dump_execution(const ExecutionIR &execution) {
         out << " boundary-inputs=";
         for (int id : region.full_live_ins) out << id << ',';
         out << '\n';
+        out << "bitmap-slots:";
+        for (const auto &[id, slot] : region.slots) out << " set" << id << "=slot" << slot;
+        out << '\n';
+        for (const auto &binding : region.bindings)
+            out << "bitmap-bind set" << binding.set_id << " -> slot" << binding.slot
+                << " @depth" << binding.depth
+                << (region.projection_pair ? " projected" : " array") << '\n';
+        for (const auto &[depth, inputs] : region.loop_inputs) {
+            out << "bitmap-loop @depth" << depth << " inputs:";
+            for (int id : inputs) out << " s" << id;
+            out << " private-outputs:";
+            for (int id : region.loop_outputs.at(depth)) out << " s" << id;
+            out << '\n';
+        }
     }
     auto ref = [&](SetReference r) {
         switch (r.source) {
@@ -245,8 +265,7 @@ std::string dump_execution(const ExecutionIR &execution) {
             out << " adj" << id;
         out << '\n';
         if (loop.spawn_nested && loop.runtime_threshold)
-            out << "  rule: degree-threshold " << loop.threshold_factor << " * " << loop.average_degree
-                << (loop.cap_threshold ? " capped-at-100" : "") << '\n';
+            out << "  rule: runtime degree-threshold, factor=" << loop.threshold_factor << '\n';
     }
     for (const auto &term : execution.iep) {
         out << "iep " << term.coefficient;

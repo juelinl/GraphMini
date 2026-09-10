@@ -194,7 +194,7 @@ EdgeIR ToEdgeIR(const std::string &adj_mat, int vid) {
 
 EdgeRestrictIR ToRestrictIR(const std::string &res_mat, int vid) { return ToEdgeIR(res_mat, vid); };
 
-ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, MetaData meta) {
+ScheduleResult schedule_query(const std::string &_adj_mat, CodeGenConfig config, MetaData meta) {
     Timer t;
     int p_size = get_pattern_size(_adj_mat);
     ScheduleResult schedule;
@@ -203,7 +203,6 @@ ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, Meta
         schedule = schedule_pattern(_adj_mat, p_size, config, meta);
     }
     std::string adj_mat = schedule.adj_mat;
-    std::string res_mat = restricts_to_str(schedule.restrict_pair, p_size);
     {
     CompilationStage stage("schedule_diagnostics");
     LOG(MSG) << format_generated_schedule(schedule.matching_order);
@@ -211,8 +210,18 @@ ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, Meta
     LOG(MSG) << format_canonicality_constraints(schedule.restrict_pair, p_size);
     LOG(MSG) << "Scheduling Time: " << ToReadableDuration(t.Passed());
     }
-    t.Reset();
+    return schedule;
+}
+
+ScheduledPlan build_plan(const std::string &query, CodeGenConfig config, MetaData meta) {
+    return build_plan(query, config, meta, schedule_query(query, config, meta));
+}
+
+ScheduledPlan build_plan(const std::string &_adj_mat, CodeGenConfig config, MetaData meta, ScheduleResult schedule) {
     CompilationStage stage("base_ir");
+    const int p_size = get_pattern_size(_adj_mat);
+    const auto &adj_mat = schedule.adj_mat;
+    const auto res_mat = restricts_to_str(schedule.restrict_pair, p_size);
     PlanIR out;
     out.context.config = config;
     out.query = {_adj_mat, config.adjMatType == AdjMatType::VertexInduced

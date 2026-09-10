@@ -34,4 +34,16 @@ with tempfile.TemporaryDirectory() as directory:
                 assert snapshot['accumulated_matches'] == result.number_of_matches == expected
                 # Disabled runs must not retain a pointer to the previous mapping.
                 assert plan.run(graph, num_threads=threads).number_of_matches == expected
+                # A failed progress setup must leave the reusable plan intact.
+                os.environ['GRAPHMINI_PROGRESS_FILE'] = str(path)
+                try:
+                    try:
+                        plan.run(graph, num_threads=threads)
+                    except RuntimeError as error:
+                        assert 'Cannot create benchmark progress file' in str(error)
+                    else:
+                        raise AssertionError('Existing progress file was unexpectedly accepted')
+                finally:
+                    os.environ.pop('GRAPHMINI_PROGRESS_FILE')
+                assert plan.run(graph, num_threads=threads).number_of_matches == expected
 print('Progress counts and root coverage verified for array/bitmap, nested TBB, 1/4 threads')

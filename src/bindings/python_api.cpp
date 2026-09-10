@@ -2,11 +2,14 @@
 #include "common/meta.h"
 #include "compiler/codegen.h"
 #include "compiler/compilation_profile.h"
+#include "compiler/planning.h"
+#include "compiler/execution_ir.h"
 #include "backend/backend.h"
 #include "configure.h"
 #include "runtime/graph_builder.h"
 #include "runtime/plan_module.h"
 #include "common/timer.h"
+#include "bindings/schedule_cache.h"
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -130,10 +133,11 @@ std::vector<T> optional_numpy_vector(const py::object &obj, const char *name) {
 }
 
 std::string hash_code_string(const std::string &code) {
-    const size_t hash_value = std::hash<std::string>{}(code);
-    std::ostringstream out;
-    out << std::hex << hash_value;
-    return out.str();
+    // Python is already a dependency of this binding. Use its stable SHA-256
+    // rather than an implementation-defined, size_t-wide std::hash.
+    py::gil_scoped_acquire acquire;
+    return py::module_::import("hashlib").attr("sha256")(py::bytes(code))
+        .attr("hexdigest")().cast<std::string>();
 }
 
 std::filesystem::path plan_cache_dir() {
@@ -220,14 +224,16 @@ public:
                  std::string parallel_type,
                  std::string scheduler,
                  bool bitmap = false,
-                 bool bitmap_diagnostics = false)
+                 bool bitmap_diagnostics = false, bool bitmap_direct = false,
+                 bool bitmap_deferred_counts = false, bool prefer_iep = false)
             : graph_(std::move(graph)),
               query_adjmat_(std::move(query_adjmat)),
               query_type_(std::move(query_type)),
               pruning_type_(std::move(pruning_type)),
               parallel_type_(std::move(parallel_type)),
-              scheduler_(std::move(scheduler)), bitmap_(bitmap), bitmap_diagnostics_(bitmap_diagnostics) {
-        compile();
+              scheduler_(std::move(scheduler)), bitmap_(bitmap), bitmap_diagnostics_(bitmap_diagnostics),
+              bitmap_direct_(bitmap_direct), bitmap_deferred_counts_(bitmap_deferred_counts) {
+        compile(prefer_iep);
     }
 
     uint64_t pattern_size() const { return module_.pattern_size(); }
@@ -290,7 +296,7 @@ public:
     }
 
 private:
-    void compile() {
+    void compile(bool prefer_iep) {
         CompilationCapture capture(compilation_profile_);
         CompilationStage total("compile_total");
         CodeGenConfig config;
@@ -304,12 +310,33 @@ private:
         config.runnerType = RunnerType::Benchmark;
         config.bitmap = bitmap_;
         config.bitmapDiagnostics = bitmap_diagnostics_;
+        config.bitmapDirect = bitmap_direct_;
+        config.bitmapDeferredCounts = bitmap_deferred_counts_;
 
         meta = metadata_from_graph(*graph_);
         }
+        const auto schedule = schedule_query(query_adjmat_, config, meta);
+        if (prefer_iep && config.adjMatType == EdgeInduced && schedule.iep_num > 1) {
+            config.adjMatType = EdgeInducedIEP;
+            config.bitmap = config.bitmapDirect = false;
+        }
+        std::optional<python_internal::ScheduledKernel> cached;
+        {
+            CompilationStage stage("schedule_cache_lookup");
+            cached = python_internal::lookup_scheduled_kernel(
+                schedule, config, plan_cache_dir(), generated_plan_module_path().extension().string());
+        }
+        if (cached) {
+            generated_code_ = std::move(cached->source);
+            module_copy_path_ = std::move(cached->module);
+            compilation_profile_.cache_hit = compilation_profile_.schedule_cache_hit = true;
+            CompilationStage load("library_load");
+            module_ = LoadedPlanModule(module_copy_path_);
+            return;
+        }
         {
         CompilationStage stage("codegen_total");
-        generated_code_ = gen_code(query_adjmat_, config, meta);
+        generated_code_ = gen_code(query_adjmat_, config, meta, schedule);
         }
         {
         CompilationStage stage("cache_lookup");
@@ -347,17 +374,81 @@ private:
     std::string scheduler_;
     bool bitmap_;
     bool bitmap_diagnostics_;
+    bool bitmap_direct_;
+    bool bitmap_deferred_counts_;
     std::string generated_code_;
     std::filesystem::path module_copy_path_;
     LoadedPlanModule module_;
     CompilationProfile compilation_profile_;
 };
 
+CodeGenConfig offline_config(const std::string &query, const std::string &query_type, bool prefer_iep) {
+    CodeGenConfig config;
+    config.adjMatType = parse_adjmat_type(query_type);
+    if (config.adjMatType == AdjMatType::EdgeInducedIEP)
+        throw std::invalid_argument("Offline query semantics must be edge or vertex; IEP is selected automatically");
+    config.schedulerType = SchedulerType::Outgoing;
+    config.pruningType = PruningType::None;
+    config.parType = ParallelType::NestedRt;
+    config.bitmap = config.bitmapDirect = true;
+    if (prefer_iep && config.adjMatType == AdjMatType::EdgeInduced &&
+        build_plan(query, config, MetaData{}).schedule.iep_num > 1) {
+        config.adjMatType = AdjMatType::EdgeInducedIEP;
+        config.bitmap = config.bitmapDirect = false;
+    }
+    return config;
+}
+
 } // namespace
 } // namespace minigraph
 
 PYBIND11_MODULE(graphmini, m) {
     using namespace minigraph;
+
+    m.attr("plan_build_id") = GRAPHMINI_PLAN_BUILD_ID;
+    m.attr("codegen_build_id") = GRAPHMINI_CODEGEN_BUILD_ID;
+    const auto describe_offline = [](const std::string &query, const std::string &query_type, bool prefer_iep) {
+        const auto config = offline_config(query, query_type, prefer_iep);
+        const bool iep = config.adjMatType == AdjMatType::EdgeInducedIEP;
+        const auto planned = build_plan(query, config, MetaData{});
+        const auto plan = iep ? compile_edge_induced_iep(query, config, MetaData{}) : planned.plan;
+        const auto execution = lower_execution(plan);
+        py::dict result;
+        result["adjacency"] = planned.schedule.adj_mat;
+        result["restrictions"] = planned.schedule.restrict_pair;
+        result["matching_order"] = planned.schedule.matching_order;
+        result["schedule_counting"] = python_internal::schedule_counting(planned.schedule);
+        result["codegen_build_id"] = GRAPHMINI_CODEGEN_BUILD_ID;
+        result["format_enabled"] = python_internal::formatting_enabled();
+        result["bitmap_selected"] = execution.bitmap_region.has_value();
+        result["bitmap_reason"] = execution.bitmap_reason;
+        result["strategy"] = iep ? "iep" : execution.bitmap_region ? "bitmap" : "array";
+        result["iep_width"] = iep ? plan.counting.iep_num : 0;
+        result["execution_query_type"] = iep ? "edge_iep" :
+            config.adjMatType == AdjMatType::EdgeInduced ? "edge" : "vertex";
+        // Array-only plans remain on-demand. IEP takes priority over bitmap for
+        // non-induced counting, never for vertex-induced semantics.
+        result["source"] = iep || execution.bitmap_region ? gen_code(query, config, MetaData{}) : "";
+        return result;
+    };
+    m.def("describe_offline_plan", describe_offline, py::arg("query_adjmat"), py::arg("query_type"),
+          py::arg("prefer_iep") = true);
+    m.def("describe_bitmap_plan", [describe_offline](const std::string &query, const std::string &type) {
+        return describe_offline(query, type, false);
+    }, py::arg("query_adjmat"), py::arg("query_type"));
+
+    const auto precompile_offline = [](const std::string &query, const std::string &query_type, bool prefer_iep) {
+        if (parse_adjmat_type(query_type) == EdgeInducedIEP)
+            throw std::invalid_argument("Offline query semantics must be edge or vertex");
+        py::gil_scoped_release release;
+        return CompiledPlan(std::make_shared<Graph>(), query, query_type, "none", "nested_rt",
+                            "outgoing", true, false, true, false, prefer_iep);
+    };
+    m.def("precompile_offline_plan", precompile_offline, py::arg("query_adjmat"), py::arg("query_type"),
+          py::arg("prefer_iep") = true);
+    m.def("precompile_bitmap_plan", [precompile_offline](const std::string &query, const std::string &type) {
+        return precompile_offline(query, type, false);
+    }, py::arg("query_adjmat"), py::arg("query_type"));
 
     py::class_<RunResult>(m, "RunResult")
             .def_readonly("number_of_matches", &RunResult::number_of_matches)
@@ -404,13 +495,13 @@ PYBIND11_MODULE(graphmini, m) {
                              const std::string &pruning_type,
                              const std::string &parallel_type,
                              const std::string &scheduler,
-                             bool bitmap, bool bitmap_diagnostics) {
+                             bool bitmap, bool bitmap_diagnostics, bool bitmap_direct, bool bitmap_deferred_counts) {
                      return CompiledPlan(graph.ptr(),
                                          query_adjmat,
                                          query_type,
                                          pruning_type,
                                          parallel_type,
-                                         scheduler, bitmap, bitmap_diagnostics);
+                                         scheduler, bitmap, bitmap_diagnostics, bitmap_direct, bitmap_deferred_counts);
                  }),
                  py::arg("graph"),
                  py::arg("query_adjmat"),
@@ -419,7 +510,9 @@ PYBIND11_MODULE(graphmini, m) {
                  py::arg("parallel_type") = "nested_rt",
                  py::arg("scheduler") = "graphpi",
                  py::arg("bitmap") = false,
-                 py::arg("bitmap_diagnostics") = false)
+                 py::arg("bitmap_diagnostics") = false,
+                 py::arg("bitmap_direct") = false,
+                 py::arg("bitmap_deferred_counts") = false)
             .def("run", [](const CompiledPlan &self, const PyGraph &graph, int num_threads) {
                 py::gil_scoped_release release;
                 return self.run(graph.ptr(), num_threads);
@@ -433,6 +526,7 @@ PYBIND11_MODULE(graphmini, m) {
                 py::dict out;
                 out["seconds"] = self.compilation_profile().seconds;
                 out["cache_hit"] = self.compilation_profile().cache_hit;
+                out["schedule_cache_hit"] = self.compilation_profile().schedule_cache_hit;
                 return out;
             });
 
@@ -443,14 +537,14 @@ PYBIND11_MODULE(graphmini, m) {
              const std::string &pruning_type,
              const std::string &parallel_type,
              const std::string &scheduler,
-             bool bitmap, bool bitmap_diagnostics) {
+             bool bitmap, bool bitmap_diagnostics, bool bitmap_direct, bool bitmap_deferred_counts) {
               py::gil_scoped_release release;
               return CompiledPlan(graph.ptr(),
                                   query_adjmat,
                                   query_type,
                                   pruning_type,
                                   parallel_type,
-                                  scheduler, bitmap, bitmap_diagnostics);
+                                  scheduler, bitmap, bitmap_diagnostics, bitmap_direct, bitmap_deferred_counts);
           },
           py::arg("graph"),
           py::arg("query_adjmat"),
@@ -459,5 +553,7 @@ PYBIND11_MODULE(graphmini, m) {
           py::arg("parallel_type") = "nested_rt",
           py::arg("scheduler") = "graphpi",
           py::arg("bitmap") = false,
-          py::arg("bitmap_diagnostics") = false);
+          py::arg("bitmap_diagnostics") = false,
+          py::arg("bitmap_direct") = false,
+          py::arg("bitmap_deferred_counts") = false);
 }

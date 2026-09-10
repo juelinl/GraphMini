@@ -12,9 +12,36 @@ class BitGraph {
     NeighborhoodUniverse universe_;
     std::vector<uint32_t> rows_;
     std::vector<bit_ops::Word> words_;
+    std::vector<size_t> row_counts_;
     bool universe_rows_{false};
 
   public:
+    // Eager shared rows with the existing 32 MiB budget. Reserve conservative
+    // candidate storage as well as rows, mappings and construction scratch.
+    // Keep the legacy slot-storage allowance so changing emission does not
+    // silently alter which universes fit the budget.
+    template<class Graph, class Set>
+    static std::shared_ptr<const BitGraph> build(const Graph &graph, uint32_t anchor,
+        const Set &neighbors, const Set &rows, size_t candidates, size_t budget = 32 * 1024 * 1024) {
+        if (!rows.size() || !neighbors.size()) return {};
+        auto charge = [&](size_t count, size_t width) {
+            if (width && count > budget / width) return false;
+            budget -= count * width;
+            return true;
+        };
+        const size_t stride = bit_ops::word_count(neighbors.size()) * sizeof(bit_ops::Word);
+        const size_t state_bytes = sizeof(std::shared_ptr<const BitGraph>) + sizeof(std::vector<Bitmap>) + sizeof(size_t);
+        const size_t candidate_bytes = sizeof(std::optional<Bitmap>) + sizeof(const Bitmap *);
+        if (!charge(1, state_bytes) || !charge(1, sizeof(BitGraph)) ||
+            !charge(neighbors.size(), sizeof(uint32_t)) || !charge(rows.size(), sizeof(uint32_t)) ||
+            !charge(rows.size(), stride) || !charge(rows.size(), sizeof(size_t)) ||
+            !charge(candidates, neighbors.size() <= 512 ? 0 :
+                internal::BitmapWordPool::capacity_for(bit_ops::word_count(neighbors.size())) * sizeof(bit_ops::Word)) ||
+            !charge(candidates, candidate_bytes) || !charge(1, stride)) return {};
+        return std::make_shared<BitGraph>(NeighborhoodUniverse(anchor, neighbors.data(), neighbors.size()),
+            std::vector<uint32_t>(rows.data(), rows.data() + rows.size()),
+            [&](uint32_t vertex) { return graph.N(vertex); });
+    }
     template <class Neighbors>
     BitGraph(NeighborhoodUniverse universe, std::vector<uint32_t> rows, Neighbors neighbors)
         : universe_(std::move(universe)), rows_(std::move(rows)) {
@@ -24,16 +51,19 @@ class BitGraph {
         if (stride && rows_.size() > words_.max_size() / stride)
             throw std::length_error("BitGraph is too large");
         words_.resize(rows_.size() * stride);
+        row_counts_.resize(rows_.size());
         Bitmap bitmap(universe_);
         for (size_t i = 0; i < rows_.size(); ++i) {
             decltype(auto) adjacency = neighbors(rows_[i]);
             bitmap.assign_neighbors(adjacency.data(), adjacency.size());
+            row_counts_[i] = bitmap.count();
             if (stride)
                 std::copy(bitmap.words().begin(), bitmap.words().end(), words_.data() + i * stride);
         }
     }
     const NeighborhoodUniverse &universe() const { return universe_; }
     size_t row_count() const { return rows_.size(); }
+    size_t row_cardinality_at(size_t row) const { return row_counts_.at(row); }
     bool has_universe_rows() const { return universe_rows_; }
     size_t storage_bytes() const { return words_.size() * sizeof(bit_ops::Word); }
     const bit_ops::Word *row_data_at(size_t row) const & {
@@ -44,9 +74,14 @@ class BitGraph {
     }
     const bit_ops::Word *row_data_at(size_t) const && = delete;
     BitmapView row_at(size_t row) const & {
-        return {universe_, row_data_at(row), bit_ops::word_count(universe_.size())};
+        return {universe_, row_data_at(row), bit_ops::word_count(universe_.size()), &row_counts_.at(row)};
     }
     BitmapView row_at(size_t) const && = delete;
+    BitmapRowView local_row(uint32_t position) const & {
+        if (!universe_rows_) throw std::logic_error("Local bitmap row requires universe-indexed rows");
+        return {universe_, row_data_at(position), row_counts_.at(position)};
+    }
+    BitmapRowView local_row(uint32_t) const && = delete;
     BitmapView row(uint32_t vertex) const & {
         const auto it = std::lower_bound(rows_.begin(), rows_.end(), vertex);
         if (it == rows_.end() || *it != vertex)

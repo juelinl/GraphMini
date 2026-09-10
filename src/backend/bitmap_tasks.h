@@ -1,5 +1,7 @@
 #pragma once
 #include "bitmap_count_region.h"
+#include "bit_ops/decode.h"
+#include "index_set.h"
 #include <oneapi/tbb/blocked_range.h>
 #include <oneapi/tbb/parallel_reduce.h>
 #include <functional>
@@ -7,26 +9,109 @@
 #include <string>
 
 namespace minigraph {
-// Experimental policy selection is read once when a generated module loads.
+enum class BitmapIteration { Positions, DecodedScalar, DecodedAVX2 };
+// Policy selection is read once when a generated module loads.
 // Separate processes can compare policies without recompiling the query.
 struct BitmapTaskPolicy {
     size_t grain{16};
     size_t levels{std::numeric_limits<size_t>::max()};
     bool skip_empty{false};
+    bool copy_inputs{false}; // Borrow large inputs; keep outputs private until the synchronous join.
+    BitmapIteration iteration{BitmapIteration::Positions}; // Opt-in decode-first experiment.
     static BitmapTaskPolicy from_environment() {
         const char *value = std::getenv("GRAPHMINI_BITMAP_TASK_POLICY");
         const std::string name = value ? value : "baseline";
-        if (name == "baseline") return {};
-        if (name == "empty16") return {16, std::numeric_limits<size_t>::max(), true};
-        if (name == "grain64") return {64, std::numeric_limits<size_t>::max(), true};
-        if (name == "grain128") return {128, std::numeric_limits<size_t>::max(), true};
-        if (name == "shallow64") return {64, 1, true};
-        throw std::invalid_argument("Unknown GRAPHMINI_BITMAP_TASK_POLICY");
+        BitmapTaskPolicy policy;
+        if (name == "baseline") {}
+        else if (name == "empty16") policy = {16, std::numeric_limits<size_t>::max(), true};
+        else if (name == "grain64" || name == "grain64-borrow") policy = {64, std::numeric_limits<size_t>::max(), true};
+        else if (name == "grain64-copy") policy = {64, std::numeric_limits<size_t>::max(), true, true};
+        else if (name == "grain128") policy = {128, std::numeric_limits<size_t>::max(), true};
+        else if (name == "shallow64") policy = {64, 1, true};
+        else throw std::invalid_argument("Unknown GRAPHMINI_BITMAP_TASK_POLICY");
+        const char *iteration = std::getenv("GRAPHMINI_BITMAP_ITERATION");
+        const std::string mode = iteration ? iteration : "positions";
+        if (mode == "decoded-scalar") policy.iteration = BitmapIteration::DecodedScalar;
+        else if (mode == "decoded-avx2") policy.iteration = BitmapIteration::DecodedAVX2;
+        else if (mode != "positions") throw std::invalid_argument("Unknown GRAPHMINI_BITMAP_ITERATION");
+        return policy;
     }
 };
 } // namespace minigraph
 
 namespace minigraph {
+// A non-owning slice of sorted LOCAL indices. Its owner spans the synchronous
+// reduction; copies of this cursor never allocate or copy the index array.
+class BitmapIndexCursor {
+    const uint32_t *indices_;
+    size_t current_, end_;
+  public:
+    BitmapIndexCursor(const uint32_t *indices, size_t begin, size_t end)
+        : indices_(indices), current_(begin), end_(end) {}
+    bool valid() const { return current_ < end_; }
+    uint32_t position() const {
+        if (!valid()) throw std::out_of_range("Exhausted bitmap index cursor");
+        return indices_[current_];
+    }
+    void advance() { if (valid()) ++current_; }
+};
+// Own only task-local copies; otherwise borrow an immutable named input until
+// the synchronous join. Never keep a view into this wrapper after its lifetime.
+class BitmapTaskInput {
+    std::optional<Bitmap> owned_;
+    const Bitmap *input_;
+  public:
+    BitmapTaskInput(const Bitmap &input, bool task, const BitmapTaskPolicy &policy)
+        : input_(&input) {
+        if (task && (policy.copy_inputs || input.words().is_inline()))
+            owned_.emplace(input);
+    }
+    BitmapTaskInput(Bitmap &&, bool, const BitmapTaskPolicy &) = delete;
+    const Bitmap &get() const & { return owned_ ? *owned_ : *input_; }
+    const Bitmap &get() const && = delete;
+};
+
+// The generated body owns named scratch values and the cursor. This helper
+// only splits ranges and joins reductions; it does not interpret set operations.
+template<class Function>
+uint64_t bitmap_for_each(const Bitmap &input, bool parallel, const Function &range_body,
+                         const BitmapTaskPolicy &policy = {}, size_t level = 0,
+                         size_t parallel_threshold = 0) {
+    const auto bits = input.universe().size();
+    // An empty matching loop has no body work. Avoid constructing private
+    // scratch for it, particularly when the universe uses pooled buffers.
+    if (input.empty()) return 0;
+    const auto threshold = std::max(size_t{1}, parallel_threshold);
+    if (!parallel || level >= policy.levels || input.capacity_bound() <= threshold)
+        return range_body(input.local_cursor(), false);
+    if (policy.iteration != BitmapIteration::Positions) {
+        // Lease uninitialized storage for a proven bound, not an estimate.
+        // Decode supplies the exact task range without a preceding count pass.
+        // Storage survives until every child joins; no global-ID conversion.
+        IndexSet indices(input.capacity_bound());
+        const auto written = policy.iteration == BitmapIteration::DecodedAVX2
+            ? bit_ops::decode_indices_avx2(input.words().data(), bits, indices.data())
+            : bit_ops::decode_indices_scalar(input.words().data(), bits, indices.data());
+        if (written > input.capacity_bound() || (input.has_exact_count() && written != input.count()))
+            throw std::logic_error("Bitmap decode cardinality mismatch");
+        indices.set_size(written);
+        // Preserve the exact generated threshold, including task/copy semantics.
+        if (written <= threshold) return range_body(input.local_cursor(), false);
+        if (!policy.grain) throw std::invalid_argument("Bitmap task grain must be positive");
+        return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, indices.size(), policy.grain), uint64_t{0},
+            [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
+                return count + range_body(BitmapIndexCursor(indices.data(), range.begin(), range.end()), true);
+            }, std::plus<uint64_t>{});
+    }
+    if (input.count() <= threshold) return range_body(input.local_cursor(), false);
+    if (!policy.grain) throw std::invalid_argument("Bitmap task grain must be positive");
+    return tbb::parallel_reduce(tbb::blocked_range<size_t>(0, bits, policy.grain), uint64_t{0},
+        [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
+            if (policy.skip_empty && !input.local_cursor(range.begin(), range.end()).valid()) return count;
+            return count + range_body(input.local_cursor(range.begin(), range.end()), true);
+        }, std::plus<uint64_t>{});
+}
+
 // No mutable state is stored in a TBB body: each invocation has its own slots
 // and reduction accumulator. Parent state stays read-only until the join.
 template<class Function>
@@ -44,7 +129,7 @@ uint64_t bitmap_for_each(BitmapCountRegion &state, size_t input, bool parallel,
         [&](const tbb::blocked_range<size_t> &range, uint64_t count) {
             if (policy.skip_empty && !state.local_cursor(input, range.begin(), range.end()).valid())
                 return count;
-            auto local = state.fork();
+            auto local = policy.copy_inputs ? state.fork() : state.fork_borrowed();
             return count + serial(local, range.begin(), range.end());
         }, std::plus<uint64_t>{});
 }

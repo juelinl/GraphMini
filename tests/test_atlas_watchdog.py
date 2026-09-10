@@ -62,6 +62,17 @@ class WatchdogTest(unittest.TestCase):
         self.assertEqual(row["status"], "error")
         self.assertNotEqual(row["returncode"], 0)
 
+    def test_skipped_array_fallback(self):
+        row = self.run_worker("p.write_text(json.dumps(dict(status='skipped_array_fallback', bitmap_selected=False)))")
+        self.assertEqual(row['status'], 'skipped_array_fallback')
+        self.assertEqual(row['returncode'], 0)
+        self.assertNotIn('execution_started', row)
+        self.assertNotIn('partial_progress', row)
+
+    def test_failed_skip_is_error(self):
+        row = self.run_worker("p.write_text(json.dumps(dict(status='skipped_array_fallback'))); raise RuntimeError('test')")
+        self.assertEqual(row['status'], 'error')
+
 
 if __name__ == "__main__":
     unittest.main()

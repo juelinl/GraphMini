@@ -14,8 +14,8 @@ inline size_t fixed(const Word *a, const Word *b, size_t bits, Word *out, size_t
 }
 struct Item { std::array<Word, 2> a, b; size_t bound; };
 template<Binary Op, bool Write> void verify(std::mt19937_64 &rng) {
-    for (size_t bits = 1; bits <= 128; ++bits)
-        for (size_t limit = 0; limit <= 130; ++limit) {
+    for (size_t bits = 0; bits <= 512; ++bits)
+        for (size_t limit = 0; limit <= 514; ++limit) {
             std::vector<Word> a(word_count(bits)), b(a.size()), out(a.size(), ~Word{0});
             for (auto &v : a) v = rng();
             for (auto &v : b) v = rng();
@@ -27,13 +27,17 @@ template<Binary Op, bool Write> void verify(std::mt19937_64 &rng) {
                 if (value) { expected[i/64] |= Word{1} << (i%64); ++count; }
             }
             auto got = bits <= 64 ? fixed<1, Op, Write>(a.data(), b.data(), bits, out.data(), limit)
-                                  : fixed<2, Op, Write>(a.data(), b.data(), bits, out.data(), limit);
+                : bits <= 128 ? fixed<2, Op, Write>(a.data(), b.data(), bits, out.data(), limit)
+                : bits <= 256 ? fixed<4, Op, Write>(a.data(), b.data(), bits, out.data(), limit)
+                : fixed<8, Op, Write>(a.data(), b.data(), bits, out.data(), limit);
             if (got != count || (Write && out != expected)) throw std::runtime_error("fixed mismatch");
             if (combine<Op, Write>(a.data(), b.data(), bits, out.data(), limit) != count ||
                 (Write && out != expected)) throw std::runtime_error("baseline mismatch");
             if constexpr (Write) {
                 if (bits <= 64) fixed<1, Op, true>(a.data(), b.data(), bits, a.data(), limit);
-                else fixed<2, Op, true>(a.data(), b.data(), bits, a.data(), limit);
+                else if (bits <= 128) fixed<2, Op, true>(a.data(), b.data(), bits, a.data(), limit);
+                else if (bits <= 256) fixed<4, Op, true>(a.data(), b.data(), bits, a.data(), limit);
+                else fixed<8, Op, true>(a.data(), b.data(), bits, a.data(), limit);
                 if (a != expected) throw std::runtime_error("alias mismatch");
             }
         }
@@ -88,7 +92,7 @@ int main(int argc, char **) {
     std::mt19937_64 rng(917);
     verify<Binary::Intersection,false>(rng); verify<Binary::Difference,false>(rng);
     verify<Binary::Intersection,true>(rng); verify<Binary::Difference,true>(rng);
-    std::cerr << "Validated all sizes 1..128 and bounds 0..130 against bit oracle\n";
+    std::cerr << "Validated all sizes 0..512 and bounds 0..514 against bit oracle\n";
     if (argc == 1) return 0;
     std::vector<Item> items(256);
     for (auto &v : items) v = {{rng(),rng()},{rng(),rng()},rng()%129};

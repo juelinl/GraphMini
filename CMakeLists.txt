@@ -97,6 +97,10 @@ file(GLOB plan_runtime_inputs CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/src/codegen_output/plan.h")
 list(APPEND plan_runtime_inputs "${PROJECT_SOURCE_DIR}/src/backend/graphmini_backend.cppm")
 set(plan_build_fingerprint "${CMAKE_CXX_COMPILER};${CMAKE_CXX_COMPILER_VERSION};${CMAKE_BUILD_TYPE};${CMAKE_CXX_FLAGS};${CMAKE_CXX_FLAGS_RELEASE};${CMAKE_CXX_FLAGS_DEBUG};${OpenMP_CXX_FLAGS};${TBB_VERSION};${TBB_DIR};${GRAPHMINI_EXPERIMENTAL_HEADER_UNITS};${GRAPHMINI_EXPERIMENTAL_TBB_MODULE}")
+# Native builds must not share cached binaries merely because both spell their
+# target as -march=native. Also distinguish platform/SDK and toolchain changes.
+cmake_host_system_information(RESULT plan_host_cpu QUERY PROCESSOR_DESCRIPTION)
+string(APPEND plan_build_fingerprint ";${CMAKE_SYSTEM_NAME};${CMAKE_SYSTEM_PROCESSOR};${CMAKE_OSX_SYSROOT};${CMAKE_OSX_DEPLOYMENT_TARGET};${plan_host_cpu}")
 string(APPEND plan_build_fingerprint ";${GRAPHMINI_EXPERIMENTAL_BACKEND_MODULE}")
 string(APPEND plan_build_fingerprint ";${GRAPHMINI_PROFILE_QUERY_COMPILATION}")
 string(APPEND plan_build_fingerprint ";${GRAPHMINI_EXPERIMENTAL_NO_INLINE}")
@@ -117,6 +121,7 @@ target_include_directories(graphmini_headers INTERFACE
     "${PROJECT_SOURCE_DIR}/src"
     "${PROJECT_BINARY_DIR}/configure")
 add_subdirectory(src)
+include(cmake/BitmapCatalog.cmake)
 if(GRAPHMINI_BUILD_TESTS)
     add_subdirectory(tests)
 endif()

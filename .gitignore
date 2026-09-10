@@ -13,6 +13,7 @@ build-profile-backend
 build-inline-*
 build-noinline-*
 build-macos-clang/
+build-metal/
 build-linux-gcc/
 build-windows-msvc/
 build-custom/
@@ -27,6 +28,7 @@ venv
 .idea
 .cache
 __pycache__/
+/plans/.catalog.lock
 
 # Local-only compiler guides, development notes, and experiment reports.
 /REFACTOR_PLAN.md

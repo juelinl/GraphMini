@@ -7,6 +7,7 @@ namespace minigraph {
 struct CompilationProfile {
     std::map<std::string, double> seconds;
     bool cache_hit{false};
+    bool schedule_cache_hit{false};
 };
 // Telemetry only: per-thread scoped capture does not affect compiler decisions.
 inline thread_local CompilationProfile* active_compilation_profile = nullptr;

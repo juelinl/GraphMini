@@ -72,22 +72,49 @@ struct LoopExecution {
     bool spawn_nested{false};
     bool runtime_threshold{false};
     int threshold_factor{4};
-    int average_degree{0};
-    bool cap_threshold{false};
     int grain_size{1};
     std::vector<int> captured_sets, captured_minigraphs;
     std::set<int> captured_adjacencies;
 };
-// Array live-ins remain available for memory-budget fallback. A full region
-// owns fixed slots for all materialized prefixes; otherwise only terminal-loop
-// inputs are converted. Both use one immutable, full-universe row store.
+// Construction selects separate bitmap-enabled and array-only continuations.
+// A full region uses named bitmap prefixes; otherwise only terminal-loop inputs
+// are converted. Both use one immutable, full-universe row store.
+struct BitmapProjectionPair {
+    int positive, negative, local_depth, external_depth;
+    std::vector<int> fallback_sets;
+    bool operator==(const BitmapProjectionPair &other) const {
+        return positive == other.positive && negative == other.negative &&
+               local_depth == other.local_depth && external_depth == other.external_depth &&
+               fallback_sets == other.fallback_sets;
+    }
+};
+struct BitmapBinding {
+    int set_id;
+    int slot;
+    // Initialize in the success continuation after this depth's definitions/guards.
+    // Older live-ins bind at region entry; newly defined inputs bind in-scope.
+    int depth;
+};
 struct BitmapRegionExecution {
     int entry_depth, conversion_depth, anchor_depth;
-    // Rows cover the full universe, so every later selected vertex has a row.
+    // Immutable rows depend only on the anchor's full graph neighborhood.
+    // Their lifetime is independent of the legal bitmap execution boundary.
+    int build_depth{-1};
+    // Rows cover the full universe, so every vertex selected inside the bitmap
+    // suffix has a row. Vertices between build and entry may lie outside it.
     std::vector<int> live_ins, count_ops;
     int iterator_set{-1}; // Bitmap live-in traversed by the last explicit matching loop.
     bool full_region{false};
-    std::vector<int> full_sets, full_live_ins; // fixed slots and boundary conversions
+    std::vector<int> full_sets, full_live_ins; // SSA values and boundary conversions
+    std::optional<BitmapProjectionPair> projection_pair;
+    // Stable storage numbering for accounting and binding verification only;
+    // generated execution uses the named values in loop_inputs/loop_outputs.
+    std::map<int, int> slots;
+    // Live-in destinations initialized from arrays, or jointly by projection_pair.
+    std::vector<BitmapBinding> bindings;
+    // Explicit SSA values crossing each bitmap loop boundary, and private
+    // outputs reused within that loop's task range. No runtime slot lookup.
+    std::map<int, std::vector<int>> loop_inputs, loop_outputs;
 };
 struct ExecutionIR {
     int serial_loop_boundary{1};
@@ -106,6 +133,9 @@ ExecutionIR lower_execution(const PlanIR &plan);
 void lower_minigraphs(const PlanIR &plan, ExecutionIR &execution);
 void lower_loops(const PlanIR &plan, ExecutionIR &execution);
 void lower_bitmap_region(const PlanIR &plan, ExecutionIR &execution);
+// Resolve physical slots and initialization scopes after selecting a region.
+void lower_bitmap_bindings(const ExecutionIR &execution, BitmapRegionExecution &region);
+void verify_bitmap_bindings(const ExecutionIR &execution, const BitmapRegionExecution &region);
 std::optional<IEPBitmapExecution> plan_iep_bitmap(const PlanIR &plan, const ExecutionIR &execution);
 void verify_bitmap_region(const PlanIR &plan, const ExecutionIR &execution);
 void verify_execution(const ExecutionIR &execution, const PlanIR &plan);

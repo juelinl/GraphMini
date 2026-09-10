@@ -1,0 +1,141 @@
+{
+  "entries": [
+    {
+      "atlas_id": 13,
+      "bitmap_reason": "disabled",
+      "bitmap_selected": false,
+      "execution_query_type": "edge_iep",
+      "iep_width": 2,
+      "query_type": "edge",
+      "schedule_id": "02dca82f5d88ed39f6308c50e611a8ba5b4f81850c3ec60bde2465a514954280",
+      "source_file": "iep.cpp",
+      "source_sha256": "58baa90198dd0dac08149acc83350afb5d1983c316eae81c58785ba72c38b2b9",
+      "strategy": "iep"
+    },
+    {
+      "atlas_id": 13,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "dd11ca459bbacdbab46c47013db8f22aa29401a69b77ff7c6cc3fb8a368936be",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "81cab79dff8942e229801e8461234cf434b21fc665e52c21d1ec7f63d5b1f4f4",
+      "strategy": "bitmap"
+    },
+    {
+      "atlas_id": 14,
+      "bitmap_reason": "no supported shared-universe terminal region",
+      "bitmap_selected": false,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "0d5baa136c3b2c3a28a5367d49cb69fa9c1fa71dab32167d9b58da29a62bdfc9",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 14,
+      "bitmap_reason": "no supported shared-universe terminal region",
+      "bitmap_selected": false,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "ee1d06dcacaf140c8f76dd2d77473cd8641e9f385f19df454c4c16275d8d8995",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 15,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "dd08fb05c5087074dfc945cd37c142bfa2b5af37b8640cc3b734e3b205100030",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "62333b3983fef67008c7ed7d55729049d9b8e4ca5a21fb67c492f487c4088550",
+      "strategy": "bitmap"
+    },
+    {
+      "atlas_id": 15,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "3698c0720683f176d24565c95f1344e36f9dc203923c8d69f95bf09c2a303377",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "3e534aff761ab4fdd00dd222e9fe901c42ea59126f40ff688168d288ceaf2623",
+      "strategy": "bitmap"
+    },
+    {
+      "atlas_id": 16,
+      "bitmap_reason": "no supported shared-universe terminal region",
+      "bitmap_selected": false,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "bc5a2dbbf979ed168e5fba36f4e9396df1eb9360fd8e87765b20e5d31b6d0fd6",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 16,
+      "bitmap_reason": "no supported shared-universe terminal region",
+      "bitmap_selected": false,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "b2cdc4bd1e0885d6c526999263b756009fc3ff626de827efe212025850a94f21",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 17,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "d4fe3337032358c76e3bae05b2963733e79c27fa2dfc42ce4a04e824b6c1dad3",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "46e31377e949eabdefc55fb07213d8ba2107def1bb2cc5ad7173fcd221823019",
+      "strategy": "bitmap"
+    },
+    {
+      "atlas_id": 17,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "99150589c6057976d1addc3450cd176223cc2ccba3995aa0914de0c8cdb435e4",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "53c537d7b088a9391bcc3cf421a9aab528ae746920bf12d83575a738269a6a25",
+      "strategy": "bitmap"
+    },
+    {
+      "atlas_id": 18,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "8235ebe95fef6036d61be4c32c557f70a8f82a956066b2257dd6c5a112e73586",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "06242505f7d498227d071f31536b3809d459a72a3c69b01c40895c40d99143f2",
+      "strategy": "bitmap"
+    },
+    {
+      "atlas_id": 18,
+      "bitmap_reason": "terminal counts reuse one neighborhood BitGraph across at least two matching loops",
+      "bitmap_selected": true,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "2a590f9325cccc9cd35e50693c97f562770a6e1b37f7b91487067a913aaee77f",
+      "source_file": "bitmap.cpp",
+      "source_sha256": "06242505f7d498227d071f31536b3809d459a72a3c69b01c40895c40d99143f2",
+      "strategy": "bitmap"
+    }
+  ],
+  "schema": "graphmini-outgoing-bitmap-v1"
+}

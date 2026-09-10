@@ -1,0 +1,155 @@
+// Naming (D is matching depth; N is an IR set ID):
+// sN         : array-backed vertex set with IR set ID N
+// bN         : bitmap with IR set ID N (same ID as its array representation)
+// vD         : global vertex ID matched at depth D
+// vD_idx     : position in the prefix set iterated at depth D
+// vD_adj     : adjacency list or bitmap row of vD
+// vD_bit_idx : position of vD in the current bitmap universe
+// SetLevelD / BitLevelD : array / bitmap task at matching depth D
+
+#include "plan.h"
+#include "backend/benchmark_progress.h"
+#include <array>
+#include "runtime/nested_policy.h"
+namespace minigraph {
+// Borrowed per-query state; all task joins complete before plan returns.
+struct QueryContext {
+    const Graph *const graph;
+    Context &ctx;
+    BenchmarkProgress &progress;
+    const std::array<size_t, 6> nested_thresholds;
+};
+uint64_t pattern_size() { return 7; }
+class SetLevel1 {
+  private:
+    const QueryContext &query;
+    // Parent Intermediates
+    VertexSet &s0;
+    // Iterate Set
+    VertexSet &s1;
+
+  public:
+    SetLevel1(const QueryContext &_query, VertexSet &_s0, VertexSet &_s1) : query{_query}, s0{_s0}, s1{_s1} {};
+    void operator()(const tbb::blocked_range<size_t> &r) const {
+        auto &ctx = query.ctx;
+        const int worker_id = tbb::this_task_arena::current_thread_index();
+        cc &counter = ctx.per_thread_result.at(worker_id);
+        for (size_t v1_idx = r.begin(); v1_idx < r.end(); v1_idx++) { // loop-1begin
+            const IdType v1 = s1[v1_idx];
+            VertexSet v1_adj = query.graph->N(v1);
+            VertexSet s2 = s0.intersect(v1_adj);
+            for (size_t v2_idx = 0; v2_idx < s2.size(); v2_idx++) { // loop-2 begin
+                const IdType v2 = s2[v2_idx];
+                VertexSet v2_adj = query.graph->N(v2);
+                VertexSet s3 = s2.bounded(v2_adj.vid());
+                counter += 1ll * s3.size() * s3.size() * s3.size() * s3.size();
+                /* Val: 1 | Group: (0),(1),(2),(3) | Comp: |VSet(3)|*|VSet(3)|*|VSet(3)|*|VSet(3)| */
+                counter += -1ll * s3.size() * s3.size() * s3.size();
+                /* Val: -1 | Group: (0 3),(1),(2) | Comp: |VSet(3) & VSet(3)|*|VSet(3)|*|VSet(3)| */
+                counter += -1ll * s3.size() * s3.size() * s3.size();
+                /* Val: -1 | Group: (0),(1 3),(2) | Comp: |VSet(3)|*|VSet(3) & VSet(3)|*|VSet(3)| */
+                counter += -1ll * s3.size() * s3.size() * s3.size();
+                /* Val: -1 | Group: (0),(1),(2 3) | Comp: |VSet(3)|*|VSet(3)|*|VSet(3) & VSet(3)| */
+                counter += -1ll * s3.size() * s3.size() * s3.size();
+                /* Val: -1 | Group: (0 2),(1),(3) | Comp: |VSet(3) & VSet(3)|*|VSet(3)|*|VSet(3)| */
+                counter += 2ll * s3.intersect(s3).intersect_cnt(s3) * s3.size();
+                /* Val: 2 | Group: (0 2 3),(1) | Comp: |VSet(3) & VSet(3) & VSet(3)|*|VSet(3)| */
+                counter += 1ll * s3.size() * s3.size();
+                /* Val: 1 | Group: (0 2),(1 3) | Comp: |VSet(3) & VSet(3)|*|VSet(3) & VSet(3)| */
+                counter += -1ll * s3.size() * s3.size() * s3.size();
+                /* Val: -1 | Group: (0),(1 2),(3) | Comp: |VSet(3)|*|VSet(3) & VSet(3)|*|VSet(3)| */
+                counter += 1ll * s3.size() * s3.size();
+                /* Val: 1 | Group: (0 3),(1 2) | Comp: |VSet(3) & VSet(3)|*|VSet(3) & VSet(3)| */
+                counter += 2ll * s3.size() * s3.intersect(s3).intersect_cnt(s3);
+                /* Val: 2 | Group: (0),(1 2 3) | Comp: |VSet(3)|*|VSet(3) & VSet(3) & VSet(3)| */
+                counter += -1ll * s3.size() * s3.size() * s3.size();
+                /* Val: -1 | Group: (0 1),(2),(3) | Comp: |VSet(3) & VSet(3)|*|VSet(3)|*|VSet(3)| */
+                counter += 2ll * s3.intersect(s3).intersect_cnt(s3) * s3.size();
+                /* Val: 2 | Group: (0 1 3),(2) | Comp: |VSet(3) & VSet(3) & VSet(3)|*|VSet(3)| */
+                counter += 1ll * s3.size() * s3.size();
+                /* Val: 1 | Group: (0 1),(2 3) | Comp: |VSet(3) & VSet(3)|*|VSet(3) & VSet(3)| */
+                counter += 2ll * s3.intersect(s3).intersect_cnt(s3) * s3.size();
+                /* Val: 2 | Group: (0 1 2),(3) | Comp: |VSet(3) & VSet(3) & VSet(3)|*|VSet(3)| */
+                counter += -6ll * s3.intersect(s3).intersect(s3).intersect_cnt(s3);
+                /* Val: -6 | Group: (0 1 2 3) | Comp: |VSet(3) & VSet(3) & VSet(3) & VSet(3)| */
+            }
+        }
+    }
+};
+
+class SetLevel0 {
+  private:
+    const QueryContext &query;
+
+  public:
+    SetLevel0(const QueryContext &_query) : query{_query} {};
+    void operator()(const tbb::blocked_range<size_t> &r) const {
+        auto &ctx = query.ctx;
+        const int worker_id = tbb::this_task_arena::current_thread_index();
+        cc &counter = ctx.per_thread_result.at(worker_id);
+        for (size_t v0 = r.begin(); v0 < r.end(); v0++) { // loop-0begin
+            BenchmarkRootProgress root_progress(query.progress.root(v0));
+            VertexSet v0_adj = query.graph->N(v0);
+            VertexSet s0 = v0_adj;
+            if (s0.size() == 0)
+                continue;
+            VertexSet s1 = s0.bounded(v0);
+            if (s1.size() > query.nested_thresholds[1]) {
+                tbb::parallel_for(tbb::blocked_range<size_t>(0, s1.size(), 1), SetLevel1(query, s0, s1), tbb::auto_partitioner());
+                continue;
+            }
+            for (size_t v1_idx = 0; v1_idx < s1.size(); v1_idx++) { // loop-1 begin
+                const IdType v1 = s1[v1_idx];
+                VertexSet v1_adj = query.graph->N(v1);
+                VertexSet s2 = s0.intersect(v1_adj);
+                for (size_t v2_idx = 0; v2_idx < s2.size(); v2_idx++) { // loop-2 begin
+                    const IdType v2 = s2[v2_idx];
+                    VertexSet v2_adj = query.graph->N(v2);
+                    VertexSet s3 = s2.bounded(v2_adj.vid());
+                    counter += 1ll * s3.size() * s3.size() * s3.size() * s3.size();
+                    /* Val: 1 | Group: (0),(1),(2),(3) | Comp: |VSet(3)|*|VSet(3)|*|VSet(3)|*|VSet(3)| */
+                    counter += -1ll * s3.size() * s3.size() * s3.size();
+                    /* Val: -1 | Group: (0 3),(1),(2) | Comp: |VSet(3) & VSet(3)|*|VSet(3)|*|VSet(3)| */
+                    counter += -1ll * s3.size() * s3.size() * s3.size();
+                    /* Val: -1 | Group: (0),(1 3),(2) | Comp: |VSet(3)|*|VSet(3) & VSet(3)|*|VSet(3)| */
+                    counter += -1ll * s3.size() * s3.size() * s3.size();
+                    /* Val: -1 | Group: (0),(1),(2 3) | Comp: |VSet(3)|*|VSet(3)|*|VSet(3) & VSet(3)| */
+                    counter += -1ll * s3.size() * s3.size() * s3.size();
+                    /* Val: -1 | Group: (0 2),(1),(3) | Comp: |VSet(3) & VSet(3)|*|VSet(3)|*|VSet(3)| */
+                    counter += 2ll * s3.intersect(s3).intersect_cnt(s3) * s3.size();
+                    /* Val: 2 | Group: (0 2 3),(1) | Comp: |VSet(3) & VSet(3) & VSet(3)|*|VSet(3)| */
+                    counter += 1ll * s3.size() * s3.size();
+                    /* Val: 1 | Group: (0 2),(1 3) | Comp: |VSet(3) & VSet(3)|*|VSet(3) & VSet(3)| */
+                    counter += -1ll * s3.size() * s3.size() * s3.size();
+                    /* Val: -1 | Group: (0),(1 2),(3) | Comp: |VSet(3)|*|VSet(3) & VSet(3)|*|VSet(3)| */
+                    counter += 1ll * s3.size() * s3.size();
+                    /* Val: 1 | Group: (0 3),(1 2) | Comp: |VSet(3) & VSet(3)|*|VSet(3) & VSet(3)| */
+                    counter += 2ll * s3.size() * s3.intersect(s3).intersect_cnt(s3);
+                    /* Val: 2 | Group: (0),(1 2 3) | Comp: |VSet(3)|*|VSet(3) & VSet(3) & VSet(3)| */
+                    counter += -1ll * s3.size() * s3.size() * s3.size();
+                    /* Val: -1 | Group: (0 1),(2),(3) | Comp: |VSet(3) & VSet(3)|*|VSet(3)|*|VSet(3)| */
+                    counter += 2ll * s3.intersect(s3).intersect_cnt(s3) * s3.size();
+                    /* Val: 2 | Group: (0 1 3),(2) | Comp: |VSet(3) & VSet(3) & VSet(3)|*|VSet(3)| */
+                    counter += 1ll * s3.size() * s3.size();
+                    /* Val: 1 | Group: (0 1),(2 3) | Comp: |VSet(3) & VSet(3)|*|VSet(3) & VSet(3)| */
+                    counter += 2ll * s3.intersect(s3).intersect_cnt(s3) * s3.size();
+                    /* Val: 2 | Group: (0 1 2),(3) | Comp: |VSet(3) & VSet(3) & VSet(3)|*|VSet(3)| */
+                    counter += -6ll * s3.intersect(s3).intersect(s3).intersect_cnt(s3);
+                    /* Val: -6 | Group: (0 1 2 3) | Comp: |VSet(3) & VSet(3) & VSet(3) & VSet(3)| */
+                }
+            }
+        }
+    }
+};
+
+void plan(const GraphType *graph, Context &ctx) {
+    ctx.tick_begin = tbb::tick_count::now();
+    ctx.iep_redundency = 24;
+    BenchmarkProgress progress(ctx, graph->get_vnum());
+    const QueryContext query{graph, ctx, progress, {0, nested_threshold(graph->num_vertex, graph->num_edge, graph->max_degree, 4), 0, 0, 0, 0}};
+    internal::VertexSetPool::configure_for_graph(graph->get_maxdeg());
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, graph->get_vnum()), SetLevel0(query), tbb::simple_partitioner());
+}
+} // namespace minigraph
+extern "C" uint64_t graphmini_pattern_size() { return minigraph::pattern_size(); }
+extern "C" void graphmini_plan(const minigraph::GraphType *graph, minigraph::Context *ctx) { minigraph::plan(graph, *ctx); }

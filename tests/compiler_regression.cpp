@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <regex>
 #include <stdexcept>
 #include <vector>
 
@@ -41,6 +42,34 @@ int main(int argc, char **argv) {
                             const auto code = gen_code(pattern, config, meta);
                             if (code.empty())
                                 throw std::runtime_error("Empty generated code");
+#ifdef GRAPHMINI_REFACTORED
+                            if (code.find("// Naming (D is matching depth; N is an IR set ID):") != 0 ||
+                                code.find("v0_adj") == std::string::npos ||
+                                code.find("v1_idx") == std::string::npos)
+                                throw std::runtime_error("Missing generated naming guide or vertex names");
+                            static const std::regex old_names(R"(\b_?i[0-9]+_(id|idx|adj)\b|\bbp[0-9]+\b)");
+                            if (std::regex_search(code, old_names))
+                                throw std::runtime_error("Legacy generated vertex name");
+                            if (code.find("/* VSet(") != std::string::npos ||
+                                code.find("// operator begin") != std::string::npos ||
+                                code.find("// operator end") != std::string::npos)
+                                throw std::runtime_error("Redundant generated comments");
+                            if (parallel != ParallelType::OpenMP) {
+                                if (code.find("struct QueryContext") == std::string::npos ||
+                                    code.find("SetLevel0(query)") == std::string::npos ||
+                                    code.find("query.ctx") == std::string::npos ||
+                                    code.find("query.graph") == std::string::npos ||
+                                    code.find("static const Graph") != std::string::npos ||
+                                    code.find("static BenchmarkProgress") != std::string::npos)
+                                    throw std::runtime_error("Missing explicit per-query task context");
+                                static const std::regex old_context_call(R"((Loop|SetLevel)[0-9]+\(ctx\b)");
+                                if (std::regex_search(code, old_context_call))
+                                    throw std::runtime_error("Nested task did not receive query context");
+                                const bool progress = runner != RunnerType::Profiling;
+                                if ((code.find("query.progress.root(") != std::string::npos) != progress)
+                                    throw std::runtime_error("Incorrect query-context progress wiring");
+                            }
+#endif
                             if (argc > 1) {
                                 std::ofstream out(std::filesystem::path(argv[1]) /
                                                   (std::to_string(cases) + ".cpp"));
@@ -49,6 +78,21 @@ int main(int argc, char **argv) {
                             ++cases;
                         }
 #ifdef GRAPHMINI_REFACTORED
+    // A pruned clique needs v1 for a bound, but the terminal MiniGraph
+    // operation consumes only its iterator index and adjacency owner.
+    for (auto parallel : {ParallelType::OpenMP, ParallelType::TbbTop,
+                          ParallelType::Nested, ParallelType::NestedRt}) {
+        CodeGenConfig cleanup;
+        cleanup.schedulerType = SchedulerType::GraphPi;
+        cleanup.pruningType = PruningType::Static;
+        cleanup.parType = parallel;
+        const auto code = gen_code(patterns[3], cleanup, meta);
+        if (code.find("const IdType v1 =") == std::string::npos ||
+            code.find(".bounded(v1)") == std::string::npos ||
+            code.find("const IdType v2 =") != std::string::npos ||
+            code.find("using MiniGraphType =") != std::string::npos)
+            throw std::runtime_error("Incorrect MiniGraph declaration liveness");
+    }
     // Sorting IR must be asymmetric even when edge/restriction counts disagree.
     VertexSetIR sparse(EdgeIR(1), EdgeRestrictIR(3), 2, EdgeInduced);
     VertexSetIR dense(EdgeIR(3), EdgeRestrictIR(0), 2, EdgeInduced);

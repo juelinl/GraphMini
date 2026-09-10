@@ -63,9 +63,11 @@ inline size_t simd_word_width() {
     return 0;
 #endif
 }
-template <Binary Op, bool Write, bool Simd = true>
+// Count=false is a write-only kernel: its return value is unused (zero).
+template <Binary Op, bool Write, bool Simd = true, bool Count = true>
 inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nullptr,
                       size_t limit = unlimited) {
+    static_assert(Write || Count, "A bitmap kernel must write or count");
     const size_t active_bits = std::min(bits, limit);
     // Terminal counts often fit in one word. Bypass loop/vector dispatch
     // entirely, including when a bound narrows a larger universe to one word.
@@ -93,9 +95,9 @@ inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nul
                 processed = (active_bits / word_bits) / width * width;
                 if (processed) {
 #if defined(__aarch64__) || defined(_M_ARM64)
-                    count = internal::neon_words<Op == Binary::Difference, Write>(a, b, processed, out);
+                    count = internal::neon_words<Op == Binary::Difference, Write, Count>(a, b, processed, out);
 #elif defined(__x86_64__) && (defined(__clang__) || defined(__GNUC__))
-                    count = internal::avx2_words<Op == Binary::Difference, Write>(a, b, processed, out);
+                    count = internal::avx2_words<Op == Binary::Difference, Write, Count>(a, b, processed, out);
 #endif
                 }
             }
@@ -106,7 +108,7 @@ inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nul
         value &= word_mask(i, active_bits);
         if constexpr (Write)
             out[i] = value;
-        count += popcount(value);
+        if constexpr (Count) count += popcount(value);
     }
     if constexpr (Write)
         for (size_t i = active_words; i < word_count(bits); ++i)
@@ -116,21 +118,24 @@ inline size_t combine(const Word *a, const Word *b, size_t bits, Word *out = nul
 inline size_t intersection_count(const Word *a, const Word *b, size_t bits, size_t limit = unlimited) {
     return combine<Binary::Intersection, false>(a, b, bits, nullptr, limit);
 }
-// Words=0 retains dynamic SIMD dispatch. Fixed callers must establish
-// word_count(bits)==Words once at region entry; buffers need no extra padding.
-template<size_t Words, Binary Op, bool Write>
+// Words=0 retains dynamic SIMD dispatch. Words is a capacity tier; callers
+// establish word_count(bits)<=Words. Never read padding from packed graph rows.
+template<size_t Words, Binary Op, bool Write, bool Count = true>
 inline size_t combine_fixed(const Word *a, const Word *b, size_t bits, Word *out = nullptr,
                             size_t limit = unlimited) {
-    static_assert(Words <= 2, "Only one/two-word specializations are supported");
+    static_assert(Write || Count, "A bitmap kernel must write or count");
+    static_assert(Words == 0 || Words == 1 || Words == 2 || Words == 4 || Words == 8,
+                  "Supported fixed capacities are 64/128/256/512 bits");
     if constexpr (Words == 0) {
-        return combine<Op, Write>(a, b, bits, out, limit);
+        return combine<Op, Write, true, Count>(a, b, bits, out, limit);
     } else {
         const size_t active = std::min(bits, limit);
         size_t result = 0;
         for (size_t i = 0; i < Words; ++i) {
+            if (i >= word_count(bits)) break;
             Word value = Op == Binary::Intersection ? a[i] & b[i] : a[i] & ~b[i];
             value &= word_mask(i, active);
-            result += popcount(value);
+            if constexpr (Count) result += popcount(value);
             if constexpr (Write) out[i] = value;
         }
         return result;

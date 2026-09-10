@@ -1,4 +1,20 @@
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
+add_executable(offline_plans_regression offline_plans.cpp)
+target_link_libraries(offline_plans_regression PRIVATE graphmini_codegen)
+add_test(NAME offline_plans_regression COMMAND offline_plans_regression)
+add_test(NAME offline_policy
+    COMMAND ${CMAKE_COMMAND} -E env "PYTHONPATH=$<TARGET_FILE_DIR:graphmini>"
+            ${Python3_EXECUTABLE} ${PROJECT_SOURCE_DIR}/tests/offline_policy.py)
+
 add_executable(common_types_regression common_types.cpp)
+add_executable(codegen_format_regression codegen_format.cpp)
+target_link_libraries(codegen_format_regression PRIVATE graphmini_codegen)
+if(GRAPHMINI_CLANG_FORMAT_EXECUTABLE)
+    target_compile_definitions(codegen_format_regression PRIVATE GRAPHMINI_TEST_FORMAT_AVAILABLE=1)
+endif()
+add_test(NAME codegen_format_regression COMMAND codegen_format_regression)
 add_executable(root_bitmap_benchmark root_bitmap_benchmark.cpp)
 target_link_libraries(root_bitmap_benchmark PRIVATE graphmini_headers)
 add_executable(iep_bitmap_regression iep_bitmap.cpp)
@@ -22,6 +38,21 @@ add_test(NAME python_import
 
 add_executable(bitmap_reuse_regression bitmap_reuse.cpp)
 add_executable(bitmap_tasks_regression bitmap_tasks.cpp)
+add_executable(bitmap_explicit_regression bitmap_explicit.cpp)
+add_executable(bitmap_iteration_regression bitmap_iteration.cpp)
+add_executable(index_set_regression index_set.cpp)
+target_link_libraries(index_set_regression PRIVATE graphmini_headers TBB::tbb)
+add_test(NAME index_set_regression COMMAND index_set_regression)
+target_link_libraries(bitmap_iteration_regression PRIVATE graphmini_headers TBB::tbb)
+add_test(NAME bitmap_iteration_regression COMMAND bitmap_iteration_regression)
+target_link_libraries(bitmap_explicit_regression PRIVATE graphmini_headers TBB::tbb)
+add_test(NAME bitmap_explicit_regression COMMAND bitmap_explicit_regression)
+add_executable(bitmap_dispatch_regression bitmap_dispatch.cpp)
+target_link_libraries(bitmap_dispatch_regression PRIVATE graphmini_headers)
+add_test(NAME bitmap_dispatch_regression COMMAND bitmap_dispatch_regression)
+add_executable(bitmap_word_pool_regression bitmap_word_pool.cpp)
+target_link_libraries(bitmap_word_pool_regression PRIVATE graphmini_headers TBB::tbb Threads::Threads)
+add_test(NAME bitmap_word_pool_regression COMMAND bitmap_word_pool_regression)
 target_link_libraries(bitmap_tasks_regression PRIVATE graphmini_headers TBB::tbb)
 add_test(NAME bitmap_tasks_regression COMMAND bitmap_tasks_regression)
 add_executable(bit_fixed_regression bit_fixed_experiment.cpp)
@@ -61,6 +92,21 @@ add_executable(schedule_experiment schedule_experiment.cpp)
 target_link_libraries(schedule_experiment PRIVATE graphmini_headers)
 target_link_libraries(schedule_experiment PRIVATE graphmini_codegen)
 add_executable(bitmap_ir_regression bitmap_ir.cpp)
+add_executable(bitmap_codegen_regression bitmap_codegen.cpp)
+target_link_libraries(bitmap_codegen_regression PRIVATE graphmini_codegen)
+add_test(NAME bitmap_codegen_regression COMMAND bitmap_codegen_regression)
+set(bitmap_count_fixture "${CMAKE_CURRENT_BINARY_DIR}/bitmap_count_only_fixture.cpp")
+add_custom_command(OUTPUT "${bitmap_count_fixture}"
+    COMMAND bitmap_codegen_regression --count-only "${bitmap_count_fixture}"
+    DEPENDS bitmap_codegen_regression
+    VERBATIM)
+add_executable(bitmap_count_only_runtime bitmap_count_only_runtime.cpp "${bitmap_count_fixture}")
+# The harness includes the generated fixture so its diagnostics are in scope.
+set_source_files_properties("${bitmap_count_fixture}" PROPERTIES HEADER_FILE_ONLY TRUE)
+target_include_directories(bitmap_count_only_runtime PRIVATE
+    "${CMAKE_CURRENT_BINARY_DIR}" "${PROJECT_SOURCE_DIR}/src/codegen_output")
+target_link_libraries(bitmap_count_only_runtime PRIVATE graph_runtime)
+add_test(NAME bitmap_count_only_runtime COMMAND bitmap_count_only_runtime)
 target_link_libraries(bitmap_ir_regression PRIVATE graphmini_headers)
 target_link_libraries(bitmap_ir_regression PRIVATE graphmini_codegen)
 add_test(NAME bitmap_ir_regression COMMAND bitmap_ir_regression)
@@ -118,14 +164,14 @@ foreach(runtime normal profile)
     add_test(NAME sorted_ops_${runtime} COMMAND sorted_ops_${runtime})
     add_executable(vertex_set_pool_${runtime} vertex_set_pool.cpp)
     target_link_libraries(vertex_set_pool_${runtime} PRIVATE graphmini_headers)
-    target_link_libraries(vertex_set_pool_${runtime} PRIVATE common OpenMP::OpenMP_CXX TBB::tbb)
+    target_link_libraries(vertex_set_pool_${runtime} PRIVATE common OpenMP::OpenMP_CXX TBB::tbb Threads::Threads)
     if(runtime STREQUAL "profile")
         target_compile_definitions(vertex_set_pool_${runtime} PRIVATE GRAPHMINI_PROFILE_RUNTIME)
     endif()
     add_test(NAME vertex_set_pool_${runtime} COMMAND vertex_set_pool_${runtime})
     add_executable(minigraph_pool_${runtime} minigraph_pool.cpp)
     target_link_libraries(minigraph_pool_${runtime} PRIVATE graphmini_headers)
-    target_link_libraries(minigraph_pool_${runtime} PRIVATE common OpenMP::OpenMP_CXX TBB::tbb)
+    target_link_libraries(minigraph_pool_${runtime} PRIVATE common OpenMP::OpenMP_CXX TBB::tbb Threads::Threads)
     if(runtime STREQUAL "profile")
         target_compile_definitions(minigraph_pool_${runtime} PRIVATE GRAPHMINI_PROFILE_RUNTIME)
     endif()
@@ -162,6 +208,9 @@ endif()
 
 # Each translation unit includes exactly one project header, without a PCH.
 set(standalone_headers
+    backend/bitmap_dispatch.h
+    backend/bitmap.h backend/bitgraph.h backend/bitmap_tasks.h
+    backend/index_set.h
     backend/bit_ops/from_sorted.h
     common/types.h common/counter.h common/timer.h common/logging.h
     common/meta.h common/constant.h common/logitem.h

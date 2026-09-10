@@ -20,8 +20,11 @@ struct ScheduledPlan {
     ScheduleResult schedule;
 };
 ScheduledPlan build_plan(const std::string &, CodeGenConfig, MetaData);
+ScheduleResult schedule_query(const std::string &, CodeGenConfig, MetaData);
+ScheduledPlan build_plan(const std::string &, CodeGenConfig, MetaData, ScheduleResult);
 PlanIR create_plan_mg(const PlanIR &, const CodeGenConfig &);
 PlanIR compile_vertex_induced(const std::string &, CodeGenConfig, MetaData);
 PlanIR compile_edge_induced(const std::string &, CodeGenConfig, MetaData);
 PlanIR compile_edge_induced_iep(const std::string &, CodeGenConfig, MetaData);
+PlanIR compile_edge_induced_iep(ScheduledPlan);
 } // namespace minigraph

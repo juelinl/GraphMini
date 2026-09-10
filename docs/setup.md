@@ -2,8 +2,18 @@
 
 [Back to GraphMini](../README.md)
 
+Generated C++ is formatted by default with clang-format, discovered at CMake
+configuration time. Set `GRAPHMINI_FORMAT_CODE=0` for raw output. If the formatter
+is unavailable or fails, generation continues with raw code and a warning.
+
 Run all commands below from the repository root. The Conda environment below
 is the recommended installation method.
+
+Bitmap nested tasks borrow large read-only inputs by default and keep outputs
+private. Buffers up to 512 bits still copy inline. For comparison/debugging, set
+`GRAPHMINI_BITMAP_TASK_POLICY=grain64-copy` to force deep copies with grain 64;
+`grain64` and `grain64-borrow` both use borrowing with that same grain. Set the
+policy before loading a query module. This does not change the default grain.
 
 ## Compiler policy and verification status
 

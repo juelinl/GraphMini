@@ -3,7 +3,9 @@
 namespace minigraph {
 PlanIR compile_edge_induced_iep(const std::string &query, CodeGenConfig config, MetaData meta) {
     config.adjMatType = AdjMatType::EdgeInducedIEP;
-    auto scheduled = build_plan(query, config, meta);
+    return compile_edge_induced_iep(build_plan(query, config, meta));
+}
+PlanIR compile_edge_induced_iep(ScheduledPlan scheduled) {
     auto &out = scheduled.plan;
     const auto &schedule = scheduled.schedule;
     const int p_size = out.logical.p_size;

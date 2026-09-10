@@ -1,0 +1,45 @@
+{
+  "entries": [
+    {
+      "atlas_id": 6,
+      "bitmap_reason": "requires non-IEP matching, no MiniGraph, benchmark, and at least four vertices",
+      "bitmap_selected": false,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "9c56ed9bfc0e3d1befaaa32f28bfa137bbf03d07009adb7b169f7f20c742f432",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 6,
+      "bitmap_reason": "requires non-IEP matching, no MiniGraph, benchmark, and at least four vertices",
+      "bitmap_selected": false,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "02f93e8a6689573c54ac89c745d771befb386904336b863e0deda4612e4e6528",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 7,
+      "bitmap_reason": "requires non-IEP matching, no MiniGraph, benchmark, and at least four vertices",
+      "bitmap_selected": false,
+      "execution_query_type": "edge",
+      "iep_width": 0,
+      "query_type": "edge",
+      "schedule_id": "0a7c606ca677f37dc716194ff83004a774c9040abd85b66a783ac264774a309e",
+      "strategy": "array"
+    },
+    {
+      "atlas_id": 7,
+      "bitmap_reason": "requires non-IEP matching, no MiniGraph, benchmark, and at least four vertices",
+      "bitmap_selected": false,
+      "execution_query_type": "vertex",
+      "iep_width": 0,
+      "query_type": "vertex",
+      "schedule_id": "d32961c41f96c5a452745db2303cfd33e78e429d402fa9b45b50488ee8b4acaf",
+      "strategy": "array"
+    }
+  ],
+  "schema": "graphmini-outgoing-bitmap-v1"
+}
