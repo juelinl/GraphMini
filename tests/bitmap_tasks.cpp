@@ -36,6 +36,28 @@ int main() {
                 policy.skip_empty == test.skip_empty && policy.copy_inputs == test.copy_inputs);
     }
     set_policy(had_previous ? previous_policy.c_str() : nullptr);
+    const char *previous_iteration = std::getenv("GRAPHMINI_BITMAP_ITERATION");
+    const bool had_iteration = previous_iteration != nullptr;
+    const std::string saved_iteration = previous_iteration ? previous_iteration : "";
+    auto set_iteration = [&](const char *value) {
+#ifdef _WIN32
+        require(_putenv_s("GRAPHMINI_BITMAP_ITERATION", value ? value : "") == 0);
+#else
+        require(value ? setenv("GRAPHMINI_BITMAP_ITERATION", value, 1) == 0
+                      : unsetenv("GRAPHMINI_BITMAP_ITERATION") == 0);
+#endif
+    };
+    for (const auto &test : {std::pair{"positions", BitmapIteration::Positions},
+                            std::pair{"decoded-scalar", BitmapIteration::DecodedScalar},
+                            std::pair{"decoded-avx2", BitmapIteration::DecodedAVX2}}) {
+        set_iteration(test.first);
+        require(BitmapTaskPolicy::from_environment().iteration == test.second);
+    }
+    set_iteration("invalid");
+    bool invalid_iteration = false;
+    try { BitmapTaskPolicy::from_environment(); } catch (const std::invalid_argument &) { invalid_iteration = true; }
+    require(invalid_iteration);
+    set_iteration(had_iteration ? saved_iteration.c_str() : nullptr);
     tbb::global_control limit(tbb::global_control::max_allowed_parallelism, 4);
     for (size_t n : {1, 63, 64, 65, 127, 128, 129, 257, 512, 513}) {
         struct Graph {

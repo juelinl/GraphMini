@@ -142,13 +142,13 @@ std::string CppCodegen::emit_bitmap_levels(const PlanIR &plan) {
         out += fmt::format("uint64_t operator()() const {{\n"
                            "return bitmap_for_each(input_s{}, {}, *this, policy, {});\n}}\n",
                            input, parallel, depth - region.entry_depth - 1);
-        out += "uint64_t operator()(size_t begin, size_t end, bool parallel_task) const {\n";
+        out += fmt::format("template<class Cursor>\nuint64_t operator()(Cursor bc{}, bool parallel_task) const {{\n", depth);
         for (int id : inputs)
             out += fmt::format("BitmapTaskInput task_s{0}(input_s{0}, parallel_task, policy);\n"
                                "const Bitmap& s{0} = task_s{0}.get();\n", id);
         out += emit_bitmap_outputs(depth);
         out += fmt::format("uint64_t counter = 0;\n"
-                           "for (auto bc{0} = s{1}.local_cursor(begin, end); bc{0}.valid(); bc{0}.advance()) {{ "
+                           "for (; bc{0}.valid(); bc{0}.advance()) {{ "
                            "// bitmap local-index loop\nconst auto {2} = bc{0}.position();\n",
                            depth, input, codegen_names::bit_index(depth));
         if (depth == plan.logical.p_size - 2) out += "const uint64_t previous_count = counter;\n";

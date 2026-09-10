@@ -64,25 +64,28 @@ int main() {
         dispatch_bitmap_words(n, check);
         check(std::integral_constant<size_t, 0>{});
         for (const auto policy : {BitmapTaskPolicy{}, BitmapTaskPolicy{64, 99, true},
-                                  BitmapTaskPolicy{64, 99, true, true}, BitmapTaskPolicy{64, 0, true}}) {
+                                  BitmapTaskPolicy{64, 99, true, true}, BitmapTaskPolicy{64, 0, true},
+                                  BitmapTaskPolicy{64, 99, true, false, BitmapIteration::DecodedScalar},
+                                  BitmapTaskPolicy{64, 99, true, false, BitmapIteration::DecodedAVX2},
+                                  BitmapTaskPolicy{64, 99, true, true, BitmapIteration::DecodedAVX2}}) {
             for (bool parallel : {false, true}) {
                 const auto before = a.view().vertices();
                 const auto actual = bitmap_for_each(a, parallel,
-                    [&](size_t begin, size_t end, bool task) -> uint64_t {
+                    [&](auto cursor, bool task) -> uint64_t {
                         BitmapTaskInput input(a, task, policy);
                         const auto &s0 = input.get();
                         const bool copies = task && (n <= 512 || policy.copy_inputs);
                         if (n) require((s0.words().data() != a.words().data()) == copies);
                         Bitmap s1(universe);
                         uint64_t total = 0;
-                        for (auto cursor = s0.local_cursor(begin, end); cursor.valid(); cursor.advance()) {
+                        for (; cursor.valid(); cursor.advance()) {
                             s1.assign_bounded(s0, cursor.position());
                             // A private output is reused only after this nested join.
                             total += bitmap_for_each(s1, parallel,
-                                [&](size_t first, size_t last, bool child_task) -> uint64_t {
+                                [&](auto c, bool child_task) -> uint64_t {
                                     BitmapTaskInput child(s1, child_task, policy);
                                     uint64_t count = 0;
-                                    for (auto c = child.get().local_cursor(first, last); c.valid(); c.advance()) ++count;
+                                    for (; c.valid(); c.advance()) ++count;
                                     return count;
                                 }, policy, 1);
                         }
@@ -96,7 +99,7 @@ int main() {
     }
     NeighborhoodUniverse left(1, {1, 2}), right(1, {1, 3});
     Bitmap a(left), b(right), out(left);
-    require(bitmap_for_each(a, true, [](size_t, size_t, bool) -> uint64_t {
+    require(bitmap_for_each(a, true, [](auto, bool) -> uint64_t {
         throw std::runtime_error("Empty input constructed task scratch");
     }) == 0);
     bool rejected = false;

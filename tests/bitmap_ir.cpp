@@ -49,7 +49,8 @@ void require_bitmap_task_boundaries(const std::string &code, const PlanIR &plan,
         std::string expected = "constQueryContext&query;constBitGraph&bitgraph;constBitmapTaskPolicy&policy;";
         for (int id : region.loop_inputs.at(depth)) expected += "constBitmap&input_s" + std::to_string(id) + ";";
         require(fields == expected, "Level class must hold only required read-only references, not scratch");
-        require(compact.find("uint64_toperator()(size_tbegin,size_tend,boolparallel_task)const{") != std::string::npos,
+        require(compact.find("template<classCursor>uint64_toperator()(Cursorbc" + std::to_string(depth) +
+                             ",boolparallel_task)const{") != std::string::npos,
                 "Missing const range invocation");
         for (int id : region.loop_inputs.at(depth)) {
             require(ir.sets.at(id).depth < depth, "Captured a private output as input");
