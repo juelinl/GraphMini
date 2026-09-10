@@ -7,13 +7,13 @@
 #include <string>
 
 namespace minigraph {
-// Experimental policy selection is read once when a generated module loads.
+// Policy selection is read once when a generated module loads.
 // Separate processes can compare policies without recompiling the query.
 struct BitmapTaskPolicy {
     size_t grain{16};
     size_t levels{std::numeric_limits<size_t>::max()};
     bool skip_empty{false};
-    bool copy_inputs{true}; // Borrowed outputs remain opt-in pending broader timings.
+    bool copy_inputs{false}; // Borrow large inputs; keep outputs private until the synchronous join.
     static BitmapTaskPolicy from_environment() {
         const char *value = std::getenv("GRAPHMINI_BITMAP_TASK_POLICY");
         const std::string name = value ? value : "baseline";

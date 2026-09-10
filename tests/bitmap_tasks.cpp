@@ -2,12 +2,40 @@
 #include <oneapi/tbb/global_control.h>
 #include <oneapi/tbb/parallel_for.h>
 #include <atomic>
+#include <cstdlib>
+#include <limits>
 #include <numeric>
 #include <stdexcept>
+#include <string>
 
 int main() {
     using namespace minigraph;
     auto require = [](bool value) { if (!value) throw std::logic_error("Bitmap task isolation/range failure"); };
+    const char *previous = std::getenv("GRAPHMINI_BITMAP_TASK_POLICY");
+    const bool had_previous = previous != nullptr;
+    const std::string previous_policy = previous ? previous : "";
+    auto set_policy = [&](const char *value) {
+#ifdef _WIN32
+        require(_putenv_s("GRAPHMINI_BITMAP_TASK_POLICY", value ? value : "") == 0);
+#else
+        require(value ? setenv("GRAPHMINI_BITMAP_TASK_POLICY", value, 1) == 0
+                      : unsetenv("GRAPHMINI_BITMAP_TASK_POLICY") == 0);
+#endif
+    };
+    struct PolicyCase { const char *name; size_t grain, levels; bool skip_empty, copy_inputs; };
+    const size_t all_levels = std::numeric_limits<size_t>::max();
+    require(!BitmapTaskPolicy{}.copy_inputs);
+    for (const PolicyCase test : {PolicyCase{nullptr, 16, all_levels, false, false},
+          {"baseline", 16, all_levels, false, false}, {"empty16", 16, all_levels, true, false},
+          {"grain64", 64, all_levels, true, false}, {"grain64-copy", 64, all_levels, true, true},
+          {"grain64-borrow", 64, all_levels, true, false}, {"grain128", 128, all_levels, true, false},
+          {"shallow64", 64, 1, true, false}}) {
+        set_policy(test.name);
+        const auto policy = BitmapTaskPolicy::from_environment();
+        require(policy.grain == test.grain && policy.levels == test.levels &&
+                policy.skip_empty == test.skip_empty && policy.copy_inputs == test.copy_inputs);
+    }
+    set_policy(had_previous ? previous_policy.c_str() : nullptr);
     tbb::global_control limit(tbb::global_control::max_allowed_parallelism, 4);
     for (size_t n : {1, 63, 64, 65, 127, 128, 129, 257, 512, 513}) {
         struct Graph {
@@ -37,6 +65,15 @@ int main() {
         require(graph.reads == n); // Budget rejection does not read any rows.
         region->bind_input(0, graph.ids);
         region->bind_input(1, graph.ids);
+        if (n > 1) {
+            // The omitted policy argument must borrow large inputs, not just
+            // produce the same count through the old deep-copy path.
+            require(bitmap_for_each(*region, 0, true,
+                [&](BitmapCountRegion &local, uint32_t) -> uint64_t {
+                    require((local.input_view(0).data() == region->input_view(0).data()) == (n > 512));
+                    return 1;
+                }) == n);
+        }
         auto copy = region->fork();
         require(copy.input_view(0).universe().compatible(region->input_view(0).universe()));
         require(copy.input_view(0).data() != region->input_view(0).data());
@@ -69,7 +106,7 @@ int main() {
             }
         }
         for (const BitmapTaskPolicy policy : {BitmapTaskPolicy{}, BitmapTaskPolicy{16, 99, true},
-              BitmapTaskPolicy{64, 99, true}, BitmapTaskPolicy{64, 99, true, false},
+              BitmapTaskPolicy{64, 99, true}, BitmapTaskPolicy{64, 99, true, true},
               BitmapTaskPolicy{128, 99, true}, BitmapTaskPolicy{64, 1, true}}) {
           for (int repeat = 0; repeat < 4; ++repeat) {
             const auto result = bitmap_for_each(*region, 0, true,
